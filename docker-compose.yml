@@ -1,0 +1,33 @@
+services:
+  php-fpm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravue-monolito
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+    networks:
+      - laravel-net
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-posvenda
+    depends_on:
+      - php-fpm
+    ports:
+      - "127.0.0.1:8001:80"
+    volumes:
+      - .:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - laravel-net
+    restart: unless-stopped
+
+networks:
+  laravel-net:
+    driver: bridge

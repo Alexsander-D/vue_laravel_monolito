@@ -1,0 +1,7 @@
+/bootstrap/ssr
+/public/build
+/node_modules
+/vendor
+.env
+public/hot
+.phpunit.result.cache

@@ -1,0 +1,27 @@
+/* Importando Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cor-contraste: rgba(0, 0, 0);
+  --cor-principal: rgb(38, 25, 225);
+  --cor-secundaria: rgb(30, 145, 205);
+  --cor-fundo: rgb(190, 203, 255);
+}
+
+html.dark {
+  --cor-contraste: rgba(255, 255, 255);
+  --cor-principal: rgba(21, 101, 192);
+  --cor-secundaria: rgb(17, 0, 255);
+  --cor-fundo: rgb(12, 18, 24);
+}
+
+/* Usando as variáveis CSS */
+body {
+  background: var(--cor-fundo);
+}
+
+[x-cloak] {
+  display: none;
+}
