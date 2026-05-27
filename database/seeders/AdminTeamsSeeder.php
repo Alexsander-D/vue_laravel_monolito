@@ -6,12 +6,13 @@ use Illuminate\Database\Seeder;
 use App\Models\Spatie\Team;
 use App\Models\Spatie\User;
 use App\Models\Spatie\Permission;
+use App\Models\Spatie\Role;
 
 class AdminTeamsSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::where('email', 'spm@grupomultilaser.com.br')->first();
+        $user = User::where('email', 'admin@hotmail.com')->first();
 
         $teams = [
             'SAC',

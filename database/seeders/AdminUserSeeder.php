@@ -13,8 +13,8 @@ class AdminUserSeeder extends Seeder
     {
         $user = User::firstOrCreate([
             'name' => 'Admin User',
-            'email' => 'spm@grupomultilaser.com.br',
-            'password' => 'feadbddbc6cfa21a8c8c4f2a9210bc944acc7157',
+            'email' => 'admin@hotmail.com',
+            'password' => 'admin',
         ]);
 
         $user->markEmailAsVerified();
