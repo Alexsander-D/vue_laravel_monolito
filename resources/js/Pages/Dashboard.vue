@@ -37,7 +37,7 @@ const features = [
     title: "Barba",
     string_value: "R$ 20,00",
     value: 20,
-    icon: "🧔‍♂️", // Rosto com barba
+    icon: "🧔", // Rosto com barba
     link: "#",
   },
   {
