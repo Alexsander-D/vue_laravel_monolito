@@ -67,6 +67,11 @@ Route::middleware([
             [AttendanceController::class, 'report']
         )->name('attendance.report');
 
+        Route::delete(
+            '/attendance/{attendance}',
+            [AttendanceController::class, 'destroy']
+        )->name('attendance.destroy');
+
         Route::prefix('technical_assistance')->group(function () {
             Route::prefix('registration')->group(function () {
                 // ? FAILURES

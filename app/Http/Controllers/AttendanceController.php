@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 class AttendanceController extends Controller
 {
@@ -54,21 +55,28 @@ class AttendanceController extends Controller
 
     public function report()
     {
-        $records = AttendanceService::join('attendances', 'attendance_services.attendance_id', '=', 'attendances.id')
+        $records = DB::table('attendances')
             ->join('users', 'attendances.user_id', '=', 'users.id')
+            ->leftJoin('attendance_services', 'attendance_services.attendance_id', '=', 'attendances.id')
             ->select(
-                'attendance_services.id as attendance_service_id',
                 'attendances.id as attendance_id',
-                'users.id as user_id',
+                'attendances.user_id',
                 'users.name as user_name',
-                'attendance_services.service_name',
-                'attendance_services.price',
-                'attendances.created_at as created_at'
+                DB::raw("GROUP_CONCAT(attendance_services.service_name SEPARATOR ', ') as service_name"),
+                DB::raw('COALESCE(SUM(attendance_services.price), 0) as price'),
+                'attendances.payment_method',
+                'attendances.created_at'
             )
             ->whereDate('attendances.created_at', Carbon::today())
+            ->groupBy(
+                'attendances.id',
+                'attendances.user_id',
+                'users.name',
+                'attendances.payment_method',
+                'attendances.created_at'
+            )
             ->orderBy('attendances.created_at', 'desc')
             ->orderBy('users.name', 'asc')
-            ->orderBy('attendance_services.id', 'desc')
             ->get();
 
         return Inertia::render('Attendance/Report', [
