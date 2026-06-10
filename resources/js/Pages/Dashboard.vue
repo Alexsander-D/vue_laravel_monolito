@@ -90,7 +90,7 @@ const form = useForm({
   services: [],
   total: 0,
   created_at: "",
-  payment_method: "Dinheiro",
+  payment_method: "",
 });
 
 const confirmAttendance = async () => {
