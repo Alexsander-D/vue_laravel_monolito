@@ -9,6 +9,7 @@ class Attendance extends Model
     protected $fillable = [
         'user_id',
         'total',
+        'payment_method',
     ];
 
     public function services()

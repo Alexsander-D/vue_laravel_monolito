@@ -19,8 +19,10 @@ class AttendanceController extends Controller
             'services' => ['required', 'array', 'min:1'],
             'services.*.name' => ['required', 'string'],
             'services.*.price' => ['required', 'numeric'],
+            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
         ], [
             'services.required' => 'SELECIONE AO MENOS UM SERVIÇO.',
+            'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
         ])->validate();
 
         DB::transaction(function () use ($validated) {
@@ -31,6 +33,7 @@ class AttendanceController extends Controller
             $attendance = Attendance::create([
                 'user_id' => Auth::id(),
                 'total' => $total,
+                'payment_method' => $validated['payment_method'],
             ]);
 
             foreach ($validated['services'] as $service) {

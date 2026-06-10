@@ -84,11 +84,51 @@ const features = [
   },
 ];
 
+const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
+
 const form = useForm({
   services: [],
   total: 0,
   created_at: "",
+  payment_method: "Dinheiro",
 });
+
+const confirmAttendance = async () => {
+  if (selectedServices.value.length === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Nenhum serviço selecionado",
+      text: "Selecione pelo menos um serviço.",
+    });
+
+    return;
+  }
+
+  const servicesSummary = selectedServices.value
+    .map((service) => `• ${service.title} — R$ ${service.value.toFixed(2).replace(".", ",")}`)
+    .join("<br>");
+
+  const result = await Swal.fire({
+    title: "Confirmar atendimento?",
+    html: `
+      <div style="text-align: left;">
+        <p><strong>Serviços:</strong></p>
+        <p>${servicesSummary}</p>
+        <p class="mt-3"><strong>Total:</strong> R$ ${totalValue.value.toFixed(2).replace(".", ",")}</p>
+        <p><strong>Pagamento:</strong> ${form.payment_method || "Dinheiro"}</p>
+      </div>
+    `,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Confirmar",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#000",
+  });
+
+  if (result.isConfirmed) {
+    submitAttendance();
+  }
+};
 
 const submitAttendance = () => {
   if (selectedServices.value.length === 0) {
@@ -107,6 +147,7 @@ const submitAttendance = () => {
   }));
 
   form.total = totalValue.value;
+  form.payment_method = form.payment_method || "Dinheiro";
 
   form.created_at =
     new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR");
@@ -115,13 +156,27 @@ const submitAttendance = () => {
     preserveScroll: true,
 
     onSuccess: () => {
+      const attendanceTime = new Date().toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
       Swal.fire({
         icon: "success",
         title: "Atendimento registrado!",
+        html: `<p>Horário do atendimento: <strong>${attendanceTime}</strong></p>`,
+        timer: 10000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        toast: false,
       });
 
       selectedServices.value = [];
       form.reset();
+      form.payment_method = "Dinheiro";
     },
 
     onError: (errors) => {
@@ -159,7 +214,7 @@ const isSelected = (service) => {
     <div class="w-full mx-auto pt-1">
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
         <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold" style="color: #e6e600">
+          <h1 class="text-3xl font-bold" style="color: var(--cor-principal)">
             Realizar Atendimento
           </h1>
 
@@ -169,23 +224,14 @@ const isSelected = (service) => {
         </div>
 
         <div class="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          <div
-            v-for="service in features"
-            :key="service.title"
-            @click="toggleSelection(service)"
-            class="cursor-pointer rounded-xl border p-6 text-center transition-all duration-300"
-            :class="
-              isSelected(service)
+          <div v-for="service in features" :key="service.title" @click="toggleSelection(service)"
+            class="cursor-pointer rounded-xl border p-6 text-center transition-all duration-300 text-yellow-500 focus:ring-yellow-500" :class="isSelected(service)
                 ? 'border-yellow-500 bg-yellow-500/10 shadow-lg scale-105'
                 : 'border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
-            "
-          >
+              ">
             <div class="mt-4">
-              <input
-                type="checkbox"
-                :checked="isSelected(service)"
-                class="absolute top-4 left-4 form-checkbox h-5 w-5 text-blue-600 pointer-events-none"
-              />
+              <input type="checkbox" :checked="isSelected(service)"
+                class="absolute top-4 left-4 form-checkbox h-5 w-5 text-yellow-500 pointer-events-none" />
             </div>
 
             <div class="text-5xl mb-4">
@@ -196,29 +242,42 @@ const isSelected = (service) => {
               {{ service.title }}
             </h3>
 
-            <!-- <p
-              class="mt-2 text-xl font-bold"
-              style="color: var(--cor-principal)"
-            >
+            <p class="mt-2 text-md font-bold" style="color: var(--cor-principal)">
               R$ {{ service.value.toFixed(2).replace(".", ",") }}
-            </p> -->
+            </p>
           </div>
         </div>
 
-        <div
-          class="mt-10 rounded-xl border border-yellow-500/20 p-6 bg-gray-50 dark:bg-gray-800"
-        >
+        <div class="mt-8 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-6">
+          <div class="flex justify-center items-center">
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+              Forma de pagamento
+            </h2>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <label v-for="method in paymentMethods" :key="method"
+              class="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 cursor-pointer transition hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-gray-700"
+              :class="form.payment_method === method ? 'border-yellow-500 bg-yellow-500/10' : ''">
+              <input type="radio" name="payment_method" :value="method" v-model="form.payment_method"
+                class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
+              <span class="text-sm font-medium text-gray-800 dark:text-gray-100">
+                {{ method }}
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="mt-10 rounded-xl border border-yellow-500/20 p-6 bg-gray-50 dark:bg-gray-800">
           <div class="flex justify-center items-center">
             <span class="text-xl font-semibold text-black dark:text-white">
               R${{ totalValue.toFixed(2).replace(".", ",") }}
             </span>
           </div>
 
-          <button
-            @click="submitAttendance"
+          <button @click="confirmAttendance"
             class="mt-6 w-full rounded-lg py-3 font-semibold dark:text-black text-white transition hover:scale-[1.02] dark:bg-white bg-gray-900"
-            :disabled="form.processing"
-          >
+            :disabled="form.processing">
             Finalizar Atendimento
           </button>
         </div>

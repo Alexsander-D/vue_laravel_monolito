@@ -16,6 +16,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             $table->decimal('total', 10, 2);
+            $table->string('payment_method')->default('Dinheiro');
 
             $table->timestamps();
         });
