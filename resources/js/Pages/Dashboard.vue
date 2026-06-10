@@ -104,6 +104,16 @@ const confirmAttendance = async () => {
     return;
   }
 
+  if (form.payment_method.length === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Nenhum método de pagamento selecionado",
+      text: "Selecione um método de pagamento.",
+    });
+
+    return;
+  }
+
   const servicesSummary = selectedServices.value
     .map((service) => `• ${service.title} — R$ ${service.value.toFixed(2).replace(".", ",")}`)
     .join("<br>");
@@ -115,7 +125,7 @@ const confirmAttendance = async () => {
         <p><strong>Serviços:</strong></p>
         <p>${servicesSummary}</p>
         <p class="mt-3"><strong>Total:</strong> R$ ${totalValue.value.toFixed(2).replace(".", ",")}</p>
-        <p><strong>Pagamento:</strong> ${form.payment_method || "Dinheiro"}</p>
+        <p><strong>Pagamento:</strong> ${form.payment_method}</p>
       </div>
     `,
     icon: "question",
@@ -147,7 +157,7 @@ const submitAttendance = () => {
   }));
 
   form.total = totalValue.value;
-  form.payment_method = form.payment_method || "Dinheiro";
+  form.payment_method = form.payment_method;
 
   form.created_at =
     new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR");
@@ -176,7 +186,6 @@ const submitAttendance = () => {
 
       selectedServices.value = [];
       form.reset();
-      form.payment_method = "Dinheiro";
     },
 
     onError: (errors) => {
