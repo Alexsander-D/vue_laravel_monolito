@@ -28,7 +28,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'allowed_origins' => env('APP_ENV') === 'production'
-        ? ['https://spm.multilaser.com.br']
+        ? ['http://3.84.217.247']
         : ['*'],
 
     /*

@@ -7,7 +7,7 @@ if (import.meta.env.MODE === 'development') {
     window.axios.defaults.baseURL = 'http://127.0.0.1:8000';
 } else {
     // Produção
-    window.axios.defaults.baseURL = 'https://spm.multilaser.com.br';
+    window.axios.defaults.baseURL = 'http://3.84.217.247';
 }
 
 // Mantém as demais configs
