@@ -73,7 +73,7 @@ return [
     |
     */
 
-    'home' => '/pos-venda/dashboard',
+    'home' => '/dashboard',
 
     /*
     |--------------------------------------------------------------------------
@@ -86,7 +86,7 @@ return [
     |
     */
 
-    'prefix' => 'pos-venda',
+    'prefix' => '/',
 
     'domain' => null,
 

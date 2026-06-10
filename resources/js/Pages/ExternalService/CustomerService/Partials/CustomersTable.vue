@@ -81,7 +81,7 @@ const tableId = ref("Queue");
                         Abaixo listagem com os clientes cadastrados.
                     </p>
                 </div>
-                <a href="/pos-venda/technical_assistance/external/customers/show">
+                <a href="/technical_assistance/external/customers/show">
                     <button type="button"
                         class="flex items-center justify-center gap-2 size-[38px] text-sm rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
                         title="Cadastrar novo cliente">

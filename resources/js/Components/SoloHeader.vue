@@ -82,8 +82,8 @@ onMounted(() => {
     }" class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2">
       <Link
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
-        :href="route('dashboard')" aria-label="Vex">
-      <img src="/pos-venda/images/logomarca.png" alt="Vex" class="w-16 h-16" />
+        :href="route('dashboard')" aria-label="barbearia">
+      <img src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
       </Link>
     </div>
     <!-- FIM LOGOMARCA -->
@@ -418,78 +418,7 @@ onMounted(() => {
         <!-- FIM PRODUÇÃO DIÁRIA DROPDOWN -->
 
         <!-- EQUIPE DROPDOWN -->
-        <div :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  {{ $page.props.auth.user.current_team.name }}
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
 
-            <template #content>
-              <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('gerir-equipe')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('teams.show', $page.props.auth.user.current_team)">
-                Gerir equipe
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('gerir-permissoes')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
-                Gerir Permissões
-                </Link>
-
-                <Link v-if="$page.props.jetstream.canCreateTeams"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('teams.create')">
-                Criar nova equipe
-                </Link>
-                <div v-if="
-                  $page.props.userPermissions.includes('mudar-equipe') &&
-                  $page.props.auth.user.all_teams.length > 1
-                " class="group relative">
-                  <button type="button"
-                    class="themeColor w-full justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none">
-                    Mudar de equipe
-                    <svg class="shrink-0 size-4 transition-transform group-hover:rotate-90"
-                      xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      stroke-width="2">
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </button>
-
-                  <!-- Submenu dropdown -->
-                  <div class="absolute hidden group-hover:block right-16 top-0 w-60 bg-white shadow-lg rounded z-50">
-                    <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
-                      <form @submit.prevent="switchToTeam(team)">
-                        <button v-if="team.id == $page.props.auth.user.current_team_id" type="submit"
-                          class="secondaryColor w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
-                          {{ team.name }}
-                        </button>
-                        <button v-else type="submit"
-                          class="themeColor w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
-                          {{ team.name }}
-                        </button>
-                      </form>
-                    </template>
-                  </div>
-                </div>
-              </div>
-              <!-- Submenu container -->
-            </template>
-          </Dropdown>
-        </div>
         <!-- FIM EQUIPE DROPDOWN -->
 
         <!-- PERFIL DROPDOWN -->

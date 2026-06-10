@@ -98,7 +98,7 @@
 
 <body>
     <div class="email-container">
-        <h1>Bem-vindo(a) ao Vex!</h1>
+        <h1>Bem-vindo(a) a Barbearia!</h1>
         <p>Estamos felizes em ter você conosco! Para garantir a segurança da sua conta, por favor, verifique seu e-mail clicando no botão abaixo. Isso nos ajudará a confirmar que você é o proprietário deste endereço de e-mail.</p>
 
         <div class="button-container">
@@ -111,7 +111,7 @@
         <div class="footer">
             <p>Se você estiver com problemas para clicar no botão "Verificar endereço de e-mail", copie e cole o seguinte link em seu navegador:</p>
             <p><a href="{{ $verificationUrl }}">{{ $verificationUrl }}</a></p>
-            <p>Atenciosamente,<br>Equipe Vex</p>
+            <p>Atenciosamente,<br>Equipe Barbearia Carioca</p>
         </div>
     </div>
 </body>

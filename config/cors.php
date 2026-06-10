@@ -10,7 +10,7 @@ return [
     | No seu caso, todas as rotas da API começam com "pos-venda/api".
     |--------------------------------------------------------------------------
     */
-    'paths' => ['api/*', 'pos-venda/api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     /*
     |--------------------------------------------------------------------------

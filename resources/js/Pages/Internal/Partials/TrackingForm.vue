@@ -174,7 +174,7 @@ const radioOptions = [
         <div class="flex-grow text-center">Adicionar Produto</div>
         <div class="relative inline-block max-w-full">
           <a
-            href="/pos-venda/storage/excel/separated_tracking.xlsx"
+            href="/storage/excel/separated_tracking.xlsx"
             download="separated_tracking.xlsx"
             class="tooltip-button px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all"
           >

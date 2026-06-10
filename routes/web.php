@@ -37,6 +37,7 @@ use App\Http\Controllers\Internal\TimelineController;
 use App\Http\Controllers\Internal\ProductOutputController;
 use App\Http\Controllers\Internal\ProductTransferController;
 use App\Http\Controllers\Internal\ProductTransferControllerAdmin;
+use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -55,6 +56,11 @@ Route::middleware([
         Route::get('/dashboard', function () {
             return Inertia::render('Dashboard');
         })->name('dashboard');
+
+        Route::post(
+            '/attendance/store',
+            [AttendanceController::class, 'store']
+        )->name('attendance.store');
 
         Route::prefix('technical_assistance')->group(function () {
             Route::prefix('registration')->group(function () {

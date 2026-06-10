@@ -40,12 +40,12 @@ class CustomVerifyEmail extends Notification
 
         // Retornar a mensagem personalizada
         return (new MailMessage)
-            ->subject('Confirme seu endereço de e-mail - Vex')
+            ->subject('Confirme seu endereço de e-mail - Barbearia Carioca')
             ->greeting('Bem-vindo(a) à nossa plataforma!')
             ->line('Obrigado por se registrar em nosso site. Por favor, clique no botão abaixo para verificar seu endereço de e-mail.')
             ->action('Verificar Endereço de E-mail', $verificationUrl)
             ->line('Se você não criou uma conta, nenhuma ação é necessária.')
-            ->salutation('Atenciosamente, Equipe Vex')
+            ->salutation('Atenciosamente, Equipe Barbearia Carioca')
             ->view('emails.verify-email', ['verificationUrl' => $verificationUrl]);
     }
 

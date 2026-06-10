@@ -50,7 +50,7 @@ class CreateNewUser implements CreatesNewUsers
                 'email',
                 'max:255',
                 'unique:users',
-                'regex:/^[a-zA-Z0-9._%+-]+@grupomultilaser\.com\.br$/',
+                'regex:/^[a-zA-Z0-9._%+-]/',
             ],
             'password' => $this->passwordRules(),
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',

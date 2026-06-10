@@ -15,92 +15,85 @@ const props = defineProps({
 </style>
 
 <template>
-  <Head title="Welcome" />
-  <!-- Hero -->
-  <div
-    class="relative bg-gradient-to-b from-violet-600/10 via-transparent overflow-hidden min-h-screen"
-  >
-    <div class="w-full mx-auto px-4 py-8 space-y-8 relative z-10">
-      <!-- Title -->
-      <div class="max-w-3xl text-center mx-auto">
-        <div class="colorBase text-7xl flex items-center justify-center">
-          <img src="/pos-venda/images/logomarca.png" alt="Vex" class="w-48 h-48" />
-        </div>
-      </div>
-      <!-- End Title -->
+  <Head title="Bem-vindo" />
 
-      <div class="max-w-4xl text-center mx-auto bg-black/50 backdrop-blur-sm rounded">
-        <p class="text-lg text-white">
-          Plataforma desenvolvida para atender às necessidades do pós-venda, integrando
-          sistemas e proporcionando dados para decisões assertivas e eficientes.
-        </p>
-      </div>
-
-      <div class="text-center">
-        <Link
-          v-if="$page.props.auth.user"
-          :href="route('dashboard')"
-          class="inline-flex justify-center items-center gap-x-3 text-center bg-gradient-to-tl from-blue-600 to-violet-600 shadow-lg hover:shadow-blue-700/50 border border-transparent text-white text-sm font-medium rounded-full focus:outline-none focus:shadow-blue-700/50 py-3 px-6"
-        >
-          Continuar
-          <svg
-            class="shrink-0 size-4"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="m9 18 6-6-6-6" />
-          </svg>
-        </Link>
-        <Link
-          v-else
-          class="inline-flex justify-center items-center gap-x-3 text-center bg-gradient-to-tl from-blue-600 to-violet-600 shadow-lg hover:shadow-blue-700/50 border border-transparent text-white text-sm font-medium rounded-full focus:outline-none focus:shadow-blue-700/50 py-3 px-6"
-          :href="route('login')"
-        >
-          Continuar
-          <svg
-            class="shrink-0 size-4"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="m9 18 6-6-6-6" />
-          </svg>
-        </Link>
-      </div>
-      <!-- End Buttons -->
-    </div>
-
-    <!-- Optional Background Image or Video -->
+  <div class="relative min-h-screen overflow-hidden">
+    <!-- Background -->
     <div
-      class="absolute inset-0 bg-cover bg-center bg-no-repeat"
+      class="absolute inset-0 bg-cover bg-center"
       :style="{ backgroundImage: `url('${props.welcomeImage}')` }"
-    ></div>
-  </div>
-  <!-- End Hero -->
+    />
 
-  <!-- Inconsistencies Button - Positioned at the bottom -->
-  <div class="fixed bottom-4 w-full flex justify-center px-4">
-    <a
-      class="group inline-flex items-center bg-white/90 hover:bg-white/70 border border-white/10 p-3 px-6 rounded-full shadow-md focus:outline-none w-auto sm:w-auto md:w-auto lg:w-auto xl:w-auto flex"
-      href="https://mail.google.com/mail/u/0/?fs=1&to=spm@grupomultilaser.com.br&su=SUPORTE%20-%20Vex&tf=cm"
-      target="_blank"
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
+
+    <!-- Content -->
+    <div
+      class="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center"
     >
-      <p class="me-2 text-black text-sm text-center">
-        Em caso de inconsistências, entre em contato com o suporte.
+      <!-- Logo -->
+      <!-- <img
+        src="/images/logomarca.png"
+        alt="Barbearia Carioca"
+        class="w-64 md:w-80 drop-shadow-2xl"
+      /> -->
+
+      <!-- Texto -->
+      <h1
+        class="mt-6 text-4xl md:text-6xl font-bold text-yellow-400 tracking-wider"
+      >
+        Barbearia Carioca
+      </h1>
+
+      <p
+        class="mt-4 max-w-xl text-gray-200 text-lg md:text-xl"
+      >
+        Tradição, estilo e atendimento de excelência.
       </p>
-    </a>
+
+      <p
+        class="mt-2 max-w-lg text-gray-400"
+      >
+        Faça login para acessar o sistema e gerenciar seus atendimentos.
+      </p>
+
+      <!-- Botão -->
+      <Link
+        :href="$page.props.auth.user ? route('dashboard') : route('login')"
+        class="mt-10 inline-flex items-center gap-2 rounded-full
+               bg-gradient-to-r from-yellow-500 to-amber-300
+               px-8 py-4 text-lg font-semibold text-black
+               shadow-lg transition-all duration-300
+               hover:scale-105 hover:shadow-yellow-500/40"
+      >
+        {{
+          $page.props.auth.user
+            ? "Entrar no Sistema"
+            : "Fazer Login"
+        }}
+
+        <svg
+          class="h-5 w-5"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+      </Link>
+
+      <!-- Rodapé -->
+      <div
+        class="absolute bottom-6 text-sm text-gray-500"
+      >
+        © {{ new Date().getFullYear() }} Barbearia Carioca
+      </div>
+    </div>
   </div>
 </template>

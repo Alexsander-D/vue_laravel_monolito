@@ -37,7 +37,7 @@
                 <div class="border rounded-xl p-4 bg-gray-50 dark:bg-gray-700">
                     <div class="flex justify-between items-center mb-2">
                         <h4 class="font-semibold text-gray-800 dark:text-gray-100">Importar preços por Excel</h4>
-                        <a href="/pos-venda/storage/excel/valor_unitario.xlsx" download="valor_unitário.xlsx"
+                        <a href="/storage/excel/valor_unitario.xlsx" download="valor_unitário.xlsx"
                             class="text-sm text-blue-600 hover:underline">Baixar modelo</a>
                     </div>
                     <div class="flex items-center gap-4">

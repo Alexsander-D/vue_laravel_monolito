@@ -14,6 +14,6 @@ class LogoutResponse implements LogoutResponseContract
  */
     public function toResponse($request)
     {
-        return redirect()->to('/pos-venda');
+        return redirect()->to('/');
     }
 }

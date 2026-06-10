@@ -13,14 +13,14 @@ O Usuário é responsável por:
 Garantir a veracidade e a precisão dos dados inseridos no sistema;
 Atualizar os dados cadastrais caso haja qualquer alteração;
 Manter sua conta e senha em sigilo e não permitir que outros acessem o serviço com suas credenciais.
-A Equipe Vex não se responsabiliza por dados incorretos ou ações fraudulentas realizadas pelo usuário.
+A Equipe barbearia não se responsabiliza por dados incorretos ou ações fraudulentas realizadas pelo usuário.
 
-A Equipe Vex adota medidas de segurança para proteger os dados dos usuários contra acessos não autorizados, roubo ou perda. No entanto, o usuário reconhece que nenhum sistema é 100% seguro e que o uso da internet envolve riscos.
+A Equipe barbearia adota medidas de segurança para proteger os dados dos usuários contra acessos não autorizados, roubo ou perda. No entanto, o usuário reconhece que nenhum sistema é 100% seguro e que o uso da internet envolve riscos.
 
-A Equipe Vex reserva-se o direito de alterar estes termos a qualquer momento, mediante aviso prévio. As alterações serão notificadas ao usuário por e-mail.
+A Equipe barbearia reserva-se o direito de alterar estes termos a qualquer momento, mediante aviso prévio. As alterações serão notificadas ao usuário por e-mail.
 
-A Equipe Vex pode, a seu exclusivo critério, suspender ou rescindir o acesso do usuário ao serviço, caso identifique violação destes termos ou o uso inadequado do sistema.
+A Equipe barbearia pode, a seu exclusivo critério, suspender ou rescindir o acesso do usuário ao serviço, caso identifique violação destes termos ou o uso inadequado do sistema.
 
-A Equipe Vex não será responsável por danos diretos, indiretos, incidentais ou consequenciais resultantes do uso ou da impossibilidade de uso do serviço, incluindo, mas não se limitando a, perda de dados ou interrupção de serviços.
+A Equipe barbearia não será responsável por danos diretos, indiretos, incidentais ou consequenciais resultantes do uso ou da impossibilidade de uso do serviço, incluindo, mas não se limitando a, perda de dados ou interrupção de serviços.
 
 Estes termos foram regidos de acordo com as leis brasileiras.

@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue';
 import path from 'path';
 
 export default defineConfig({
-    base: '/pos-venda/build/',
+    base: '/build/',
     plugins: [
         laravel({
             input: 'resources/js/app.js',

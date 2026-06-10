@@ -10,7 +10,7 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * Caminho padrão após login.
      */
-    public const HOME = '/pos-venda';
+    public const HOME = '/';
 
     /**
      * Bootstrap das rotas.
@@ -23,7 +23,7 @@ class RouteServiceProvider extends ServiceProvider
 
             // Rotas web com prefixo /pos-venda
             Route::middleware('web')->group(function () {
-                Route::prefix('pos-venda')->group(function () {
+                Route::prefix('/')->group(function () {
                     require base_path('routes/web.php');
                     require base_path('routes/jetstream.php');
                     require base_path('routes/spatie.php');
@@ -33,7 +33,7 @@ class RouteServiceProvider extends ServiceProvider
 
             // Rotas API com prefixo /pos-venda/api
             Route::middleware('api')->group(function () {
-                Route::prefix('pos-venda/api')->group(function () {
+                Route::prefix('api')->group(function () {
                     require base_path('routes/api.php');
                 });
             });

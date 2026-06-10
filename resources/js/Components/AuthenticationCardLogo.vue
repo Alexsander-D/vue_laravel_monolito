@@ -5,7 +5,7 @@ import { Link } from '@inertiajs/vue3';
 <template>
     <Link :href="'/dashboard'">
         <div class="flex items-center justify-center">
-          <img src="images/logomarca.png" alt="Vex" class="w-32 h-32" />
+          <img src="images/logomarca.png" alt="barbearia" class="w-32 h-32" />
         </div>
     </Link>
 </template>

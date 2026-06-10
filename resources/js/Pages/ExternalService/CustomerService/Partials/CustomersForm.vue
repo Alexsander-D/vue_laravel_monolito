@@ -107,7 +107,7 @@ const limparFormulario = () => {
 
 const buscarEstados = async () => {
   try {
-    const response = await axios.get('/pos-venda/api/estados')
+    const response = await axios.get('/api/estados')
     estados.value = response.data.map((estado) => ({
       label: estado.nome.toUpperCase(),
       value: estado.sigla.toUpperCase(),
@@ -121,7 +121,7 @@ const buscarCidades = async (estadoSigla) => {
   form.city = "";
   cidades.value = [];
   try {
-    const response = await axios.get(`/pos-venda/api/estados/${estadoSigla}/municipios`);
+    const response = await axios.get(`/api/estados/${estadoSigla}/municipios`);
     cidades.value = response.data.map((cidade) => ({
       label: cidade.nome.toUpperCase(),
       value: cidade.nome.toUpperCase(),
@@ -147,7 +147,7 @@ const buscarCnpj = async () => {
   if (cnpj.length === 14) {
     isLoading.value = true;
     try {
-      const response = await axios.get(`/pos-venda/api/cnpj/${cnpj}`);
+      const response = await axios.get(`/api/cnpj/${cnpj}`);
       const data = response.data;
       console.log(data);
 
@@ -199,7 +199,7 @@ const buscarCep = async () => {
   if (cep.length === 8) {
     isLoading.value = true;
     try {
-      const response = await axios.get(`/pos-venda/api/cep/${cep}`);
+      const response = await axios.get(`/api/cep/${cep}`);
       const data = response.data;
 
       if (!data.erro) {
