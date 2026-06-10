@@ -61,29 +61,52 @@ onMounted(() => {
 <template>
   <!-- ========== HEADER ========== -->
   <header
-    class="sticky top-0 inset-x-0 flex z-[48] w-full bg-white shadow shadow-md py-2 sm:py-1 lg:ps-64 dark:bg-gray-900">
+    class="sticky top-0 inset-x-0 flex z-[48] w-full bg-white shadow shadow-md py-2 sm:py-1 lg:ps-64 dark:bg-gray-900"
+  >
     <!-- HAMBURGUER BUTTON -->
-    <div class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2">
-      <button :class="{
-        hidden: isButtonHidden,
-      }" class="rounded-md focus:outline-none" @click="toggleMenu" aria-label="Toggle menu">
-        <svg class="w-6 h-6 text-black dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
-          viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+    <div
+      class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2"
+    >
+      <button
+        :class="{
+          hidden: isButtonHidden,
+        }"
+        class="rounded-md focus:outline-none"
+        @click="toggleMenu"
+        aria-label="Toggle menu"
+      >
+        <svg
+          class="w-6 h-6 text-black dark:text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16m-7 6h7"
+          />
         </svg>
       </button>
     </div>
     <!-- HAMBURGUER BUTTON -->
 
     <!-- LOGOMARCA -->
-    <div :class="{
-      hidden: !isButtonHidden,
-      flex: isButtonHidden,
-    }" class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2">
+    <div
+      :class="{
+        hidden: !isButtonHidden,
+        flex: isButtonHidden,
+      }"
+      class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2"
+    >
       <Link
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
-        :href="route('dashboard')" aria-label="barbearia">
-      <img src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
+        :href="route('dashboard')"
+        aria-label="barbearia"
+      >
+        <img src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
       </Link>
     </div>
     <!-- FIM LOGOMARCA -->
@@ -91,23 +114,39 @@ onMounted(() => {
     <nav class="flex basis-full w-full mx-auto justify-center items-center space-x-4 p-2">
       <div class="flex flex-col sm:w-full md:flex-row md:w-auto items-center md:ml-auto">
         <!-- CADASTROS DROPDOWN -->
-        <div v-if="
-          ['cadastrar-falhas', 'cadastrar-produtos'].some((term) =>
-            $page.props.userPermissions.includes(term)
-          )
-        " :class="{
+        <div
+          v-if="
+            ['cadastrar-falhas', 'cadastrar-produtos'].some((term) =>
+              $page.props.userPermissions.includes(term)
+            )
+          "
+          :class="{
             hidden: !isMenuOpen,
             block: isMenuOpen,
-          }" class="ms-3 relative py-1">
+          }"
+          class="ms-3 relative py-1"
+        >
           <Dropdown align="bottom" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                <button
+                  type="button"
+                  class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none"
+                >
                   Cadastros
 
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg
+                    class="flex-shrink-0 ms-1 size-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
@@ -116,16 +155,20 @@ onMounted(() => {
 
             <template #content>
               <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('cadastrar-falhas')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('cadastrar-falhas')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('failures.index')">
-                Defeitos e Soluções
+                  :href="route('failures.index')"
+                >
+                  Defeitos e Soluções
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('cadastrar-produtos')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('cadastrar-produtos')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('products.index')">
-                Produtos
+                  :href="route('products.index')"
+                >
+                  Produtos
                 </Link>
               </div>
             </template>
@@ -134,19 +177,35 @@ onMounted(() => {
         <!-- FIM CADASTROS DROPDOWN -->
 
         <!-- CADASTROS DROPDOWN -->
-        <div v-if="$page.props.auth.user.current_team.name.includes('SAC')" :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
+        <div
+          v-if="$page.props.auth.user.current_team.name.includes('SAC')"
+          :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }"
+          class="ms-3 relative py-1"
+        >
           <Dropdown align="bottom" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                <button
+                  type="button"
+                  class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none"
+                >
                   Fila
 
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg
+                    class="flex-shrink-0 ms-1 size-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
@@ -155,25 +214,32 @@ onMounted(() => {
 
             <template #content>
               <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('separar-rastreio')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('separar-rastreio')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('separated-tracking.index')">
-                Separar rastreio
+                  :href="route('separated-tracking.index')"
+                >
+                  Separar rastreio
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('coletar-rastreio')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('coletar-rastreio')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('collect-tracking.index')">
-                Coletar rastreio
+                  :href="route('collect-tracking.index')"
+                >
+                  Coletar rastreio
                 </Link>
 
-                <Link v-if="
-                  ['separar-rastreio', 'coletar-rastreio'].some((term) =>
-                    $page.props.userPermissions.includes(term)
-                  )
-                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('collect-tracking.show')">
-                Relatório
+                <Link
+                  v-if="
+                    ['separar-rastreio', 'coletar-rastreio'].some((term) =>
+                      $page.props.userPermissions.includes(term)
+                    )
+                  "
+                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('collect-tracking.show')"
+                >
+                  Relatório
                 </Link>
               </div>
             </template>
@@ -182,21 +248,37 @@ onMounted(() => {
         <!-- FIM CADASTROS DROPDOWN -->
 
         <!-- MATERIAIS TRIAGEMDROPDOWN -->
-        <div v-if="
-          $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
-          $page.props.userPermissions.includes('gerir-materiais')
-        " :class="{
+        <div
+          v-if="
+            $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
+            $page.props.userPermissions.includes('gerir-materiais')
+          "
+          :class="{
             hidden: !isMenuOpen,
             block: isMenuOpen,
-          }" class="ms-3 relative py-1">
+          }"
+          class="ms-3 relative py-1"
+        >
           <Dropdown align="right" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                <button
+                  type="button"
+                  class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none"
+                >
                   Materiais
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg
+                    class="flex-shrink-0 ms-1 size-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
@@ -207,8 +289,9 @@ onMounted(() => {
               <div class="w-60">
                 <Link
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('viewMaterial.index')">
-                Visualizar Materiais
+                  :href="route('viewMaterial.index')"
+                >
+                  Visualizar Materiais
                 </Link>
               </div>
             </template>
@@ -218,21 +301,37 @@ onMounted(() => {
         <!-- FIM MATERIAIS TRIAGEM DROPDOWN -->
 
         <!-- RELATÓRIOS TRIAGEM DROPDOWN -->
-        <div v-if="
-          $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
-          $page.props.userPermissions.includes('relatorios-triagem')
-        " :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
+        <div
+          v-if="
+            $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
+            $page.props.userPermissions.includes('relatorios-triagem')
+          "
+          :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }"
+          class="ms-3 relative py-1"
+        >
           <Dropdown align="right" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                <button
+                  type="button"
+                  class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none"
+                >
                   Relatórios
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg
+                    class="flex-shrink-0 ms-1 size-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
@@ -243,8 +342,9 @@ onMounted(() => {
               <div class="w-60">
                 <Link
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('positioning.index')">
-                Posicionamento
+                  :href="route('positioning.index')"
+                >
+                  Posicionamento
                 </Link>
               </div>
             </template>
@@ -253,19 +353,35 @@ onMounted(() => {
         <!-- FIM RELATÓRIOS TRIAGEM DROPDOWN -->
 
         <!-- ATENDIMENTO EXTERNO DROPDOWN -->
-        <div v-if="$page.props.auth.user.current_team.name.includes('TRIAGEM')" :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
+        <div
+          v-if="$page.props.auth.user.current_team.name.includes('TRIAGEM')"
+          :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }"
+          class="ms-3 relative py-1"
+        >
           <!-- Teams Dropdown -->
           <Dropdown align="right" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                <button
+                  type="button"
+                  class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none"
+                >
                   Atendimento Externo
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg
+                    class="flex-shrink-0 ms-1 size-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
@@ -274,46 +390,60 @@ onMounted(() => {
 
             <template #content>
               <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('gerir-clientes')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('gerir-clientes')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('viewCustomers.show')">
-                Clientes
+                  :href="route('viewCustomers.show')"
+                >
+                  Clientes
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('cadastrar-atendimento')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('cadastrar-atendimento')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('screening.index')">
-                Criar Atendimento
+                  :href="route('screening.index')"
+                >
+                  Criar Atendimento
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('gerir-triagens')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('gerir-triagens')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('ViewScreening.index')">
-                Triagens
+                  :href="route('ViewScreening.index')"
+                >
+                  Triagens
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('gerir-includes')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('gerir-includes')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('include.index')">
-                Includes
+                  :href="route('include.index')"
+                >
+                  Includes
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('gerir-laudos')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('gerir-laudos')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('techLog.index')">
-                Laudos
+                  :href="route('techLog.index')"
+                >
+                  Laudos
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('gerir-agenda')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('gerir-agenda')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('calendar.index')">
-                Agenda
+                  :href="route('calendar.index')"
+                >
+                  Agenda
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('gerir-historico')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('gerir-historico')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('screeningTimeline.index')">
-                Histórico
+                  :href="route('screeningTimeline.index')"
+                >
+                  Histórico
                 </Link>
               </div>
             </template>
@@ -321,24 +451,61 @@ onMounted(() => {
         </div>
         <!-- FIM ATENDIMENTO EXTERNO DROPDOWN -->
 
-        <!-- PRODUÇÃO DIÁRIA DROPDOWN -->
-        <div v-if="
-          ['RMA', 'SAC'].some((term) =>
-            $page.props.auth.user.current_team.name.includes(term)
-          )
-        " :class="{
+        <!-- BARBER -->
+        <div
+          :class="{
             hidden: !isMenuOpen,
             block: isMenuOpen,
-          }" class="ms-3 relative py-1">
+          }"
+          class="ms-3 relative py-1"
+        >
+          <!-- Teams Dropdown -->
+          <Dropdown align="right" width="60">
+            <template #trigger>
+              <Link
+                class="dark:text-white text-black justify-center flex items-center gap-x-3.5 py-2 px-6 text-sm font-medium focus:outline-none"
+                :href="route('attendance.report')"
+              >
+                Relatório
+              </Link>
+            </template>
+          </Dropdown>
+        </div>
+        <!-- FIM BARBER -->
+        <!-- PRODUÇÃO DIÁRIA DROPDOWN -->
+        <div
+          v-if="
+            ['RMA', 'SAC'].some((term) =>
+              $page.props.auth.user.current_team.name.includes(term)
+            )
+          "
+          :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }"
+          class="ms-3 relative py-1"
+        >
           <!-- Teams Dropdown -->
           <Dropdown align="right" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                <button
+                  type="button"
+                  class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none"
+                >
                   Apontamentos
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
+                  <svg
+                    class="flex-shrink-0 ms-1 size-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
                 </button>
@@ -347,69 +514,91 @@ onMounted(() => {
 
             <template #content>
               <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('realizar-entrada')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('realizar-entrada')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('entry.index')">
-                Realizar Entrada
+                  :href="route('entry.index')"
+                >
+                  Realizar Entrada
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('atribuir-fila')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('atribuir-fila')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('set-queue.index')">
-                Aguardando Atribuição
+                  :href="route('set-queue.index')"
+                >
+                  Aguardando Atribuição
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('realizar-laudo')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('realizar-laudo')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('queue.index')">
-                Realizar Laudo
+                  :href="route('queue.index')"
+                >
+                  Realizar Laudo
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('realizar-analise')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('realizar-analise')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('analyzes.index')">
-                Realizar Análise
+                  :href="route('analyzes.index')"
+                >
+                  Realizar Análise
                 </Link>
 
-                <Link v-if="
-                  $page.props.userPermissions.includes('realizar-laudo') &&
-                  !$page.props.userPermissions.includes('transferir-produto-admin')
-                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('product_transfer.index')">
-                Transferir Produto
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('transferir-produto-admin')"
+                <Link
+                  v-if="
+                    $page.props.userPermissions.includes('realizar-laudo') &&
+                    !$page.props.userPermissions.includes('transferir-produto-admin')
+                  "
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('product_transfer_admin.index')">
-                Transferir Produto
+                  :href="route('product_transfer.index')"
+                >
+                  Transferir Produto
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('embalagem')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('transferir-produto-admin')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('product_output.index')">
-                Realizar Embalagem
+                  :href="route('product_transfer_admin.index')"
+                >
+                  Transferir Produto
                 </Link>
 
-                <Link v-if="
-                  $page.props.userPermissions.includes(
-                    'visualizar-relatorio-individual'
-                  )
-                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('individual_report.index')">
-                Relatório Individual
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('visualizar-relatorio')"
+                <Link
+                  v-if="$page.props.userPermissions.includes('embalagem')"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('report.index')">
-                Relatório Geral
+                  :href="route('product_output.index')"
+                >
+                  Realizar Embalagem
                 </Link>
 
-                <Link v-if="$page.props.userPermissions.includes('realizar-analise')"
+                <Link
+                  v-if="
+                    $page.props.userPermissions.includes(
+                      'visualizar-relatorio-individual'
+                    )
+                  "
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('analyzes_report.index')">
-                Relatório de Análises
+                  :href="route('individual_report.index')"
+                >
+                  Relatório Individual
+                </Link>
+
+                <Link
+                  v-if="$page.props.userPermissions.includes('visualizar-relatorio')"
+                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('report.index')"
+                >
+                  Relatório Geral
+                </Link>
+
+                <Link
+                  v-if="$page.props.userPermissions.includes('realizar-analise')"
+                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('analyzes_report.index')"
+                >
+                  Relatório de Análises
                 </Link>
               </div>
             </template>
@@ -422,26 +611,46 @@ onMounted(() => {
         <!-- FIM EQUIPE DROPDOWN -->
 
         <!-- PERFIL DROPDOWN -->
-        <div :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="relative mx-auto">
+        <div
+          :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }"
+          class="relative mx-auto"
+        >
           <Dropdown align="right">
             <template #trigger>
-              <button v-if="$page.props.jetstream.managesProfilePhotos"
-                class="flex text-sm rounded-full focus:outline-none focus:border-gray-300 transition">
-                <img class="h-10 w-10 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url"
-                  :alt="$page.props.auth.user.name" />
+              <button
+                v-if="$page.props.jetstream.managesProfilePhotos"
+                class="flex text-sm rounded-full focus:outline-none focus:border-gray-300 transition"
+              >
+                <img
+                  class="h-10 w-10 rounded-full object-cover"
+                  :src="$page.props.auth.user.profile_photo_url"
+                  :alt="$page.props.auth.user.name"
+                />
               </button>
 
               <span v-else class="inline-flex rounded-md">
-                <button type="button"
-                  class="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700 active:bg-gray-50 dark:active:bg-gray-700 transition ease-in-out duration-150">
+                <button
+                  type="button"
+                  class="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700 active:bg-gray-50 dark:active:bg-gray-700 transition ease-in-out duration-150"
+                >
                   {{ $page.props.auth.user.name }}
 
-                  <svg class="ms-2 -me-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                    stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  <svg
+                    class="ms-2 -me-0.5 h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                    />
                   </svg>
                 </button>
               </span>
@@ -456,21 +665,27 @@ onMounted(() => {
                 </p>
               </div>
 
-              <Link class="themeColor justify-center flex items-center gap-x-3.5 py-2 text-sm focus:ring-2 w-full"
-                :href="route('profile.show')">
-              Perfil
+              <Link
+                class="themeColor justify-center flex items-center gap-x-3.5 py-2 text-sm focus:ring-2 w-full"
+                :href="route('profile.show')"
+              >
+                Perfil
               </Link>
 
-              <button type="button"
+              <button
+                type="button"
                 class="themeColor justify-center flex items-center gap-x-3.5 py-2 text-sm focus:ring-2 w-full"
-                @click="switchTheme">
+                @click="switchTheme"
+              >
                 Alterar Tema
               </button>
 
               <!-- Authentication -->
-              <button type="button"
+              <button
+                type="button"
                 class="themeColor justify-center flex items-center gap-x-3.5 py-2 text-sm focus:ring-2 w-full"
-                @click="logout">
+                @click="logout"
+              >
                 Log Out
               </button>
             </template>

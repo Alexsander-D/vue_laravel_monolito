@@ -62,6 +62,11 @@ Route::middleware([
             [AttendanceController::class, 'store']
         )->name('attendance.store');
 
+        Route::get(
+            '/attendance/report',
+            [AttendanceController::class, 'report']
+        )->name('attendance.report');
+
         Route::prefix('technical_assistance')->group(function () {
             Route::prefix('registration')->group(function () {
                 // ? FAILURES
