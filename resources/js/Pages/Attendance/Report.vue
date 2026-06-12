@@ -1,8 +1,8 @@
 <script setup>
 import BaseLayout from '@/Layouts/BaseLayout.vue';
+import DateFilter from '@/Components/DateFilter.vue';
 import { computed } from 'vue';
-import { defineProps } from 'vue';
-import { router, usePage } from '@inertiajs/vue3';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 
 const props = defineProps({
@@ -10,10 +10,31 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  date: {
+    type: Object,
+    default: () => ({
+      startDate: '',
+      endDate: '',
+    }),
+  },
+});
+
+const getToday = () => new Date().toISOString().slice(0, 10);
+
+const form = useForm({
+  startDate: props.date?.startDate || getToday(),
+  endDate: props.date?.endDate || getToday(),
 });
 
 const page = usePage();
 const currentUserId = computed(() => page.props.auth?.user?.id ?? null);
+
+const submitFilters = () => {
+  form.get(route('attendance.report'), {
+    preserveScroll: true,
+    preserveState: true,
+  });
+};
 
 const totalPrice = computed(() => {
   return props.records.reduce((sum, record) => sum + Number(record.price || 0), 0);
@@ -85,11 +106,13 @@ const deleteAttendance = async (attendanceId) => {
   <BaseLayout title="Produção Diária">
     <div class="w-full mx-auto pt-1">
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
-        <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold text-yellow-500">Relatório Diário</h1>
-        </div>
+        <DateFilter
+          v-model:startDate="form.startDate"
+          v-model:endDate="form.endDate"
+          @submit="submitFilters"
+        />
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto mt-6">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800">
               <tr>
@@ -119,7 +142,7 @@ const deleteAttendance = async (attendanceId) => {
                 </td>
               </tr>
               <tr v-if="props.records.length === 0">
-                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Nenhum registro encontrado.</td>
+                <td :colspan="currentUserId === 1 ? 6 : 5" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Nenhum registro encontrado.</td>
               </tr>
             </tbody>
             <tfoot class="bg-gray-100 dark:bg-gray-800">

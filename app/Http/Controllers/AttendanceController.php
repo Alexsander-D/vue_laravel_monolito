@@ -53,9 +53,12 @@ class AttendanceController extends Controller
         );
     }
 
-    public function report()
+    public function report(Request $request)
     {
-        $records = DB::table('attendances')
+        $startDate = $request->input('start_date', $request->input('startDate'));
+        $endDate = $request->input('end_date', $request->input('endDate'));
+
+        $records = Attendance::query()
             ->join('users', 'attendances.user_id', '=', 'users.id')
             ->leftJoin('attendance_services', 'attendance_services.attendance_id', '=', 'attendances.id')
             ->select(
@@ -67,7 +70,7 @@ class AttendanceController extends Controller
                 'attendances.payment_method',
                 'attendances.created_at'
             )
-            ->whereDate('attendances.created_at', Carbon::today())
+            ->dateRange($startDate, $endDate)
             ->groupBy(
                 'attendances.id',
                 'attendances.user_id',
@@ -81,6 +84,10 @@ class AttendanceController extends Controller
 
         return Inertia::render('Attendance/Report', [
             'records' => $records,
+            'date' => [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+            ],
         ]);
     }
 }
