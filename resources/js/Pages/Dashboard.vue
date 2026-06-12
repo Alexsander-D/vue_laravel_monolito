@@ -115,7 +115,11 @@ const confirmAttendance = async () => {
   }
 
   const servicesSummary = selectedServices.value
-    .map((service) => `• ${service.title} — R$ ${service.value.toFixed(2).replace(".", ",")}`)
+    .map(
+      (service) =>
+        `• ${service.title} × ${service.quantity} — R$ ${service.value.toFixed(2).replace(".", ",")} cada` +
+        ` (subtotal: R$ ${(service.value * service.quantity).toFixed(2).replace(".", ",")})`
+    )
     .join("<br>");
 
   const result = await Swal.fire({
@@ -151,10 +155,12 @@ const submitAttendance = () => {
     return;
   }
 
-  form.services = selectedServices.value.map((service) => ({
-    name: service.title,
-    price: service.value,
-  }));
+  form.services = selectedServices.value.flatMap((service) =>
+    Array.from({ length: service.quantity }, () => ({
+      name: service.title,
+      price: service.value,
+    }))
+  );
 
   form.total = totalValue.value;
   form.payment_method = form.payment_method;
@@ -201,8 +207,15 @@ const submitAttendance = () => {
 const selectedServices = ref([]);
 
 const totalValue = computed(() => {
-  return selectedServices.value.reduce((total, service) => total + service.value, 0);
+  return selectedServices.value.reduce(
+    (total, service) => total + service.value * service.quantity,
+    0
+  );
 });
+
+const quantityOf = (service) => {
+  return selectedServices.value.find((item) => item.title === service.title)?.quantity ?? 0;
+};
 
 const toggleSelection = (service) => {
   const index = selectedServices.value.findIndex((item) => item.title === service.title);
@@ -210,8 +223,34 @@ const toggleSelection = (service) => {
   if (index > -1) {
     selectedServices.value.splice(index, 1);
   } else {
-    selectedServices.value.push(service);
+    selectedServices.value.push({ ...service, quantity: 1 });
   }
+};
+
+const increaseQuantity = (service) => {
+  const item = selectedServices.value.find((entry) => entry.title === service.title);
+
+  if (!item) {
+    selectedServices.value.push({ ...service, quantity: 1 });
+    return;
+  }
+
+  item.quantity += 1;
+};
+
+const decreaseQuantity = (service) => {
+  const index = selectedServices.value.findIndex((item) => item.title === service.title);
+
+  if (index === -1) {
+    return;
+  }
+
+  if (selectedServices.value[index].quantity > 1) {
+    selectedServices.value[index].quantity -= 1;
+    return;
+  }
+
+  selectedServices.value.splice(index, 1);
 };
 
 const isSelected = (service) => {
@@ -254,6 +293,26 @@ const isSelected = (service) => {
             <p class="mt-2 text-md font-bold" style="color: var(--cor-principal)">
               R$ {{ service.value.toFixed(2).replace(".", ",") }}
             </p>
+
+            <div class="mt-4 flex items-center justify-center gap-2" @click.stop>
+              <button
+                type="button"
+                @click="decreaseQuantity(service)"
+                class="h-8 w-8 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                −
+              </button>
+              <span class="min-w-8 rounded-full bg-yellow-500/10 px-3 py-1 text-sm font-semibold text-yellow-700 dark:text-yellow-200">
+                {{ quantityOf(service) || 0 }}
+              </span>
+              <button
+                type="button"
+                @click="increaseQuantity(service)"
+                class="h-8 w-8 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
 
