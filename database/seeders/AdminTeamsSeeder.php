@@ -12,8 +12,8 @@ class AdminTeamsSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::where('email', 'admin@hotmail.com')->first();
-
+        $user = User::where('email', env('MAIL_USERNAME'))->first();
+        
         $teams = [
             'SAC',
             'RMA',

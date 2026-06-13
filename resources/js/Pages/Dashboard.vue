@@ -262,13 +262,13 @@ const isSelected = (service) => {
     <div class="w-full mx-auto pt-1">
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
         <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold" style="color: var(--cor-principal)">
-            Realizar Atendimento
+          <h1 class="text-3xl font-bold text-yellow-500">
+            Selecione os serviços realizados.
           </h1>
 
-          <p class="text-gray-600 dark:text-gray-400 mt-2">
+          <!-- <p class="text-gray-600 dark:text-gray-400 mt-2">
             Selecione os serviços realizados.
-          </p>
+          </p> -->
         </div>
 
         <div class="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
@@ -290,7 +290,7 @@ const isSelected = (service) => {
               {{ service.title }}
             </h3>
 
-            <p class="mt-2 text-md font-bold" style="color: var(--cor-principal)">
+            <p class="mt-2 text-md font-bold text-yellow-500">
               R$ {{ service.value.toFixed(2).replace(".", ",") }}
             </p>
 

@@ -11,11 +11,13 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::firstOrCreate([
-            'name' => 'Admin User',
-            'email' => 'admin@hotmail.com',
-            'password' => 'admin',
-        ]);
+        $user = User::firstOrCreate(
+            ['email' => env('MAIL_USERNAME')],
+            [
+                'name' => 'Admin User',
+                'password' => '@dmin',
+            ]
+        );
 
         $user->markEmailAsVerified();
 

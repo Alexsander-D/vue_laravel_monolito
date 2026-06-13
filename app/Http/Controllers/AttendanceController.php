@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\AttendanceService;
+use App\Models\Spatie\User;
+use App\Notifications\AttendanceCreatedNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,31 +28,47 @@ class AttendanceController extends Controller
             'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
         ])->validate();
 
-        DB::transaction(function () use ($validated) {
+        try {
+            DB::transaction(function () use ($validated) {
 
-            $total = collect($validated['services'])
-                ->sum('price');
+                $total = collect($validated['services'])
+                    ->sum('price');
 
-            $attendance = Attendance::create([
-                'user_id' => Auth::id(),
-                'total' => $total,
-                'payment_method' => $validated['payment_method'],
-            ]);
-
-            foreach ($validated['services'] as $service) {
-
-                AttendanceService::create([
-                    'attendance_id' => $attendance->id,
-                    'service_name' => $service['name'],
-                    'price' => $service['price'],
+                $attendance = Attendance::create([
+                    'user_id' => Auth::id(),
+                    'total' => $total,
+                    'payment_method' => $validated['payment_method'],
                 ]);
-            }
-        });
 
-        return back()->with(
-            'success',
-            'ATENDIMENTO REGISTRADO COM SUCESSO.'
-        );
+                foreach ($validated['services'] as $service) {
+
+                    AttendanceService::create([
+                        'attendance_id' => $attendance->id,
+                        'service_name' => $service['name'],
+                        'price' => $service['price'],
+                    ]);
+                }
+
+                // Enviar notificação para o user 1 (responsável)
+                $responsavel = User::find(1);
+                if (!$responsavel) {
+                    throw new \Exception('USUÁRIO RESPONSÁVEL NÃO ENCONTRADO.');
+                }
+
+                try {
+                    $responsavel->notify(new AttendanceCreatedNotification($attendance));
+                } catch (\Exception $e) {
+                    throw new \Exception('ERRO AO ENVIAR E-MAIL: ' . $e->getMessage());
+                }
+            });
+
+            return back()->with(
+                'success',
+                'ATENDIMENTO REGISTRADO COM SUCESSO.'
+            );
+        } catch (\Exception $e) {
+            return back()->withErrors(['email_error' => $e->getMessage()]);
+        }
     }
 
     public function report(Request $request)

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Spatie\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
