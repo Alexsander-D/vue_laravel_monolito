@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
-use Symfony\Component\HttpFoundation\Response;
 
 class AttendanceController extends Controller
 {
@@ -49,18 +48,15 @@ class AttendanceController extends Controller
                     ]);
                 }
 
-                // Enviar notificação para todos os usuários do sistema,
-                // incluindo quem realizou o atendimento.
-                $toArray = User::all();
+                // Enviar notificação para o usuário atual.
+                $currentUser = Auth::user();
 
-                if ($toArray->isEmpty()) {
-                    throw new \Exception('NENHUM USUÁRIO ENCONTRADO PARA RECEBER A NOTIFICAÇÃO.');
+                if (!$currentUser) {
+                    throw new \Exception('USUÁRIO ATUAL NÃO ENCONTRADO PARA RECEBER A NOTIFICAÇÃO.');
                 }
 
                 try {
-                    foreach ($toArray as $usuario) {
-                        $usuario->notify(new AttendanceCreatedNotification($attendance));
-                    }
+                    $currentUser->notify(new AttendanceCreatedNotification($attendance));
                 } catch (\Exception $e) {
                     throw new \Exception('ERRO AO ENVIAR E-MAIL: ' . $e->getMessage());
                 }
