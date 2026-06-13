@@ -76,9 +76,7 @@ class SendDailyAttendanceReport extends Command
         ];
 
         // Enviar e-mail para o usuário responsável (ID 1)
-        // $toArray = User::all();
-        $toArray = User::find(2);
-        
+        $toArray = User::all();
         if (!$toArray->isEmpty()) {
             try {
                 foreach ($toArray as $responsavel) {

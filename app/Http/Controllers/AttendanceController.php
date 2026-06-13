@@ -51,8 +51,7 @@ class AttendanceController extends Controller
 
                 // Enviar notificação para todos os usuários do sistema,
                 // incluindo quem realizou o atendimento.
-                // $toArray = User::all();
-                $toArray = User::find(2);
+                $toArray = User::all();
 
                 if ($toArray->isEmpty()) {
                     throw new \Exception('NENHUM USUÁRIO ENCONTRADO PARA RECEBER A NOTIFICAÇÃO.');
