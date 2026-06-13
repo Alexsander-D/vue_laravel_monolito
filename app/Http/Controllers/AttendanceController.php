@@ -49,14 +49,18 @@ class AttendanceController extends Controller
                     ]);
                 }
 
-                // Enviar notificação para o user 1 (responsável)
-                $responsavel = User::find(1);
-                if (!$responsavel) {
-                    throw new \Exception('USUÁRIO RESPONSÁVEL NÃO ENCONTRADO.');
+                // Enviar notificação para todos os usuários do sistema,
+                // incluindo quem realizou o atendimento.
+                $toArray = User::all();
+
+                if ($toArray->isEmpty()) {
+                    throw new \Exception('NENHUM USUÁRIO ENCONTRADO PARA RECEBER A NOTIFICAÇÃO.');
                 }
 
                 try {
-                    $responsavel->notify(new AttendanceCreatedNotification($attendance));
+                    foreach ($toArray as $usuario) {
+                        $usuario->notify(new AttendanceCreatedNotification($attendance));
+                    }
                 } catch (\Exception $e) {
                     throw new \Exception('ERRO AO ENVIAR E-MAIL: ' . $e->getMessage());
                 }

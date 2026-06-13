@@ -76,10 +76,12 @@ class SendDailyAttendanceReport extends Command
         ];
 
         // Enviar e-mail para o usuário responsável (ID 1)
-        $responsavel = User::find(1);
-        if ($responsavel) {
+        $toArray = User::all();
+        if (!$toArray->isEmpty()) {
             try {
-                $responsavel->notify(new DailyAttendanceReportNotification($attendanceData));
+                foreach ($toArray as $responsavel) {
+                    $responsavel->notify(new DailyAttendanceReportNotification($attendanceData));
+                }
                 $this->info('✓ Relatório diário enviado com sucesso!');
             } catch (\Exception $e) {
                 $this->error('✗ Erro ao enviar relatório: ' . $e->getMessage());

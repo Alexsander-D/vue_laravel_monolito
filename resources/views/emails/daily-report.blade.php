@@ -214,7 +214,7 @@
     <div class="email-wrapper">
         <!-- Header -->
         <div class="email-header">
-            <img src="http://3.84.217.247/images/logomarca2.png" alt="Barbearia Carioca" class="logo">
+            <img src="http://3.84.217.247/images/logomarca.png" alt="Barbearia Carioca" class="logo">
             <h1>Relatório Diário</h1>
             <p>{{ $date }}</p>
         </div>
