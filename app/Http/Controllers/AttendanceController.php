@@ -6,7 +6,6 @@ use App\Models\Attendance;
 use App\Models\AttendanceService;
 use App\Models\Spatie\User;
 use App\Notifications\AttendanceCreatedNotification;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -48,17 +47,11 @@ class AttendanceController extends Controller
                     ]);
                 }
 
-                // Enviar notificação para o usuário atual.
-                $currentUser = Auth::user();
-
-                if (!$currentUser) {
-                    throw new \Exception('USUÁRIO ATUAL NÃO ENCONTRADO PARA RECEBER A NOTIFICAÇÃO.');
-                }
-
-                try {
-                    $currentUser->notify(new AttendanceCreatedNotification($attendance));
-                } catch (\Exception $e) {
-                    throw new \Exception('ERRO AO ENVIAR E-MAIL: ' . $e->getMessage());
+                $toArray = User::where('id', '!=', 1)->get();
+                if (!$toArray->isEmpty()) {
+                    foreach ($toArray as $responsavel) {
+                        $responsavel->notify(new AttendanceCreatedNotification($attendance));
+                    }
                 }
             });
 

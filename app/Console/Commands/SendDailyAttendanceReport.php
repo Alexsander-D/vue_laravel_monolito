@@ -75,8 +75,8 @@ class SendDailyAttendanceReport extends Command
             'date' => $dateFormatted,
         ];
 
-        // Enviar e-mail para o usuário responsável (ID 1)
-        $toArray = User::all();
+        // Enviar e-mail para os usuários cadastrados, exceto o usuário com ID 1
+        $toArray = User::where('id', '!=', 1)->get();
         if (!$toArray->isEmpty()) {
             try {
                 foreach ($toArray as $responsavel) {
