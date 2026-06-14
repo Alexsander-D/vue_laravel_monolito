@@ -50,7 +50,7 @@ const idleHours = computed(() => {
   });
 
   const emptyHours = [];
-  for (let hour = 9; hour < 22; hour++) {
+  for (let hour = 9; hour < 18; hour++) {
     if (!hoursWithAttendance.has(hour)) {
       emptyHours.push(hour);
     }
@@ -306,10 +306,10 @@ const deleteAttendance = async (attendanceId) => {
               </div>
               <div class="flex justify-between items-center">
                 <span class="text-gray-600 dark:text-gray-300"
-                  >Turno (09:00 - 22:00):</span
+                  >Turno (09:00 - 18:00):</span
                 >
                 <span class="font-bold text-lg text-gray-800 dark:text-gray-100"
-                  >{{ 22 - 9 }}h</span
+                  >{{ 18 - 9 }}h</span
                 >
               </div>
               <div class="flex justify-between items-center">

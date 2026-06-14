@@ -38,29 +38,29 @@ class SendDailyAttendanceReport extends Command
             ->with('services')
             ->get();
 
-        // Calcular horas com atendimento (09:00 - 22:00)
-        $hoursWithAttendance = new \stdClass();
-        foreach (range(9, 22) as $hour) {
-            $hoursWithAttendance->{$hour} = false;
+        // Calcular horas com atendimento (09:00 - 18:00)
+        $hoursWithAttendance = [];
+        foreach (range(9, 18) as $hour) {
+            $hoursWithAttendance[$hour] = false;
         }
 
         $attendances->each(function ($attendance) use ($hoursWithAttendance) {
             $hour = $attendance->created_at->hour;
-            if ($hour >= 9 && $hour < 22) {
-                $hoursWithAttendance->{$hour} = true;
+            if ($hour >= 9 && $hour < 18) {
+                $hoursWithAttendance[$hour] = true;
             }
         });
 
         // Calcular horas ociosas
         $idleHours = [];
         foreach (range(9, 21) as $hour) {
-            if (!$hoursWithAttendance->{$hour}) {
+            if (!($hoursWithAttendance[$hour] ?? false)) {
                 $nextHour = $hour + 1;
                 $idleHours[] = sprintf('%02d:%02d - %02d:%02d', $hour, 0, $nextHour, 0);
             }
         }
 
-        // Calcular totais (13 horas de turno: 9 às 22)
+        // Calcular totais (13 horas de turno: 9 às 18)
         $totalAttendances = $attendances->count();
         $totalRevenue = $attendances->sum('total');
         $occupiedHours = 13 - count($idleHours);
