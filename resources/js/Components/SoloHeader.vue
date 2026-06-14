@@ -96,9 +96,9 @@ onMounted(() => {
             $page.props.userPermissions.includes(term)
           )
         " :class="{
-            hidden: !isMenuOpen,
-            block: isMenuOpen,
-          }" class="ms-3 relative py-1">
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
           <Dropdown align="bottom" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
@@ -171,8 +171,7 @@ onMounted(() => {
                   ['separar-rastreio', 'coletar-rastreio'].some((term) =>
                     $page.props.userPermissions.includes(term)
                   )
-                "
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                   :href="route('collect-tracking.show')">
                   Relatório
                 </Link>
@@ -187,9 +186,9 @@ onMounted(() => {
           $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
           $page.props.userPermissions.includes('gerir-materiais')
         " :class="{
-            hidden: !isMenuOpen,
-            block: isMenuOpen,
-          }" class="ms-3 relative py-1">
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
           <Dropdown align="right" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
@@ -223,9 +222,9 @@ onMounted(() => {
           $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
           $page.props.userPermissions.includes('relatorios-triagem')
         " :class="{
-            hidden: !isMenuOpen,
-            block: isMenuOpen,
-          }" class="ms-3 relative py-1">
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
           <Dropdown align="right" width="60">
             <template #trigger>
               <span class="inline-flex rounded-md whitespace-nowrap">
@@ -331,7 +330,7 @@ onMounted(() => {
           <Dropdown align="right" width="60">
             <template #trigger>
               <Link
-               class="stringColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                class="stringColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                 :href="route('attendance.report')">
                 RELATÓRIO
               </Link>
@@ -345,9 +344,9 @@ onMounted(() => {
             $page.props.auth.user.current_team.name.includes(term)
           )
         " :class="{
-            hidden: !isMenuOpen,
-            block: isMenuOpen,
-          }" class="ms-3 relative py-1">
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
           <!-- Teams Dropdown -->
           <Dropdown align="right" width="60">
             <template #trigger>
@@ -392,8 +391,7 @@ onMounted(() => {
                 <Link v-if="
                   $page.props.userPermissions.includes('realizar-laudo') &&
                   !$page.props.userPermissions.includes('transferir-produto-admin')
-                "
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                   :href="route('product_transfer.index')">
                   Transferir Produto
                 </Link>
@@ -414,8 +412,7 @@ onMounted(() => {
                   $page.props.userPermissions.includes(
                     'visualizar-relatorio-individual'
                   )
-                "
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                   :href="route('individual_report.index')">
                   Relatório Individual
                 </Link>
@@ -471,13 +468,12 @@ onMounted(() => {
                   Gerir Permissões
                 </Link>
 
-                <Link v-if="$page.props.jetstream.canCreateTeams"
+                <Link v-if="$page.props.auth.user.id === 1 && $page.props.jetstream.canCreateTeams"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                   :href="route('teams.create')">
                   Criar nova equipe
                 </Link>
                 <div v-if="
-                  $page.props.userPermissions.includes('mudar-equipe') &&
                   $page.props.auth.user.all_teams.length > 1
                 " class="group relative">
                   <button type="button"

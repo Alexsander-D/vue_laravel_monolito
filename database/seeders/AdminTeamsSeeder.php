@@ -17,7 +17,8 @@ class AdminTeamsSeeder extends Seeder
         $teams = [
             'SAC',
             'RMA',
-            'TRIAGEM'
+            'TRIAGEM',
+            'BARBEARIA CARIOCA 2'
         ];
 
         foreach ($teams as $teamName) {
@@ -82,6 +83,16 @@ class AdminTeamsSeeder extends Seeder
                     'cadastrar-falhas',
                     'cadastrar-produtos',
                     'embalagem'
+                ]);
+            }
+
+            if ($teamName === 'BARBEARIA CARIOCA 2') {
+                $roles = [];
+                $roles = array_merge($roles, ['Admin', 'Barbeiro', 'Consultor']);
+                $permissions = array_merge($permissions, [
+                    'gerir-equipe',
+                    'gerir-permissoes',
+                    'alterar-relatorios'
                 ]);
             }
 
