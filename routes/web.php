@@ -37,6 +37,7 @@ use App\Http\Controllers\Internal\TimelineController;
 use App\Http\Controllers\Internal\ProductOutputController;
 use App\Http\Controllers\Internal\ProductTransferController;
 use App\Http\Controllers\Internal\ProductTransferControllerAdmin;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -67,10 +68,25 @@ Route::middleware([
             [AttendanceController::class, 'report']
         )->name('attendance.report');
 
+        Route::post(
+            '/attendance/send-productivity-report',
+            [AttendanceController::class, 'sendProductivityReport']
+        )->name('attendance.sendProductivityReport');
+
+        Route::put(
+            '/attendance/{attendance}',
+            [AttendanceController::class, 'update']
+        )->name('attendance.update');
+
         Route::delete(
             '/attendance/{attendance}',
             [AttendanceController::class, 'destroy']
         )->name('attendance.destroy');
+
+        Route::get('/attendance/stock', [StockController::class, 'index'])->name('stock.index');
+        Route::post('/attendance/stock/create', [StockController::class, 'create'])->name('stock.create');
+        Route::put('/attendance/stock/{stock}', [StockController::class, 'update'])->name('stock.update');
+        Route::delete('/attendance/stock/{stock}', [StockController::class, 'destroy'])->name('stock.destroy');
 
         Route::prefix('technical_assistance')->group(function () {
             Route::prefix('registration')->group(function () {

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\AttendanceService;
 use App\Models\Spatie\User;
-use App\Notifications\AttendanceCreatedNotification;
+use App\Notifications\DailyAttendanceReportNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +20,7 @@ class AttendanceController extends Controller
             'services' => ['required', 'array', 'min:1'],
             'services.*.name' => ['required', 'string'],
             'services.*.price' => ['required', 'numeric'],
-            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
+            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix,Robert'],
         ], [
             'services.required' => 'SELECIONE AO MENOS UM SERVIÇO.',
             'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
@@ -47,12 +47,6 @@ class AttendanceController extends Controller
                     ]);
                 }
 
-                $toArray = User::where('id', '!=', 1)->get();
-                if (!$toArray->isEmpty()) {
-                    foreach ($toArray as $responsavel) {
-                        $responsavel->notify(new AttendanceCreatedNotification($attendance));
-                    }
-                }
             });
 
             return back()->with(
@@ -99,6 +93,78 @@ class AttendanceController extends Controller
                 'startDate' => $startDate,
                 'endDate' => $endDate,
             ],
+        ]);
+    }
+
+    public function sendProductivityReport(Request $request)
+    {
+        $startDate = $request->input('startDate', $request->input('start_date'));
+        $endDate = $request->input('endDate', $request->input('end_date'));
+
+        $attendances = Attendance::query()
+            ->when($startDate, fn($query) => $query->whereDate('created_at', '>=', $startDate))
+            ->when($endDate, fn($query) => $query->whereDate('created_at', '<=', $endDate))
+            ->with('services')
+            ->get();
+
+        $hoursWithAttendance = array_fill_keys(range(9, 21), false);
+        foreach ($attendances as $attendance) {
+            $hour = (int) $attendance->created_at->format('H');
+            if ($hour >= 9 && $hour <= 21) {
+                $hoursWithAttendance[$hour] = true;
+            }
+        }
+
+        $idleHours = [];
+        foreach (range(9, 21) as $hour) {
+            if (!($hoursWithAttendance[$hour] ?? false)) {
+                $idleHours[] = sprintf('%02d:00 - %02d:00', $hour, $hour + 1);
+            }
+        }
+
+        $totalAttendances = $attendances->count();
+        $totalRevenue = $attendances->sum('total');
+        $occupiedHours = count(array_filter($hoursWithAttendance));
+        $occupancyPercentage = $occupiedHours > 0 ? round(($occupiedHours / count($hoursWithAttendance)) * 100) : 0;
+        $dateLabel = $startDate && $endDate
+            ? sprintf('%s até %s', $startDate, $endDate)
+            : now()->format('d/m/Y');
+
+        $attendanceData = [
+            'total_attendances' => $totalAttendances,
+            'total_revenue' => $totalRevenue,
+            'idle_hours' => $idleHours,
+            'occupancy_percentage' => $occupancyPercentage,
+            'date' => $dateLabel,
+        ];
+
+        $toArray = User::where('id', '!=', 1)->get();
+        foreach ($toArray as $responsavel) {
+            $responsavel->notify(new DailyAttendanceReportNotification($attendanceData));
+        }
+
+        return response()->json([
+            'message' => 'Relatório de produtividade enviado por e-mail.',
+        ]);
+    }
+
+    public function update(Request $request, Attendance $attendance)
+    {
+        $validated = Validator::make($request->all(), [
+            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix,Robert'],
+        ])->validate();
+
+        $attendance->update([
+            'payment_method' => $validated['payment_method'],
+        ]);
+    }
+
+    public function destroy(Attendance $attendance)
+    {
+        $attendance->delete();
+
+        return response()->json([
+            'message' => 'Atendimento excluído com sucesso.',
         ]);
     }
 }

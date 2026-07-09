@@ -338,6 +338,20 @@ onMounted(() => {
           </Dropdown>
         </div>
         <!-- FIM BARBERSHOP -->
+
+        <!-- ESTOQUE LINK -->
+        <div :class="{
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
+          <Link
+            class="stringColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+            :href="route('stock.index')">
+            ESTOQUE
+          </Link>
+        </div>
+        <!-- FIM ESTOQUE LINK -->
+
         <!-- PRODUÇÃO DIÁRIA DROPDOWN -->
         <div v-if="
           ['RMA', 'SAC'].some((term) =>

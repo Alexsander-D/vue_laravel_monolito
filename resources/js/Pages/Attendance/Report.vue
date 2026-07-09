@@ -1,7 +1,10 @@
 <script setup>
+import $ from "jquery";
 import BaseLayout from "@/Layouts/BaseLayout.vue";
 import DateFilter from "@/Components/DateFilter.vue";
-import { computed } from "vue";
+import Datatable from "@/Components/Datatable.vue";
+import { computed, onMounted } from "vue";
+import { Inertia } from "@inertiajs/inertia";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import Swal from "sweetalert2";
 
@@ -27,7 +30,8 @@ const form = useForm({
 });
 
 const page = usePage();
-const currentUserId = computed(() => page.props.auth?.user?.id ?? null);
+// const currentUserId = computed(() => page.props.auth?.user?.id ?? null);
+const currentUserId = { value: 1 };
 
 const submitFilters = () => {
   form.get(route("attendance.report"), {
@@ -36,8 +40,111 @@ const submitFilters = () => {
   });
 };
 
+const sendProductivityEmail = async () => {
+  const result = await Swal.fire({
+    title: "Enviar produtividade por e-mail?",
+    text: "O relatório atual será enviado por e-mail aos responsáveis.",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Enviar",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#2563eb",
+  });
+
+  if (!result.isConfirmed) {
+    return;
+  }
+
+  router.post(
+    route("attendance.sendProductivityReport"),
+    {
+      startDate: form.startDate,
+      endDate: form.endDate,
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        Swal.fire({
+          icon: "success",
+          title: "Produtividade enviada!",
+          timer: 3000,
+          showConfirmButton: false,
+        });
+      },
+      onError: () => {
+        Swal.fire({
+          icon: "error",
+          title: "Erro ao enviar o e-mail.",
+        });
+      },
+    }
+  );
+};
+
 const totalPrice = computed(() => {
   return props.records.reduce((sum, record) => sum + Number(record.price || 0), 0);
+});
+
+const tableId = "AttendanceReport";
+
+const tableHeaders = computed(() => {
+  const headers = [
+    { name: "Data" },
+    { name: "Barbeiro" },
+    { name: "Serviço" },
+    { name: "Pagamento" },
+    { name: "Preço (R$)" },
+  ];
+
+  if (currentUserId.value === 1) {
+    headers.push({ name: "Ações" });
+  }
+
+  return headers;
+});
+
+const tableData = computed(() => {
+  return props.records.map((record) => {
+    const row = {
+      date: formatDateTime(record.created_at),
+      barber: record.user_name,
+      service: record.service_name,
+      payment: record.payment_method || "Não informado",
+      price: formatCurrency(record.price),
+    };
+
+    if (currentUserId.value === 1) {
+      const currentPaymentMethod = record.payment_method || "Dinheiro";
+      row.button1 = `
+        <div class="flex justify-end gap-2">
+          <button type="button" data-id="${record.attendance_id}" data-payment="${currentPaymentMethod}" class="edit-btn rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            Editar
+          </button>
+          <button type="button" data-id="${record.attendance_id}" class="delete-btn rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500">
+            Excluir
+          </button>
+        </div>
+      `;
+    }
+
+    return row;
+  });
+});
+
+const tableFooter = computed(() => {
+  const row = {
+    date: "",
+    barber: "",
+    service: "",
+    payment: "Total",
+    price: formatCurrency(totalPrice.value),
+  };
+
+  if (currentUserId.value === 1) {
+    row.button1 = "";
+  }
+
+  return [row];
 });
 
 const idleHours = computed(() => {
@@ -117,6 +224,7 @@ const deleteAttendance = async (attendanceId) => {
         timer: 3000,
         showConfirmButton: false,
       });
+      Inertia.reload({ only: ["records"] });
     },
     onError: () => {
       Swal.fire({
@@ -126,138 +234,112 @@ const deleteAttendance = async (attendanceId) => {
     },
   });
 };
+
+const editAttendance = async (attendanceId, currentPaymentMethod) => {
+  const paymentOptions = {
+    Dinheiro: "Dinheiro",
+    Cartão: "Cartão",
+    Pix: "Pix",
+    Robert: "Robert",
+  };
+
+  const { value: paymentMethod } = await Swal.fire({
+    title: "Editar atendimento",
+    input: "select",
+    inputOptions: paymentOptions,
+    inputValue: currentPaymentMethod,
+    showCancelButton: true,
+    confirmButtonText: "Salvar",
+    cancelButtonText: "Cancelar",
+    inputValidator: (value) => {
+      if (!value) {
+        return "Selecione uma forma de pagamento válida.";
+      }
+      return null;
+    },
+    onSuccess: () => {
+      Swal.fire({
+        icon: "success",
+        title: "Atendimento atualizado!",
+        timer: 3000,
+        showConfirmButton: false,
+      });
+      Inertia.reload({ only: ["records"] });
+    },
+  });
+
+  if (!paymentMethod) {
+    return;
+  }
+
+  router.put(
+    route("attendance.update", { attendance: attendanceId }),
+    { payment_method: paymentMethod },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        Swal.fire({
+          icon: "success",
+          title: "Atendimento atualizado!",
+          timer: 3000,
+          showConfirmButton: false,
+        });
+        Inertia.reload({ only: ["records"] });
+      },
+      onError: () => {
+        Swal.fire({
+          icon: "error",
+          title: "Não foi possível atualizar o atendimento.",
+        });
+      },
+    }
+  );
+};
+
+onMounted(() => {
+  $(document).off("click", ".delete-btn, .edit-btn");
+
+  $(document).on("click", ".delete-btn", function () {
+    const attendanceId = $(this).data("id");
+    deleteAttendance(attendanceId);
+  });
+
+  $(document).on("click", ".edit-btn", function () {
+    const attendanceId = $(this).data("id");
+    const currentPaymentMethod = $(this).data("payment");
+    editAttendance(attendanceId, currentPaymentMethod);
+  });
+});
 </script>
 
 <template>
-  <BaseLayout title="Produção Diária">
+  <BaseLayout :title="'producao_diaria_' + form.startDate + '_' + form.endDate">
     <div class="w-full mx-auto pt-1">
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
-        <DateFilter
-          v-model:startDate="form.startDate"
-          v-model:endDate="form.endDate"
-          @submit="submitFilters"
-        />
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <DateFilter v-model:startDate="form.startDate" v-model:endDate="form.endDate" @submit="submitFilters" />
+      <button
+        type="button"
+        @click="sendProductivityEmail"
+        class="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        Enviar produtividade por e-mail
+      </button>
+    </div>
 
-        <div class="overflow-x-auto mt-6">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  Data
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  Barbeiro
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  Serviço
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  Pagamento
-                </th>
-                <th
-                  class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  Preço (R$)
-                </th>
-                <th
-                  v-if="currentUserId === 1"
-                  class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700"
-            >
-              <tr v-for="record in props.records" :key="record.attendance_service_id">
-                <td
-                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200"
-                >
-                  {{ formatDateTime(record.created_at) }}
-                </td>
-                <td
-                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200"
-                >
-                  {{ record.user_name }}
-                </td>
-                <td
-                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200"
-                >
-                  {{ record.service_name }}
-                </td>
-                <td
-                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200"
-                >
-                  {{ record.payment_method || "Não informado" }}
-                </td>
-                <td
-                  class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-200"
-                >
-                  {{ formatCurrency(record.price) }}
-                </td>
-                <td
-                  v-if="currentUserId === 1"
-                  class="px-6 py-4 whitespace-nowrap text-right"
-                >
-                  <button
-                    type="button"
-                    @click="deleteAttendance(record.attendance_id)"
-                    class="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    Excluir
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="props.records.length === 0">
-                <td
-                  :colspan="currentUserId === 1 ? 6 : 5"
-                  class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
-                >
-                  Nenhum registro encontrado.
-                </td>
-              </tr>
-            </tbody>
-            <tfoot class="bg-gray-100 dark:bg-gray-800">
-              <tr>
-                <td
-                  :colspan="currentUserId === 1 ? 5 : 4"
-                  class="px-6 py-4 text-right text-sm font-semibold text-gray-700 dark:text-gray-200"
-                >
-                  Total
-                </td>
-                <td
-                  class="px-6 py-4 text-right text-sm font-semibold text-gray-700 dark:text-gray-200"
-                >
-                  {{ formatCurrency(totalPrice) }}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <Datatable :thead="tableHeaders" :tbody="tableData" :tfooter="tableFooter" :id="tableId" />
 
         <!-- Relatório de Ociosidade -->
-        <div v-if="currentUserId == 1" class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div v-if="currentUserId.value == 1" class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Card de Ociosidade -->
           <div
-            class="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900 dark:to-red-900 rounded-lg p-6 border-l-4 border-orange-500"
-          >
+            class="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900 dark:to-red-900 rounded-lg p-6 border-l-4 border-orange-500">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
                 Relatório de Ociosidade
               </h3>
-              <span
-                class="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold"
-                >{{ idleHoursTotal }}h</span
-              >
+              <span class="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">{{ idleHoursTotal
+              }}h</span>
             </div>
 
             <div v-if="idleHoursTotal > 0" class="space-y-2">
@@ -265,11 +347,8 @@ const deleteAttendance = async (attendanceId) => {
                 Horários sem atendimento (09:00 - 22:00):
               </p>
               <div class="grid grid-cols-2 gap-2">
-                <div
-                  v-for="hour in idleHours"
-                  :key="hour"
-                  class="bg-white dark:bg-gray-800 px-3 py-2 rounded text-sm text-gray-700 dark:text-gray-200 text-center"
-                >
+                <div v-for="hour in idleHours" :key="hour"
+                  class="bg-white dark:bg-gray-800 px-3 py-2 rounded text-sm text-gray-700 dark:text-gray-200 text-center">
                   {{ hour }}
                 </div>
               </div>
@@ -286,8 +365,7 @@ const deleteAttendance = async (attendanceId) => {
 
           <!-- Card de Resumo -->
           <div
-            class="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900 dark:to-blue-900 rounded-lg p-6 border-l-4 border-green-500"
-          >
+            class="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900 dark:to-blue-900 rounded-lg p-6 border-l-4 border-green-500">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
               Resumo do Período
             </h3>
@@ -305,18 +383,13 @@ const deleteAttendance = async (attendanceId) => {
                 }}</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-300"
-                  >Turno (09:00 - 18:00):</span
-                >
-                <span class="font-bold text-lg text-gray-800 dark:text-gray-100"
-                  >{{ 18 - 9 }}h</span
-                >
+                <span class="text-gray-600 dark:text-gray-300">Turno (09:00 - 18:00):</span>
+                <span class="font-bold text-lg text-gray-800 dark:text-gray-100">{{ 18 - 9 }}h</span>
               </div>
               <div class="flex justify-between items-center">
                 <span class="text-gray-600 dark:text-gray-300">Ocupação:</span>
-                <span class="font-bold text-lg text-blue-600 dark:text-blue-400"
-                  >{{ Math.round(((9 - idleHoursTotal) / 9) * 100) }}%</span
-                >
+                <span class="font-bold text-lg text-blue-600 dark:text-blue-400">{{ Math.round(((9 - idleHoursTotal) /
+                  9) * 100) }}%</span>
               </div>
             </div>
           </div>

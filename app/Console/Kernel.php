@@ -12,10 +12,6 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Enviar relatório diário às 22:05 (9:05 PM)
-        $schedule->command('attendance:send-daily-report')
-            ->dailyAt('22:05')
-            ->timezone('America/Sao_Paulo');
     }
 
     /**
