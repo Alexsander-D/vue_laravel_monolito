@@ -325,14 +325,14 @@ onMounted(() => {
           <div class="flex-1">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
               <DateFilter v-model:startDate="form.startDate" v-model:endDate="form.endDate" @submit="submitFilters" />
-              <div class="mt-8 lg:mt-0 lg:ml-4">
+              <div class="mt-8 w-full lg:mt-0 lg:ml-4 lg:max-w-xs">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
                   Método de pagamento
                 </label>
                 <select
                   v-model="form.paymentMethod"
                   @change="submitFilters"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                  class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">Todos</option>
                   <option v-for="method in paymentMethods" :key="method" :value="method">
