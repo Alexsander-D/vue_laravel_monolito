@@ -18,15 +18,19 @@ const props = defineProps({
     default: () => ({
       startDate: "",
       endDate: "",
+      paymentMethod: "",
     }),
   },
 });
+
+const paymentMethods = ["Dinheiro", "Cartão", "Pix", "Robert"];
 
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 const form = useForm({
   startDate: props.date?.startDate || getToday(),
   endDate: props.date?.endDate || getToday(),
+  paymentMethod: props.date?.paymentMethod || "",
 });
 
 const page = usePage();
@@ -60,6 +64,7 @@ const sendProductivityEmail = async () => {
     {
       startDate: form.startDate,
       endDate: form.endDate,
+      paymentMethod: form.paymentMethod,
     },
     {
       preserveScroll: true,
@@ -317,15 +322,34 @@ onMounted(() => {
     <div class="w-full mx-auto pt-1">
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      <DateFilter v-model:startDate="form.startDate" v-model:endDate="form.endDate" @submit="submitFilters" />
-      <button
-        type="button"
-        @click="sendProductivityEmail"
-        class="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        Enviar produtividade por e-mail
-      </button>
-    </div>
+          <div class="flex-1">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <DateFilter v-model:startDate="form.startDate" v-model:endDate="form.endDate" @submit="submitFilters" />
+              <div class="mt-8 lg:mt-0 lg:ml-4">
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Método de pagamento
+                </label>
+                <select
+                  v-model="form.paymentMethod"
+                  @change="submitFilters"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                >
+                  <option value="">Todos</option>
+                  <option v-for="method in paymentMethods" :key="method" :value="method">
+                    {{ method }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            @click="sendProductivityEmail"
+            class="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Enviar produtividade por e-mail
+          </button>
+        </div>
 
         <Datatable :thead="tableHeaders" :tbody="tableData" :tfooter="tableFooter" :id="tableId" />
 
@@ -352,14 +376,6 @@ onMounted(() => {
                   {{ hour }}
                 </div>
               </div>
-            </div>
-            <div v-else class="text-center py-4">
-              <p class="text-green-600 dark:text-green-400 font-semibold">
-                ✓ Nenhuma hora ociosa!
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Todos os horários tiveram atendimento.
-              </p>
             </div>
           </div>
 

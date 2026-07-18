@@ -62,6 +62,7 @@ class AttendanceController extends Controller
     {
         $startDate = $request->input('start_date', $request->input('startDate'));
         $endDate = $request->input('end_date', $request->input('endDate'));
+        $paymentMethod = $request->input('payment_method', $request->input('paymentMethod'));
 
         $records = Attendance::query()
             ->join('users', 'attendances.user_id', '=', 'users.id')
@@ -75,6 +76,9 @@ class AttendanceController extends Controller
                 'attendances.payment_method',
                 'attendances.created_at'
             )
+            ->when($paymentMethod, function ($query, $value) {
+                $query->where('attendances.payment_method', $value);
+            })
             ->dateRange($startDate, $endDate)
             ->groupBy(
                 'attendances.id',
@@ -92,6 +96,7 @@ class AttendanceController extends Controller
             'date' => [
                 'startDate' => $startDate,
                 'endDate' => $endDate,
+                'paymentMethod' => $paymentMethod,
             ],
         ]);
     }
@@ -100,10 +105,12 @@ class AttendanceController extends Controller
     {
         $startDate = $request->input('startDate', $request->input('start_date'));
         $endDate = $request->input('endDate', $request->input('end_date'));
+        $paymentMethod = $request->input('paymentMethod', $request->input('payment_method'));
 
         $attendances = Attendance::query()
             ->when($startDate, fn($query) => $query->whereDate('created_at', '>=', $startDate))
             ->when($endDate, fn($query) => $query->whereDate('created_at', '<=', $endDate))
+            ->when($paymentMethod, fn($query) => $query->where('payment_method', $paymentMethod))
             ->with('services')
             ->get();
 
