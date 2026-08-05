@@ -86,6 +86,7 @@ Route::middleware([
         Route::get('/attendance/stock', [StockController::class, 'index'])->name('stock.index');
         Route::post('/attendance/stock/create', [StockController::class, 'create'])->name('stock.create');
         Route::put('/attendance/stock/{stock}', [StockController::class, 'update'])->name('stock.update');
+        Route::put('/attendance/stock/{stock}/sell', [StockController::class, 'sell'])->name('stock.sell');
         Route::delete('/attendance/stock/{stock}', [StockController::class, 'destroy'])->name('stock.destroy');
 
         Route::prefix('technical_assistance')->group(function () {

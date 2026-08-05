@@ -28,6 +28,7 @@ const showEditModal = ref(false);
 const form = useForm({
     product_name: "",
     quantity: 1,
+    cost_price: "",
     price: "",
 });
 
@@ -35,17 +36,20 @@ const editForm = useForm({
     id: null,
     product_name: "",
     quantity: 0,
+    cost_price: "",
     price: "",
 });
 
 const stockRows = computed(() => props.stocks || []);
 const logRows = computed(() => props.movements || []);
+const currentUserRole = computed(() => page.props.userRole || "");
+const isAdmin = computed(() => currentUserRole.value === "Admin");
 
 const submitStock = () => {
     form.post(route("stock.create"), {
         preserveScroll: true,
         onSuccess: () => {
-            form.reset("product_name", "quantity", "price");
+            form.reset("product_name", "quantity", "cost_price", "price");
             Inertia.reload({ only: ["stocks", "movements"] });
             Swal.fire({
                 icon: "success",
@@ -76,7 +80,8 @@ const openEditModal = (stock) => {
     editForm.id = stock.id;
     editForm.product_name = stock.product_name;
     editForm.quantity = stock.quantity;
-    editForm.price = stock.price;
+    editForm.cost_price = stock.cost_price ?? "";
+    editForm.price = stock.price ?? "";
 
     showEditModal.value = true;
 };
@@ -135,6 +140,76 @@ const submitEditStock = () => {
     });
 };
 
+const sellStock = async (stock) => {
+    const result = await Swal.fire({
+        title: `Vender ${stock.product_name}`,
+        html: `
+            <div class="grid gap-3 text-left">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Quantidade a vender</label>
+                    <input id="sellQuantity" type="number" min="1" max="${stock.quantity}" value="1" class="swal2-input" />
+                </div>
+                <div class="text-sm text-gray-600 dark:text-gray-300">Preço de venda unitário: ${formatCurrency(stock.price)}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-300">Total: <strong id="sellTotal">${formatCurrency(stock.price)}</strong></div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Vender",
+        cancelButtonText: "Cancelar",
+        focusConfirm: false,
+        preConfirm: () => {
+            const quantityInput = Swal.getPopup().querySelector('#sellQuantity');
+            const quantity = parseInt(quantityInput.value, 10);
+            if (!quantity || quantity < 1) {
+                Swal.showValidationMessage('Informe uma quantidade válida.');
+                return false;
+            }
+            if (quantity > stock.quantity) {
+                Swal.showValidationMessage(`A quantidade máxima disponível é ${stock.quantity}.`);
+                return false;
+            }
+            return quantity;
+        },
+        didOpen: () => {
+            const quantityInput = Swal.getPopup().querySelector('#sellQuantity');
+            const totalElement = Swal.getPopup().querySelector('#sellTotal');
+            quantityInput.addEventListener('input', () => {
+                const quantity = parseInt(quantityInput.value, 10) || 0;
+                totalElement.textContent = formatCurrency(quantity * Number(stock.price || 0));
+            });
+        },
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
+    const quantity = result.value;
+
+    router.put(
+        route("stock.sell", { stock: stock.id }),
+        { quantity },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    icon: "success",
+                    title: "Venda registrada!",
+                    timer: 1800,
+                    showConfirmButton: false,
+                });
+                Inertia.reload({ only: ["stocks", "movements"] });
+            },
+            onError: () => {
+                Swal.fire({
+                    icon: "error",
+                    title: "Erro ao registrar a venda.",
+                });
+            },
+        }
+    );
+};
+
 const formatCurrency = (value) => {
     return Number(value || 0).toLocaleString("pt-BR", {
         style: "currency",
@@ -183,7 +258,7 @@ const formatDateTime = (value) => {
                                 <InputError :message="form.errors.product_name" class="mt-1" />
                             </div>
 
-                            <div class="col-span-12 md:col-span-3">
+                            <div class="col-span-12 md:col-span-2">
                                 <label
                                     class="block text-sm font-medium text-gray-700 dark:text-gray-200">Quantidade</label>
                                 <TextInput id="quantity" v-model="form.quantity" type="number" min="1"
@@ -192,7 +267,14 @@ const formatDateTime = (value) => {
                             </div>
 
                             <div class="col-span-12 md:col-span-3">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço de custo</label>
+                                <TextInput id="cost_price" v-model="form.cost_price" type="number" step="0.01" min="0"
+                                    class="mt-1 block w-full" />
+                                <InputError :message="form.errors.cost_price" class="mt-1" />
+                            </div>
+
+                            <div class="col-span-12 md:col-span-3">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço de venda</label>
                                 <TextInput id="price" v-model="form.price" type="number" step="0.01" min="0"
                                     class="mt-1 block w-full" />
                                 <InputError :message="form.errors.price" class="mt-1" />
@@ -220,9 +302,12 @@ const formatDateTime = (value) => {
                                         <th
                                             class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                                             Quantidade</th>
+                                        <th v-if="isAdmin"
+                                            class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                            Preço de custo</th>
                                         <th
                                             class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                            Preço</th>
+                                            Preço de venda</th>
                                         <th
                                             class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                                             Ações</th>
@@ -235,13 +320,19 @@ const formatDateTime = (value) => {
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
                                             stock.quantity }}
                                         </td>
+                                        <td v-if="isAdmin" class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
+                                            formatCurrency(stock.cost_price) }}</td>
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
                                             formatCurrency(stock.price) }}</td>
                                         <td class="px-4 py-3 text-right space-x-2">
-                                            <button type="button" @click="openEditModal(stock)"
-                                                class="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">Editar</button>
-                                            <button type="button" @click="confirmDeleteStock(stock)"
-                                                class="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500">Excluir</button>
+                                            <button type="button" @click="sellStock(stock)"
+                                                class="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500">Vender</button>
+                                            <template v-if="isAdmin">
+                                              <button type="button" @click="openEditModal(stock)"
+                                                  class="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">Editar</button>
+                                              <button type="button" @click="confirmDeleteStock(stock)"
+                                                  class="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500">Excluir</button>
+                                            </template>
                                         </td>
                                     </tr>
                                     <tr v-if="stockRows.length === 0">
@@ -326,7 +417,13 @@ const formatDateTime = (value) => {
                                 <InputError :message="editForm.errors.quantity" class="mt-1" />
                             </div>
                             <div class="col-span-12 md:col-span-6">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço de custo</label>
+                                <TextInput id="edit_cost_price" v-model="editForm.cost_price" type="number" step="0.01" min="0"
+                                    class="mt-1 block w-full" />
+                                <InputError :message="editForm.errors.cost_price" class="mt-1" />
+                            </div>
+                            <div class="col-span-12 md:col-span-6">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço de venda</label>
                                 <TextInput id="edit_price" v-model="editForm.price" type="number" step="0.01" min="0"
                                     class="mt-1 block w-full" />
                                 <InputError :message="editForm.errors.price" class="mt-1" />
