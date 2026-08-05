@@ -34,8 +34,8 @@ const form = useForm({
 });
 
 const page = usePage();
-// const currentUserId = computed(() => page.props.auth?.user?.id ?? null);
-const currentUserId = { value: 1 };
+const currentUserRole = computed(() => page.props.userRole || "");
+const isAdmin = computed(() => currentUserRole.value === "Admin");
 
 const submitFilters = () => {
   form.get(route("attendance.report"), {
@@ -101,7 +101,7 @@ const tableHeaders = computed(() => {
     { name: "Preço (R$)" },
   ];
 
-  if (currentUserId.value === 1) {
+  if (isAdmin.value) {
     headers.push({ name: "Ações" });
   }
 
@@ -118,7 +118,7 @@ const tableData = computed(() => {
       price: formatCurrency(record.price),
     };
 
-    if (currentUserId.value === 1) {
+    if (isAdmin.value) {
       const currentPaymentMethod = record.payment_method || "Dinheiro";
       row.button1 = `
         <div class="flex justify-end gap-2">
@@ -145,7 +145,7 @@ const tableFooter = computed(() => {
     price: formatCurrency(totalPrice.value),
   };
 
-  if (currentUserId.value === 1) {
+  if (isAdmin.value) {
     row.button1 = "";
   }
 
@@ -324,8 +324,8 @@ onMounted(() => {
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex-1">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <DateFilter v-model:startDate="form.startDate" v-model:endDate="form.endDate" @submit="submitFilters" />
-              <div class="mt-8 w-full lg:mt-0 lg:ml-4 lg:max-w-xs">
+              <DateFilter v-if="isAdmin" v-model:startDate="form.startDate" v-model:endDate="form.endDate" @submit="submitFilters" />
+              <div v-if="isAdmin" class="mt-8 w-full lg:mt-0 lg:ml-4 lg:max-w-xs">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
                   Método de pagamento
                 </label>
@@ -343,6 +343,7 @@ onMounted(() => {
             </div>
           </div>
           <button
+            v-if="isAdmin"
             type="button"
             @click="sendProductivityEmail"
             class="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -354,7 +355,7 @@ onMounted(() => {
         <Datatable :thead="tableHeaders" :tbody="tableData" :tfooter="tableFooter" :id="tableId" />
 
         <!-- Relatório de Ociosidade -->
-        <div v-if="currentUserId.value == 1" class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div v-if="isAdmin" class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Card de Ociosidade -->
           <div
             class="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900 dark:to-red-900 rounded-lg p-6 border-l-4 border-orange-500">
