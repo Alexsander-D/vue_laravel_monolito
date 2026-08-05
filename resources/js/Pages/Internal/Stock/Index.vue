@@ -234,7 +234,7 @@ const formatDateTime = (value) => {
         <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
             <div class="w-full mx-auto pt-1">
 
-                <FormSection @submitted="confirmSubmitStock">
+                <FormSection v-if="isAdmin" @submitted="confirmSubmitStock">
                     <template #title>
                         <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <div class="text-lg font-semibold text-gray-900 dark:text-gray-100">Controle de Estoque
@@ -250,7 +250,7 @@ const formatDateTime = (value) => {
 
                     <template #form>
                         <div class="grid grid-cols-12 gap-4 mt-4">
-                            <div class="col-span-12 md:col-span-4">
+                            <div class="col-span-12 md:col-span-3">
                                 <label
                                     class="block text-sm font-medium text-gray-700 dark:text-gray-200">Produto</label>
                                 <TextInput id="product_name" v-model="form.product_name" type="text"
@@ -266,21 +266,21 @@ const formatDateTime = (value) => {
                                 <InputError :message="form.errors.quantity" class="mt-1" />
                             </div>
 
-                            <div class="col-span-12 md:col-span-3">
+                            <div class="col-span-12 md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço de custo</label>
                                 <TextInput id="cost_price" v-model="form.cost_price" type="number" step="0.01" min="0"
                                     class="mt-1 block w-full" />
                                 <InputError :message="form.errors.cost_price" class="mt-1" />
                             </div>
 
-                            <div class="col-span-12 md:col-span-3">
+                            <div class="col-span-12 md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Preço de venda</label>
                                 <TextInput id="price" v-model="form.price" type="number" step="0.01" min="0"
                                     class="mt-1 block w-full" />
                                 <InputError :message="form.errors.price" class="mt-1" />
                             </div>
 
-                            <div class="col-span-12 md:col-span-2 flex items-end">
+                            <div class="col-span-12 md:col-span-3 flex items-end">
                                 <PrimaryButton type="button" :disabled="form.processing" class="w-full" @click="confirmSubmitStock">Adicionar</PrimaryButton>
                             </div>
                         </div>
