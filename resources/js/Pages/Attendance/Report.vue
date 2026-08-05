@@ -36,6 +36,7 @@ const form = useForm({
 const page = usePage();
 const currentUserRole = computed(() => page.props.userRole || "");
 const isAdmin = computed(() => currentUserRole.value === "Admin");
+console.log("Current User Role:", currentUserRole.value , "Is Admin:", isAdmin.value);
 
 const submitFilters = () => {
   form.get(route("attendance.report"), {
