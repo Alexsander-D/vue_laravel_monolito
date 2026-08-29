@@ -49,10 +49,9 @@ class AttendanceController extends Controller
 
             });
 
-            return back()->with(
-                'success',
-                'ATENDIMENTO REGISTRADO COM SUCESSO.'
-            );
+            return response()->json([
+                'message' => 'ATENDIMENTO REGISTRADO COM SUCESSO.',
+            ]);
         } catch (\Exception $e) {
             return back()->withErrors(['email_error' => $e->getMessage()]);
         }
