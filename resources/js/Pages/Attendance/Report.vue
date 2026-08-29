@@ -23,7 +23,7 @@ const props = defineProps({
   },
 });
 
-const paymentMethods = ["Dinheiro", "Cartão", "Pix", "Robert"];
+const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
 
 const serviceCatalog = [
   { name: "Corte Social", price: 35, icon: "✂️" },
@@ -283,7 +283,6 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     Dinheiro: "Dinheiro",
     Cartão: "Cartão",
     Pix: "Pix",
-    Robert: "Robert",
   };
 
   const currentSelection = currentServices.reduce((acc, serviceName) => {

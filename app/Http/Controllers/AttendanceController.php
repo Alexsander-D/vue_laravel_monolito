@@ -20,7 +20,7 @@ class AttendanceController extends Controller
             'services' => ['required', 'array', 'min:1'],
             'services.*.name' => ['required', 'string'],
             'services.*.price' => ['required', 'numeric'],
-            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix,Robert'],
+            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
         ], [
             'services.required' => 'SELECIONE AO MENOS UM SERVIÇO.',
             'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
@@ -157,7 +157,7 @@ class AttendanceController extends Controller
     public function update(Request $request, Attendance $attendance)
     {
         $validated = Validator::make($request->all(), [
-            'payment_method' => ['nullable', 'string', 'in:Dinheiro,Cartão,Pix,Robert'],
+            'payment_method' => ['nullable', 'string', 'in:Dinheiro,Cartão,Pix'],
             'services' => ['nullable', 'array'],
             'services.*.name' => ['required_with:services', 'string', 'min:1'],
             'services.*.price' => ['required_with:services', 'numeric', 'min:0'],
