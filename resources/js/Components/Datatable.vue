@@ -74,6 +74,40 @@ const tableKey = ref(0);
 
 let dataTableInstance = null;
 
+const normalizeDateColumns = () => {
+  if (!dataTableInstance) {
+    return;
+  }
+
+  $(`#${props.id} tbody td`).each(function () {
+    const rawText = $(this).text().trim();
+    if (!rawText) {
+      return;
+    }
+
+    const match = rawText.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s*[- ]\s*(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+
+    if (!match) {
+      return;
+    }
+
+    const [, day, month, year, hour = "0", minute = "0", second = "0"] = match;
+    const parsedYear = Number(year) < 100 ? 2000 + Number(year) : Number(year);
+    const date = new Date(
+      parsedYear,
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second)
+    );
+
+    if (!Number.isNaN(date.getTime())) {
+      $(this).attr("data-order", date.toISOString());
+    }
+  });
+};
+
 const initializeDataTable = () => {
   nextTick(() => {
     dataTableInstance = $(`#${props.id}`).DataTable({
@@ -86,18 +120,30 @@ const initializeDataTable = () => {
         },
       ],
       language: {
-        lengthMenu: "_MENU_",
+        decimal: ",",
+        thousands: ".",
+        lengthMenu: "Exibir _MENU_ registros",
         zeroRecords: "Nenhum registro encontrado",
         info: "Mostrando de _START_ até _END_ de _TOTAL_ registros",
         infoEmpty: "Mostrando 0 até 0 de 0 registros",
         infoFiltered: "(filtrado de _MAX_ registros no total)",
         search: "Buscar:",
+        paginate: {
+          first: "Primeiro",
+          last: "Último",
+          next: "Próximo",
+          previous: "Anterior",
+        },
       },
-      initComplete: function () { },
+      initComplete: function () {
+        normalizeDateColumns();
+      },
       fixedHeader: true,
       pageLength: 10,
       order: [props.orderBy],
     });
+
+    dataTableInstance.on("draw.dt", normalizeDateColumns);
   });
 };
 

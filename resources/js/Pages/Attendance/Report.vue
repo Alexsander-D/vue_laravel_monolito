@@ -481,12 +481,6 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     {
       preserveScroll: true,
       onSuccess: () => {
-        Swal.fire({
-          icon: "success",
-          title: "Atendimento atualizado!",
-          timer: 3000,
-          showConfirmButton: false,
-        });
         Inertia.reload({ only: ["records"] });
       },
       onError: () => {

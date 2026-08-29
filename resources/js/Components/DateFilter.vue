@@ -15,36 +15,35 @@ const submitForm = () => {
 </script>
 
 <template>
-  <div class="grid grid-cols-12 gap-2 sm:gap-6 mt-8 items-center">
-    <div class="col-span-1 text-center">
-      <label class="font-medium inline-block text-sm mt-2.5 dark:text-neutral-200">
-        Data:
-      </label>
-    </div>
-    <div class="col-span-5">
-      <div class="flex items-center gap-2">
+  <div class="mt-8 w-full">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+      <div class="flex-1">
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+          Data inicial
+        </label>
         <TextInput
           type="date"
           :value="startDate"
-          class="mt-1 block w-full"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           autocomplete="off"
           @blur="submitForm"
           @keyup.enter="submitForm"
           @input="$emit('update:startDate', $event.target.value)"
         />
       </div>
-    </div>
-    <div class="col-span-1 text-center">
-      <label class="font-medium inline-block text-sm mt-2.5 dark:text-neutral-200">
-        Até:
-      </label>
-    </div>
-    <div class="col-span-5">
-      <div class="flex items-center gap-2">
+
+      <div class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+        <span class="hidden lg:inline">até</span>
+      </div>
+
+      <div class="flex-1">
+        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+          Data final
+        </label>
         <TextInput
           type="date"
           :value="endDate"
-          class="mt-1 block w-full"
+          class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm transition focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
           autocomplete="off"
           @blur="submitForm"
           @keyup.enter="submitForm"
