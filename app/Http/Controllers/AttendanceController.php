@@ -193,13 +193,13 @@ class AttendanceController extends Controller
             ]);
         }
 
-        return response()->noContent();
+        return redirect()->back();
     }
 
     public function destroy(Attendance $attendance)
     {
         $attendance->delete();
 
-        return response()->noContent();
+        return redirect()->back();
     }
 }

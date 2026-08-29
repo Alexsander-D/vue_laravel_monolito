@@ -481,10 +481,10 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     {
       preserveScroll: true,
       onSuccess: () => {
-        Inertia.reload({ only: ["records"], preserveScroll: true });
+        // O backend responde com redirect válido do Inertia.
       },
       onError: () => {
-        Inertia.reload({ only: ["records"], preserveScroll: true });
+        // Mantém o fluxo silencioso e sem resposta JSON bruta.
       },
     }
   );
