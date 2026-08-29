@@ -289,8 +289,11 @@ const displayableRole = (role) => {
                   :src="user.profile_photo_url"
                   :alt="user.name"
                 />
-                <div class="ms-4 dark:text-white">
-                  {{ user.name }}
+                <div class="ms-4 flex flex-col leading-tight">
+                  <div class="dark:text-white">{{ user.name }}</div>
+                  <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    {{ user.email }}
+                  </div>
                 </div>
                 <div
                   class="ms-2 py-1 px-1.5 text-xs font-medium bg-teal-100 text-teal-800 rounded-full dark:bg-teal-500/10 dark:text-teal-500"
