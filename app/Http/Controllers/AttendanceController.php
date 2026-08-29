@@ -194,17 +194,13 @@ class AttendanceController extends Controller
             ]);
         }
 
-        return response()->json([
-            'message' => 'Atendimento atualizado com sucesso.',
-        ]);
+        return response()->noContent();
     }
 
     public function destroy(Attendance $attendance)
     {
         $attendance->delete();
 
-        return response()->json([
-            'message' => 'Atendimento excluído com sucesso.',
-        ]);
+        return response()->noContent();
     }
 }

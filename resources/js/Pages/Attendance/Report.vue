@@ -481,13 +481,10 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     {
       preserveScroll: true,
       onSuccess: () => {
-        Inertia.reload({ only: ["records"] });
+        Inertia.reload({ only: ["records"], preserveScroll: true });
       },
       onError: () => {
-        Swal.fire({
-          icon: "error",
-          title: "Não foi possível atualizar o atendimento.",
-        });
+        Inertia.reload({ only: ["records"], preserveScroll: true });
       },
     }
   );
