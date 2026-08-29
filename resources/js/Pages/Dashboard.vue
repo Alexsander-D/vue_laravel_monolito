@@ -84,7 +84,7 @@ const features = [
   },
 ];
 
-const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
+const paymentMethods = ["Dinheiro", "Cartão", "Pix", "Robert"];
 
 const form = useForm({
   services: [],

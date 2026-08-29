@@ -23,19 +23,19 @@ const props = defineProps({
   },
 });
 
-const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
+const paymentMethods = ["Dinheiro", "Cartão", "Pix", "Robert"];
 
 const serviceCatalog = [
-  { name: "Corte Social", price: 35 },
-  { name: "Corte Degradê", price: 40 },
-  { name: "Corte Navalhado", price: 45 },
-  { name: "Barba", price: 20 },
-  { name: "Bigode", price: 10 },
-  { name: "Pezinho", price: 10 },
-  { name: "Sobrancelha", price: 10 },
-  { name: "Pigmentação", price: 30 },
-  { name: "Luzes", price: 100 },
-  { name: "Nevou", price: 120 },
+  { name: "Corte Social", price: 35, icon: "✂️" },
+  { name: "Corte Degradê", price: 40, icon: "💈" },
+  { name: "Corte Navalhado", price: 45, icon: "🪒" },
+  { name: "Barba", price: 20, icon: "🧔" },
+  { name: "Bigode", price: 10, icon: "👨‍🦰" },
+  { name: "Pezinho", price: 10, icon: "📏" },
+  { name: "Sobrancelha", price: 10, icon: "🔍" },
+  { name: "Pigmentação", price: 30, icon: "🎨" },
+  { name: "Luzes", price: 100, icon: "💡" },
+  { name: "Nevou", price: 120, icon: "❄️" },
 ];
 const parseServiceEntries = (value) => {
   if (!value) {
@@ -283,6 +283,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     Dinheiro: "Dinheiro",
     Cartão: "Cartão",
     Pix: "Pix",
+    Robert: "Robert",
   };
 
   const currentSelection = currentServices.reduce((acc, serviceName) => {
@@ -326,15 +327,18 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
         </div>
         <div>
           <label class="mb-2 block text-sm font-medium text-gray-700">Pagamento</label>
-          <select id="attendance-payment-edit" class="swal2-input text-left">
-            ${Object.entries(paymentOptions)
-              .map(([key, label]) => `
-                <option value="${key}" ${key === currentPaymentMethod ? "selected" : ""}>
-                  ${label}
-                </option>
-              `)
-              .join("")}
-          </select>
+          <div class="relative">
+            <select id="attendance-payment-edit" class="block w-full appearance-none rounded-xl border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 shadow-sm transition focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20">
+              ${Object.entries(paymentOptions)
+                .map(([key, label]) => `
+                  <option value="${key}" ${key === currentPaymentMethod ? "selected" : ""}>
+                    ${label}
+                  </option>
+                `)
+                .join("")}
+            </select>
+            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">▾</span>
+          </div>
         </div>
       </div>
     `,
