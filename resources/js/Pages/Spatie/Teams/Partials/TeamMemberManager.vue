@@ -295,11 +295,6 @@ const displayableRole = (role) => {
                     {{ user.email }}
                   </div>
                 </div>
-                <div
-                  class="ms-2 py-1 px-1.5 text-xs font-medium bg-teal-100 text-teal-800 rounded-full dark:bg-teal-500/10 dark:text-teal-500"
-                >
-                  AT{{ user.id }}
-                </div>
               </div>
 
               <div class="flex items-center">
