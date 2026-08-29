@@ -159,8 +159,9 @@ class AttendanceController extends Controller
     {
         $validated = Validator::make($request->all(), [
             'payment_method' => ['nullable', 'string', 'in:Dinheiro,Cartão,Pix'],
-            'service_name' => ['nullable', 'string', 'min:1'],
-            'service_price' => ['nullable', 'numeric', 'min:0'],
+            'services' => ['nullable', 'array'],
+            'services.*.name' => ['required_with:services', 'string', 'min:1'],
+            'services.*.price' => ['required_with:services', 'numeric', 'min:0'],
         ])->validate();
 
         if (! empty($validated['payment_method'])) {
@@ -169,26 +170,27 @@ class AttendanceController extends Controller
             ]);
         }
 
-        if (! empty($validated['service_name']) || array_key_exists('service_price', $validated)) {
-            $serviceName = $validated['service_name'] ?? $attendance->services()->first()?->service_name;
-            $servicePrice = $validated['service_price'] ?? $attendance->services()->first()?->price ?? 0;
+        if (array_key_exists('services', $validated)) {
+            $services = collect($validated['services'])
+                ->map(fn ($service) => [
+                    'name' => trim((string) $service['name']),
+                    'price' => (float) ($service['price'] ?? 0),
+                ])
+                ->filter(fn ($service) => $service['name'] !== '')
+                ->values()
+                ->all();
 
-            $service = $attendance->services()->first();
+            $attendance->services()->delete();
 
-            if ($service) {
-                $service->update([
-                    'service_name' => $serviceName,
-                    'price' => $servicePrice,
-                ]);
-            } else {
+            foreach ($services as $service) {
                 $attendance->services()->create([
-                    'service_name' => $serviceName,
-                    'price' => $servicePrice,
+                    'service_name' => $service['name'],
+                    'price' => $service['price'],
                 ]);
             }
 
             $attendance->update([
-                'total' => (float) $attendance->services()->sum('price'),
+                'total' => collect($services)->sum('price'),
             ]);
         }
 
