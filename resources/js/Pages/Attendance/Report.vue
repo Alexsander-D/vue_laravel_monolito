@@ -400,6 +400,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
 
       grid.querySelectorAll(".increase-service").forEach((button) => {
         button.addEventListener("click", (event) => {
+          event.preventDefault();
           event.stopPropagation();
           const serviceName = button.dataset.serviceName;
           updateSelection(serviceName, 1);
@@ -408,6 +409,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
 
       grid.querySelectorAll(".decrease-service").forEach((button) => {
         button.addEventListener("click", (event) => {
+          event.preventDefault();
           event.stopPropagation();
           const serviceName = button.dataset.serviceName;
           updateSelection(serviceName, -1);
@@ -416,7 +418,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
 
       grid.querySelectorAll(".attendance-service-card").forEach((card) => {
         card.addEventListener("click", (event) => {
-          if (event.target.closest("button")) {
+          if (event.target.closest(".increase-service, .decrease-service") || event.target.closest("button")) {
             return;
           }
 
