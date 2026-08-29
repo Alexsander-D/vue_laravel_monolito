@@ -291,6 +291,16 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     return acc;
   }, {});
 
+  const getSelectedTotal = () => {
+    return serviceCatalog.reduce((sum, service) => {
+      const quantity = Number(
+        document.querySelector(`[data-service-name="${CSS.escape(service.name)}"] .service-quantity`)?.textContent || 0
+      );
+
+      return sum + (service.price * quantity);
+    }, 0);
+  };
+
   const renderServiceCards = () => {
     return serviceCatalog.map((service) => {
       const quantity = currentSelection[service.name] || 0;
@@ -319,6 +329,15 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     title: "Editar atendimento",
     html: `
       <div class="text-left">
+        <div class="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-3">
+          <div class="text-xs font-semibold uppercase tracking-wide text-yellow-700">Valor atual</div>
+          <div id="attendance-total-preview" class="mt-1 text-xl font-bold text-yellow-600">
+            ${formatCurrency(serviceCatalog.reduce((sum, service) => {
+              const quantity = currentSelection[service.name] || 0;
+              return sum + (service.price * quantity);
+            }, 0))}
+          </div>
+        </div>
         <div class="mb-4">
           <label class="mb-2 block text-sm font-medium text-gray-700">Serviços realizados</label>
           <div id="attendance-service-grid" class="grid grid-cols-2 gap-3 max-h-[360px] overflow-y-auto pr-1">
@@ -327,17 +346,15 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
         </div>
         <div>
           <label class="mb-2 block text-sm font-medium text-gray-700">Pagamento</label>
-          <div class="relative">
-            <select id="attendance-payment-edit" class="block w-full appearance-none rounded-xl border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 shadow-sm transition focus:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500/20">
-              ${Object.entries(paymentOptions)
-                .map(([key, label]) => `
-                  <option value="${key}" ${key === currentPaymentMethod ? "selected" : ""}>
-                    ${label}
-                  </option>
-                `)
-                .join("")}
-            </select>
-            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">▾</span>
+          <div class="flex flex-wrap gap-2">
+            ${Object.entries(paymentOptions)
+              .map(([key, label]) => `
+                <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${key === currentPaymentMethod ? 'border-yellow-500 bg-yellow-500/10 text-yellow-700' : 'border-gray-300 bg-white text-gray-700 hover:border-yellow-400'}">
+                  <input type="radio" name="attendance-payment-edit" value="${key}" ${key === currentPaymentMethod ? "checked" : ""} class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
+                  <span>${label}</span>
+                </label>
+              `)
+              .join("")}
           </div>
         </div>
       </div>
@@ -348,9 +365,19 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     cancelButtonText: "Cancelar",
     didOpen: () => {
       const grid = document.getElementById("attendance-service-grid");
+      const totalPreview = document.getElementById("attendance-total-preview");
+
       if (!grid) {
         return;
       }
+
+      const updateTotalPreview = () => {
+        if (!totalPreview) {
+          return;
+        }
+
+        totalPreview.textContent = formatCurrency(getSelectedTotal());
+      };
 
       const updateSelection = (serviceName, delta) => {
         const card = grid.querySelector(`[data-service-name="${serviceName}"]`);
@@ -368,6 +395,8 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
         card.classList.toggle("shadow-md", nextQty > 0);
         card.classList.toggle("border-gray-300", nextQty === 0);
         card.classList.toggle("bg-gray-100", nextQty === 0);
+
+        updateTotalPreview();
       };
 
       grid.querySelectorAll(".increase-service").forEach((button) => {
@@ -402,11 +431,15 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
           card.classList.toggle("shadow-md", nextQty > 0);
           card.classList.toggle("border-gray-300", nextQty === 0);
           card.classList.toggle("bg-gray-100", nextQty === 0);
+
+          updateTotalPreview();
         });
       });
+
+      updateTotalPreview();
     },
     preConfirm: () => {
-      const selectedPaymentMethod = document.getElementById("attendance-payment-edit")?.value || "";
+      const selectedPaymentMethod = document.querySelector('input[name="attendance-payment-edit"]:checked')?.value || "";
       const selectedServices = [];
 
       document.querySelectorAll(".attendance-service-card").forEach((card) => {
