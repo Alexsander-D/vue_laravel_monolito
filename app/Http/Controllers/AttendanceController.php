@@ -20,7 +20,7 @@ class AttendanceController extends Controller
             'services' => ['required', 'array', 'min:1'],
             'services.*.name' => ['required', 'string'],
             'services.*.price' => ['required', 'numeric'],
-            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix,Robert'],
+            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
         ], [
             'services.required' => 'SELECIONE AO MENOS UM SERVIÇO.',
             'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
@@ -158,11 +158,42 @@ class AttendanceController extends Controller
     public function update(Request $request, Attendance $attendance)
     {
         $validated = Validator::make($request->all(), [
-            'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix,Robert'],
+            'payment_method' => ['nullable', 'string', 'in:Dinheiro,Cartão,Pix'],
+            'service_name' => ['nullable', 'string', 'min:1'],
+            'service_price' => ['nullable', 'numeric', 'min:0'],
         ])->validate();
 
-        $attendance->update([
-            'payment_method' => $validated['payment_method'],
+        if (! empty($validated['payment_method'])) {
+            $attendance->update([
+                'payment_method' => $validated['payment_method'],
+            ]);
+        }
+
+        if (! empty($validated['service_name']) || array_key_exists('service_price', $validated)) {
+            $serviceName = $validated['service_name'] ?? $attendance->services()->first()?->service_name;
+            $servicePrice = $validated['service_price'] ?? $attendance->services()->first()?->price ?? 0;
+
+            $service = $attendance->services()->first();
+
+            if ($service) {
+                $service->update([
+                    'service_name' => $serviceName,
+                    'price' => $servicePrice,
+                ]);
+            } else {
+                $attendance->services()->create([
+                    'service_name' => $serviceName,
+                    'price' => $servicePrice,
+                ]);
+            }
+
+            $attendance->update([
+                'total' => (float) $attendance->services()->sum('price'),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Atendimento atualizado com sucesso.',
         ]);
     }
 

@@ -23,7 +23,20 @@ const props = defineProps({
   },
 });
 
-const paymentMethods = ["Dinheiro", "Cartão", "Pix", "Robert"];
+const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
+
+const serviceCatalog = [
+  { name: "Corte Social", price: 35 },
+  { name: "Corte Degradê", price: 40 },
+  { name: "Corte Navalhado", price: 45 },
+  { name: "Barba", price: 20 },
+  { name: "Bigode", price: 10 },
+  { name: "Pezinho", price: 10 },
+  { name: "Sobrancelha", price: 10 },
+  { name: "Pigmentação", price: 30 },
+  { name: "Luzes", price: 100 },
+  { name: "Nevou", price: 120 },
+];
 
 const getToday = () => new Date().toISOString().slice(0, 10);
 
@@ -121,9 +134,19 @@ const tableData = computed(() => {
 
     if (isAdmin.value) {
       const currentPaymentMethod = record.payment_method || "Dinheiro";
+      const currentServiceName = typeof record.service_name === "string" ? record.service_name.split(",")[0].trim() : "";
+      const currentServicePrice = Number(record.price || 0);
+
       row.button1 = `
         <div class="flex justify-end gap-2">
-          <button type="button" data-id="${record.attendance_id}" data-payment="${currentPaymentMethod}" class="edit-btn rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button
+            type="button"
+            data-id="${record.attendance_id}"
+            data-payment="${currentPaymentMethod}"
+            data-service="${currentServiceName}"
+            data-price="${currentServicePrice}"
+            class="edit-btn rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
             Editar
           </button>
           <button type="button" data-id="${record.attendance_id}" class="delete-btn rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500">
@@ -241,46 +264,84 @@ const deleteAttendance = async (attendanceId) => {
   });
 };
 
-const editAttendance = async (attendanceId, currentPaymentMethod) => {
+const editAttendance = async (attendanceId, currentPaymentMethod, currentServiceName = "", currentServicePrice = 0) => {
   const paymentOptions = {
     Dinheiro: "Dinheiro",
     Cartão: "Cartão",
     Pix: "Pix",
-    Robert: "Robert",
   };
 
-  const { value: paymentMethod } = await Swal.fire({
+  const serviceOptions = serviceCatalog.reduce((options, service) => {
+    options[service.name] = `${service.name} - ${formatCurrency(service.price)}`;
+    return options;
+  }, {});
+
+  const defaultServiceName = serviceCatalog.some((service) => service.name === currentServiceName)
+    ? currentServiceName
+    : serviceCatalog[0]?.name || "";
+
+  const selectedService = serviceCatalog.find((service) => service.name === defaultServiceName) || serviceCatalog[0] || { name: "", price: 0 };
+
+  const { isConfirmed, value } = await Swal.fire({
     title: "Editar atendimento",
-    input: "select",
-    inputOptions: paymentOptions,
-    inputValue: currentPaymentMethod,
+    html: `
+      <div class="text-left">
+        <div class="mb-4">
+          <label class="mb-2 block text-sm font-medium text-gray-700">Serviço</label>
+          <select id="attendance-service-edit" class="swal2-input text-left">
+            ${Object.entries(serviceOptions)
+              .map(([name, label]) => `
+                <option value="${name}" ${name === defaultServiceName ? "selected" : ""}>
+                  ${label}
+                </option>
+              `)
+              .join("")}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium text-gray-700">Pagamento</label>
+          <select id="attendance-payment-edit" class="swal2-input text-left">
+            ${Object.entries(paymentOptions)
+              .map(([key, label]) => `
+                <option value="${key}" ${key === currentPaymentMethod ? "selected" : ""}>
+                  ${label}
+                </option>
+              `)
+              .join("")}
+          </select>
+        </div>
+      </div>
+    `,
+    focusConfirm: false,
     showCancelButton: true,
     confirmButtonText: "Salvar",
     cancelButtonText: "Cancelar",
-    inputValidator: (value) => {
-      if (!value) {
-        return "Selecione uma forma de pagamento válida.";
+    preConfirm: () => {
+      const selectedServiceName = document.getElementById("attendance-service-edit")?.value || "";
+      const selectedPaymentMethod = document.getElementById("attendance-payment-edit")?.value || "";
+
+      if (!selectedServiceName || !selectedPaymentMethod) {
+        Swal.showValidationMessage("Selecione o serviço e a forma de pagamento.");
+        return false;
       }
-      return null;
-    },
-    onSuccess: () => {
-      Swal.fire({
-        icon: "success",
-        title: "Atendimento atualizado!",
-        timer: 3000,
-        showConfirmButton: false,
-      });
-      Inertia.reload({ only: ["records"] });
+
+      const selectedService = serviceCatalog.find((service) => service.name === selectedServiceName) || { name: selectedServiceName, price: Number(currentServicePrice || 0) };
+
+      return {
+        payment_method: selectedPaymentMethod,
+        service_name: selectedService.name,
+        service_price: Number(selectedService.price || 0),
+      };
     },
   });
 
-  if (!paymentMethod) {
+  if (!isConfirmed || !value) {
     return;
   }
 
   router.put(
     route("attendance.update", { attendance: attendanceId }),
-    { payment_method: paymentMethod },
+    value,
     {
       preserveScroll: true,
       onSuccess: () => {
@@ -313,7 +374,9 @@ onMounted(() => {
   $(document).on("click", ".edit-btn", function () {
     const attendanceId = $(this).data("id");
     const currentPaymentMethod = $(this).data("payment");
-    editAttendance(attendanceId, currentPaymentMethod);
+    const currentServiceName = $(this).data("service") || "";
+    const currentServicePrice = Number($(this).data("price") || 0);
+    editAttendance(attendanceId, currentPaymentMethod, currentServiceName, currentServicePrice);
   });
 });
 </script>
