@@ -8,13 +8,7 @@ import { ref, defineProps, computed } from "vue";
 // Recebe as props padrão do Inertia (usuário autenticado)
 const props = defineProps({
   auth: Object,
-  barbers: {
-    type: Array,
-    default: () => [],
-  },
 });
-
-const availableBarbers = computed(() => props.barbers.filter(Boolean));
 
 // Define os cards dinamicamente
 const features = [
@@ -97,18 +91,7 @@ const form = useForm({
   total: 0,
   created_at: "",
   payment_method: "",
-  barber_id: props.barbers[0]?.id || null,
 });
-
-const selectedBarberId = ref(props.barbers[0]?.id || null);
-
-const selectBarber = (barber) => {
-  if (barber.readonly) {
-    return;
-  }
-
-  selectedBarberId.value = selectedBarberId.value === barber.id ? props.barbers[0]?.id : barber.id;
-};
 
 const confirmAttendance = async () => {
   if (selectedServices.value.length === 0) {
@@ -181,7 +164,6 @@ const submitAttendance = () => {
 
   form.total = totalValue.value;
   form.payment_method = form.payment_method;
-  form.barber_id = selectedBarberId.value;
 
   form.created_at =
     new Date().toLocaleDateString("pt-BR") + " " + new Date().toLocaleTimeString("pt-BR");
@@ -362,22 +344,16 @@ const isSelected = (service) => {
           </div>
 
           <div class="flex flex-wrap items-center justify-center gap-3">
-            <label
-              v-for="barber in availableBarbers"
-              :key="barber.id"
-              class="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 transition"
-              :class="selectedBarberId === barber.id ? 'border-yellow-500 bg-yellow-500/10' : 'cursor-pointer hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-gray-700'"
-            >
-              <input
-                type="checkbox"
-                :checked="selectedBarberId === barber.id"
-                :disabled="barber.readonly"
-                @change="selectBarber(barber)"
-                class="h-4 w-4 text-yellow-500 focus:ring-yellow-500 disabled:opacity-70"
-              />
-              <span class="text-sm font-medium text-gray-800 dark:text-gray-100">
-                {{ barber.label }} ({{ barber.name }})
-              </span>
+            <label class="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 cursor-pointer transition hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-gray-700">
+              <input type="checkbox" name="barber_1" value="barbeiro_1"
+                class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
+              <span class="text-sm font-medium text-gray-800 dark:text-gray-100">Barbeiro 1</span>
+            </label>
+
+            <label class="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 cursor-pointer transition hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-gray-700">
+              <input type="checkbox" name="barber_2" value="barbeiro_2"
+                class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
+              <span class="text-sm font-medium text-gray-800 dark:text-gray-100">Barbeiro 2</span>
             </label>
           </div>
         </div>

@@ -54,8 +54,9 @@ Route::middleware([
     'verified',
 ])
     ->group(function () {
-        Route::get('/dashboard', [AttendanceController::class, 'dashboard'])
-            ->name('dashboard');
+        Route::get('/dashboard', function () {
+            return Inertia::render('Dashboard');
+        })->name('dashboard');
 
         Route::post(
             '/attendance/store',

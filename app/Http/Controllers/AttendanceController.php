@@ -7,38 +7,13 @@ use App\Models\AttendanceService;
 use App\Models\Spatie\User;
 use App\Notifications\DailyAttendanceReportNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 
 class AttendanceController extends Controller
 {
-    public function dashboard(Request $request)
-    {
-        $currentUser = $request->user();
-        $secondBarber = User::query()
-            ->where('id', '!=', $currentUser->id)
-            ->orderBy('id')
-            ->first(['id', 'name']);
-
-        return Inertia::render('Dashboard', [
-            'barbers' => [
-                [
-                    'id' => $currentUser->id,
-                    'name' => $currentUser->name,
-                    'label' => 'Barbeiro 1',
-                    'readonly' => true,
-                ],
-                $secondBarber ? [
-                    'id' => $secondBarber->id,
-                    'name' => $secondBarber->name,
-                    'label' => 'Barbeiro 2',
-                    'readonly' => false,
-                ] : null,
-            ],
-        ]);
-    }
-
     public function store(Request $request)
     {
         $validated = Validator::make($request->all(), [
@@ -46,7 +21,6 @@ class AttendanceController extends Controller
             'services.*.name' => ['required', 'string'],
             'services.*.price' => ['required', 'numeric'],
             'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
-            'barber_id' => ['required', 'integer', 'exists:users,id'],
         ], [
             'services.required' => 'SELECIONE AO MENOS UM SERVIÇO.',
             'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
@@ -59,7 +33,7 @@ class AttendanceController extends Controller
                     ->sum('price');
 
                 $attendance = Attendance::create([
-                    'user_id' => $validated['barber_id'],
+                    'user_id' => Auth::id(),
                     'total' => $total,
                     'payment_method' => $validated['payment_method'],
                 ]);
