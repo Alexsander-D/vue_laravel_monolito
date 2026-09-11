@@ -92,7 +92,7 @@ const form = useForm({
   total: 0,
   created_at: "",
   payment_method: "",
-  barbers: [],
+  barbers: ["Barbeiro 1"],
 });
 
 const confirmAttendance = async () => {
@@ -346,11 +346,14 @@ const isSelected = (service) => {
           </div>
 
           <div class="flex flex-wrap items-center justify-center gap-3">
-            <label v-for="barber in barbers" :key="barber"
+            <label v-for="(barber, index) in barbers" :key="barber"
               class="flex items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 cursor-pointer transition hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-gray-700"
               :class="form.barbers.includes(barber) ? 'border-yellow-500 bg-yellow-500/10' : ''">
-              <input type="checkbox" name="barbers[]" :value="barber" v-model="form.barbers"
-                class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
+              <input type="radio" name="barber" :value="barber"
+                :checked="form.barbers.includes(barber)"
+                :disabled="index === 0"
+                @change="form.barbers = [barber]"
+                class="h-4 w-4 text-yellow-500 focus:ring-yellow-500 disabled:opacity-70" />
               <span class="text-sm font-medium text-gray-800 dark:text-gray-100">
                 {{ barber }}
               </span>
