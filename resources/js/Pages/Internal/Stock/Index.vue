@@ -1,7 +1,7 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
 import { ref, computed } from "vue";
-import { useForm, usePage } from "@inertiajs/vue3";
+import { router, useForm, usePage } from "@inertiajs/vue3";
 import { Inertia } from "@inertiajs/inertia";
 import FormSection from "@/Components/FormSection.vue";
 import TextInput from "@/Components/TextInput.vue";
@@ -42,8 +42,43 @@ const editForm = useForm({
 
 const stockRows = computed(() => props.stocks || []);
 const logRows = computed(() => props.movements || []);
+const logStartDate = ref("");
+const logEndDate = ref("");
+const logType = ref("todos");
 const currentUserRole = computed(() => page.props.userRole || "");
 const isAdmin = computed(() => currentUserRole.value === "Admin");
+
+const getMovementType = (movement) => {
+    if (movement.description === "Venda de estoque") {
+        return "venda";
+    }
+
+    return movement.type;
+};
+
+const getMovementTypeLabel = (movement) => {
+    const labels = {
+        entrada: "Entrada",
+        baixa: "Baixa",
+        venda: "Venda",
+    };
+
+    return labels[getMovementType(movement)] || movement.type;
+};
+
+const filteredLogRows = computed(() => {
+    const startDate = logStartDate.value ? new Date(`${logStartDate.value}T00:00:00`) : null;
+    const endDate = logEndDate.value ? new Date(`${logEndDate.value}T23:59:59.999`) : null;
+
+    return logRows.value.filter((movement) => {
+        const movementDate = new Date(movement.created_at);
+        const matchesType = logType.value === "todos" || getMovementType(movement) === logType.value;
+        const matchesStartDate = !startDate || movementDate >= startDate;
+        const matchesEndDate = !endDate || movementDate <= endDate;
+
+        return matchesType && matchesStartDate && matchesEndDate;
+    });
+});
 
 const submitStock = () => {
     form.post(route("stock.create"), {
@@ -198,7 +233,7 @@ const sellStock = async (stock) => {
                     timer: 1800,
                     showConfirmButton: false,
                 });
-                Inertia.reload({ only: ["stocks", "movements"] });
+                router.reload({ only: ["stocks", "movements"] });
             },
             onError: () => {
                 Swal.fire({
@@ -351,6 +386,31 @@ const formatDateTime = (value) => {
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Log de Entradas e Baixas
                             </h2>
                         </div>
+                        <div class="grid grid-cols-1 gap-4 mb-4 md:grid-cols-3">
+                            <div>
+                                <label for="log_start_date"
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-200">Data inicial</label>
+                                <TextInput id="log_start_date" v-model="logStartDate" type="date"
+                                    class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <label for="log_end_date"
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-200">Data final</label>
+                                <TextInput id="log_end_date" v-model="logEndDate" type="date"
+                                    class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <label for="log_type"
+                                    class="block text-sm font-medium text-gray-700 dark:text-gray-200">Tipo</label>
+                                <select id="log_type" v-model="logType"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                    <option value="todos">Todos</option>
+                                    <option value="entrada">Entrada</option>
+                                    <option value="baixa">Baixa</option>
+                                    <option value="venda">Venda</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800">
@@ -373,11 +433,11 @@ const formatDateTime = (value) => {
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                                    <tr v-for="movement in logRows" :key="movement.id">
+                                    <tr v-for="movement in filteredLogRows" :key="movement.id">
                                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{
                                             movement.stock_product?.product_name || 'Produto removido' }}</td>
-                                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ movement.type
-                                            }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{
+                                            getMovementTypeLabel(movement) }}</td>
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
                                             movement.quantity
                                             }}</td>
@@ -386,7 +446,7 @@ const formatDateTime = (value) => {
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
                                             formatDateTime(movement.created_at) }}</td>
                                     </tr>
-                                    <tr v-if="logRows.length === 0">
+                                    <tr v-if="filteredLogRows.length === 0">
                                         <td colspan="5"
                                             class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                                             Nenhum
