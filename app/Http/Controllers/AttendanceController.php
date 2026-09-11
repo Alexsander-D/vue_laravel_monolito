@@ -21,6 +21,8 @@ class AttendanceController extends Controller
             'services.*.name' => ['required', 'string'],
             'services.*.price' => ['required', 'numeric'],
             'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
+            'barbers' => ['required', 'array', 'min:1'],
+            'barbers.*' => ['string', 'in:Barbeiro 1,Barbeiro 2'],
         ], [
             'services.required' => 'SELECIONE AO MENOS UM SERVIÇO.',
             'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
@@ -36,6 +38,7 @@ class AttendanceController extends Controller
                     'user_id' => Auth::id(),
                     'total' => $total,
                     'payment_method' => $validated['payment_method'],
+                    'barbers' => $validated['barbers'],
                 ]);
 
                 foreach ($validated['services'] as $service) {

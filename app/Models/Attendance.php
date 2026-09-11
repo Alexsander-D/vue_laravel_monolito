@@ -12,6 +12,11 @@ class Attendance extends Model
         'user_id',
         'total',
         'payment_method',
+        'barbers',
+    ];
+
+    protected $casts = [
+        'barbers' => 'array',
     ];
 
     public function scopeDateRange($query, ?string $startDate = null, ?string $endDate = null)
