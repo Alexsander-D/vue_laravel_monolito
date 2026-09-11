@@ -222,7 +222,7 @@ const sellStock = async (stock) => {
     const quantity = result.value;
 
     router.put(
-        route("stock.sell", { stock: stock.id }),
+        `${route("stock.index")}/${stock.id}/sell`,
         { quantity },
         {
             preserveScroll: true,
