@@ -1,8 +1,14 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import { Inertia } from "@inertiajs/inertia";
+import $ from "jquery";
+import "datatables.net";
+import "datatables.net-buttons/js/dataTables.buttons";
+import "datatables.net-buttons/js/buttons.html5";
+import "datatables.net-buttons-dt/css/buttons.dataTables.css";
+import JSZip from "jszip";
 import FormSection from "@/Components/FormSection.vue";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
@@ -10,6 +16,8 @@ import PrimaryButton from "@/Components/PrimaryButton.vue";
 import DialogModal from "@/Components/DialogModal.vue";
 import ActionMessage from "@/Components/ActionMessage.vue";
 import Swal from "sweetalert2";
+
+window.JSZip = JSZip;
 
 const props = defineProps({
     stocks: {
@@ -89,19 +97,58 @@ const filteredLogRows = computed(() => {
     });
 });
 
-const exportStockTable = () => {
-    window.open(`${route("stock.index")}/export`, "_blank");
-};
+const initializeExportTables = () => {
+    nextTick(() => {
+        const tables = [
+            { id: "stock-table", exportColumns: ":not(:last-child)" },
+            { id: "stock-movements-table", exportColumns: ":visible" },
+        ];
 
-const exportLogTable = () => {
-    const params = new URLSearchParams({
-        start_date: logStartDate.value,
-        end_date: logEndDate.value,
-        type: logType.value,
+        tables.forEach(({ id, exportColumns }) => {
+            const table = $(`#${id}`);
+
+            if (!table.length) {
+                return;
+            }
+
+            if ($.fn.DataTable.isDataTable(`#${id}`)) {
+                table.DataTable().destroy();
+            }
+
+            table.DataTable({
+                dom: '<"mb-4"B>t',
+                paging: false,
+                searching: false,
+                info: false,
+                ordering: false,
+                buttons: [
+                    {
+                        extend: "excelHtml5",
+                        text: "Baixar Excel",
+                        exportOptions: {
+                            columns: exportColumns,
+                        },
+                    },
+                ],
+            });
+        });
     });
-
-    window.open(`${route("stock.index")}/movements/export?${params.toString()}`, "_blank");
 };
+
+onMounted(initializeExportTables);
+onBeforeUnmount(() => {
+    ["stock-table", "stock-movements-table"].forEach((id) => {
+        if ($.fn.DataTable.isDataTable(`#${id}`)) {
+            $(`#${id}`).DataTable().destroy();
+        }
+    });
+});
+
+watch(
+    () => [stockRows.value, filteredLogRows.value, isAdmin.value],
+    initializeExportTables,
+    { deep: true }
+);
 
 const submitStock = () => {
     form.post(route("stock.create"), {
@@ -349,13 +396,9 @@ const formatDateTime = (value) => {
                     <section class="bg-white dark:bg-gray-900 rounded-xl shadow p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Produtos em Estoque</h2>
-                            <button type="button" @click="exportStockTable"
-                                class="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500">
-                                Exportar Excel
-                            </button>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <table id="stock-table" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800">
                                     <tr>
                                         <th
@@ -412,10 +455,6 @@ const formatDateTime = (value) => {
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Log de Entradas e Baixas
                             </h2>
-                            <button type="button" @click="exportLogTable"
-                                class="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500">
-                                Exportar Excel
-                            </button>
                         </div>
                         <div class="grid grid-cols-1 gap-4 mb-4 md:grid-cols-3">
                             <div>
@@ -443,7 +482,7 @@ const formatDateTime = (value) => {
                             </div>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <table id="stock-movements-table" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800">
                                     <tr>
                                         <th

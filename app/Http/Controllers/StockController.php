@@ -5,13 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\StockMovement;
 use App\Models\StockProduct;
-use App\Models\Spatie\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class StockController extends Controller
 {
@@ -29,107 +26,6 @@ class StockController extends Controller
             'stocks' => $stocks,
             'movements' => $movements,
         ]);
-    }
-
-    public function export()
-    {
-        $stocks = StockProduct::orderBy('product_name')->get();
-        $user = User::find(Auth::id());
-        $isAdmin = strtolower($user?->getRoleByUser() ?? '') === 'admin';
-        $headers = ['Produto', 'Quantidade'];
-
-        if ($isAdmin) {
-            $headers[] = 'Preço de custo';
-        }
-
-        $headers[] = 'Preço de venda';
-
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-
-        foreach ($headers as $index => $header) {
-            $sheet->setCellValue(chr(65 + $index) . '1', $header);
-        }
-
-        foreach ($stocks as $rowIndex => $stock) {
-            $values = [$stock->product_name, $stock->quantity];
-
-            if ($isAdmin) {
-                $values[] = $stock->cost_price;
-            }
-
-            $values[] = $stock->price;
-
-            foreach ($values as $columnIndex => $value) {
-                $sheet->setCellValue(chr(65 + $columnIndex) . ($rowIndex + 2), $value);
-            }
-        }
-
-        return $this->downloadSpreadsheet($spreadsheet, 'produtos-em-estoque');
-    }
-
-    public function exportMovements(Request $request)
-    {
-        $validated = $request->validate([
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date'],
-            'type' => ['nullable', 'in:todos,entrada,baixa,venda'],
-        ]);
-
-        $query = StockMovement::with('stockProduct')->orderBy('created_at', 'desc');
-        $type = $validated['type'] ?? 'todos';
-
-        if (!empty($validated['start_date'])) {
-            $query->whereDate('created_at', '>=', $validated['start_date']);
-        }
-
-        if (!empty($validated['end_date'])) {
-            $query->whereDate('created_at', '<=', $validated['end_date']);
-        }
-
-        if ($type === 'venda') {
-            $query->where('type', 'baixa')->where('description', 'Venda de estoque');
-        } elseif ($type === 'baixa') {
-            $query->where('type', 'baixa')->where(function ($movementQuery) {
-                $movementQuery->whereNull('description')->orWhere('description', '!=', 'Venda de estoque');
-            });
-        } elseif ($type !== 'todos') {
-            $query->where('type', $type);
-        }
-
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $headers = ['Produto', 'Tipo', 'Quantidade', 'Preço', 'Data'];
-
-        foreach ($headers as $index => $header) {
-            $sheet->setCellValue(chr(65 + $index) . '1', $header);
-        }
-
-        foreach ($query->get() as $rowIndex => $movement) {
-            $movementType = $movement->description === 'Venda de estoque' ? 'Venda' : ucfirst($movement->type);
-            $values = [
-                $movement->stockProduct?->product_name ?? 'Produto removido',
-                $movementType,
-                $movement->quantity,
-                $movement->price,
-                $movement->created_at?->format('d/m/Y H:i'),
-            ];
-
-            foreach ($values as $columnIndex => $value) {
-                $sheet->setCellValue(chr(65 + $columnIndex) . ($rowIndex + 2), $value);
-            }
-        }
-
-        return $this->downloadSpreadsheet($spreadsheet, 'log-entradas-e-baixas');
-    }
-
-    private function downloadSpreadsheet(Spreadsheet $spreadsheet, string $name)
-    {
-        $filename = $name . '_' . date('YmdHis') . '.xlsx';
-        $tempFile = tempnam(sys_get_temp_dir(), $name);
-        (new Xlsx($spreadsheet))->save($tempFile);
-
-        return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
 
     public function create(Request $request)
