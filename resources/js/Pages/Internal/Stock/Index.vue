@@ -89,6 +89,20 @@ const filteredLogRows = computed(() => {
     });
 });
 
+const exportStockTable = () => {
+    window.open(`${route("stock.index")}/export`, "_blank");
+};
+
+const exportLogTable = () => {
+    const params = new URLSearchParams({
+        start_date: logStartDate.value,
+        end_date: logEndDate.value,
+        type: logType.value,
+    });
+
+    window.open(`${route("stock.index")}/movements/export?${params.toString()}`, "_blank");
+};
+
 const submitStock = () => {
     form.post(route("stock.create"), {
         preserveScroll: true,
@@ -335,6 +349,10 @@ const formatDateTime = (value) => {
                     <section class="bg-white dark:bg-gray-900 rounded-xl shadow p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Produtos em Estoque</h2>
+                            <button type="button" @click="exportStockTable"
+                                class="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500">
+                                Exportar Excel
+                            </button>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -394,6 +412,10 @@ const formatDateTime = (value) => {
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Log de Entradas e Baixas
                             </h2>
+                            <button type="button" @click="exportLogTable"
+                                class="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500">
+                                Exportar Excel
+                            </button>
                         </div>
                         <div class="grid grid-cols-1 gap-4 mb-4 md:grid-cols-3">
                             <div>
