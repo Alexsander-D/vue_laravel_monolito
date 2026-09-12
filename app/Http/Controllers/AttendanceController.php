@@ -65,6 +65,7 @@ class AttendanceController extends Controller
         $startDate = $request->input('start_date', $request->input('startDate'));
         $endDate = $request->input('end_date', $request->input('endDate'));
         $paymentMethod = $request->input('payment_method', $request->input('paymentMethod'));
+        $barber = $request->input('barber');
 
         $records = Attendance::query()
             ->join('users', 'attendances.user_id', '=', 'users.id')
@@ -81,6 +82,9 @@ class AttendanceController extends Controller
             )
             ->when($paymentMethod, function ($query, $value) {
                 $query->where('attendances.payment_method', $value);
+            })
+            ->when($barber, function ($query, $value) {
+                $query->whereJsonContains('attendances.barbers', $value);
             })
             ->dateRange($startDate, $endDate)
             ->groupBy(
@@ -101,6 +105,7 @@ class AttendanceController extends Controller
                 'startDate' => $startDate,
                 'endDate' => $endDate,
                 'paymentMethod' => $paymentMethod,
+                'barber' => $barber,
             ],
         ]);
     }
