@@ -100,11 +100,19 @@ const filteredLogRows = computed(() => {
 const initializeExportTables = () => {
     nextTick(() => {
         const tables = [
-            { id: "stock-table", exportColumns: ":not(:last-child)" },
-            { id: "stock-movements-table", exportColumns: ":visible" },
+            { id: "stock-table", exportUrl: () => route("stock.export", { table: "products" }) },
+            {
+                id: "stock-movements-table",
+                exportUrl: () => route("stock.export", {
+                    table: "movements",
+                    startDate: logStartDate.value,
+                    endDate: logEndDate.value,
+                    type: logType.value,
+                }),
+            },
         ];
 
-        tables.forEach(({ id, exportColumns }) => {
+        tables.forEach(({ id, exportUrl }) => {
             const table = $(`#${id}`);
 
             if (!table.length) {
@@ -116,17 +124,17 @@ const initializeExportTables = () => {
             }
 
             table.DataTable({
-                dom: '<"mb-4"B>t',
+                dom: '<"d-flex align-items-center"<"col-6"B>>t',
                 paging: false,
                 searching: false,
                 info: false,
                 ordering: false,
                 buttons: [
                     {
-                        extend: "excelHtml5",
-                        text: "Baixar Excel",
-                        exportOptions: {
-                            columns: exportColumns,
+                        text: "Exportar Excel",
+                        className: "btn btn-success",
+                        action: () => {
+                            window.open(exportUrl(), "_blank");
                         },
                     },
                 ],
@@ -574,3 +582,8 @@ const formatDateTime = (value) => {
 
     </BaseLayout>
 </template>
+
+<style>
+@import "/resources/css/Components/Datatable.css";
+@import "/resources/css/Components/datatableButtons.css";
+</style>

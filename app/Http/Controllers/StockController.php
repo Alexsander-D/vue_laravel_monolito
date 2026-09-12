@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class StockController extends Controller
 {
@@ -26,6 +29,83 @@ class StockController extends Controller
             'stocks' => $stocks,
             'movements' => $movements,
         ]);
+    }
+
+    public function export(Request $request, string $table)
+    {
+        abort_unless(in_array($table, ['products', 'movements'], true), 404);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        /** @var \App\Models\Spatie\User $user */
+        $user = Auth::user();
+        $isAdmin = $user->getRoleByUser() === 'Admin';
+
+        if ($table === 'products') {
+            $headers = ['Produto', 'Quantidade'];
+
+            if ($isAdmin) {
+                $headers[] = 'Preço de custo';
+            }
+
+            $headers[] = 'Preço de venda';
+            $rows = StockProduct::query()->orderBy('product_name')->get();
+        } else {
+            $headers = ['Produto', 'Tipo', 'Quantidade', 'Preço', 'Data'];
+            $startDate = $request->input('startDate');
+            $endDate = $request->input('endDate');
+            $type = $request->input('type');
+
+            $rows = StockMovement::with('stockProduct')
+                ->when($startDate, fn ($query) => $query->whereDate('created_at', '>=', $startDate))
+                ->when($endDate, fn ($query) => $query->whereDate('created_at', '<=', $endDate))
+                ->when(in_array($type, ['entrada', 'baixa', 'venda'], true), function ($query) use ($type) {
+                    if ($type === 'venda') {
+                        return $query->where('description', 'Venda de estoque');
+                    }
+
+                    return $query->where('type', $type)->where('description', '!=', 'Venda de estoque');
+                })
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        foreach ($headers as $index => $header) {
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1) . '1', $header);
+        }
+
+        foreach ($rows as $rowIndex => $row) {
+            if ($table === 'products') {
+                $values = [$row->product_name, $row->quantity];
+
+                if ($isAdmin) {
+                    $values[] = $row->cost_price;
+                }
+
+                $values[] = $row->price;
+            } else {
+                $movementType = $row->description === 'Venda de estoque' ? 'Venda' : ucfirst($row->type);
+                $values = [
+                    $row->stockProduct?->product_name ?? 'Produto removido',
+                    $movementType,
+                    $row->quantity,
+                    $row->price,
+                    $row->created_at?->format('d/m/Y H:i:s'),
+                ];
+            }
+
+            foreach ($values as $columnIndex => $value) {
+                $cell = Coordinate::stringFromColumnIndex($columnIndex + 1) . ($rowIndex + 2);
+                $sheet->setCellValue($cell, $value ?? '');
+            }
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'estoque_' . $table . '_' . date('YmdHis') . '.xlsx';
+        $tempFile = tempnam(sys_get_temp_dir(), $filename);
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
 
     public function create(Request $request)

@@ -84,6 +84,7 @@ Route::middleware([
         )->name('attendance.destroy');
 
         Route::get('/attendance/stock', [StockController::class, 'index'])->name('stock.index');
+        Route::get('/attendance/stock/export/{table}', [StockController::class, 'export'])->name('stock.export');
         Route::post('/attendance/stock/create', [StockController::class, 'create'])->name('stock.create');
         Route::put('/attendance/stock/{stock}', [StockController::class, 'update'])->name('stock.update');
         Route::put('/attendance/stock/{stock}/sell', [StockController::class, 'sell'])->name('stock.sell');
