@@ -24,6 +24,7 @@ const props = defineProps({
 });
 
 const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
+const barberOptions = ["Barbeiro 1", "Barbeiro 2"];
 
 const serviceCatalog = [
   { name: "Corte Social", price: 35, icon: "✂️" },
@@ -50,6 +51,13 @@ const parseServiceEntries = (value) => {
 
 const getServicePrice = (serviceName) => {
   return serviceCatalog.find((service) => service.name === serviceName)?.price ?? 0;
+};
+const getResponsibleBarber = (record) => {
+  if (Array.isArray(record.barbers) && record.barbers.length > 0) {
+    return record.barbers.join(", ");
+  }
+
+  return record.user_name || "Não informado";
 };
 const getToday = () => new Date().toISOString().slice(0, 10);
 
@@ -139,7 +147,7 @@ const tableData = computed(() => {
   return props.records.map((record) => {
     const row = {
       date: formatDateTime(record.created_at),
-      barber: record.user_name,
+      barber: getResponsibleBarber(record),
       service: record.service_name,
       payment: record.payment_method || "Não informado",
       price: formatCurrency(record.price),
@@ -151,6 +159,8 @@ const tableData = computed(() => {
         ? record.service_name
         : parseServiceEntries(record.service_name);
       const serviceList = encodeURIComponent(JSON.stringify(services));
+      const barbers = Array.isArray(record.barbers) ? record.barbers : [];
+      const barberList = encodeURIComponent(JSON.stringify(barbers));
 
       row.button1 = `
         <div class="flex justify-end gap-2">
@@ -159,6 +169,7 @@ const tableData = computed(() => {
             data-id="${record.attendance_id}"
             data-payment="${currentPaymentMethod}"
             data-services="${serviceList}"
+            data-barbers="${barberList}"
             class="edit-btn rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Editar
@@ -278,7 +289,7 @@ const deleteAttendance = async (attendanceId) => {
   });
 };
 
-const editAttendance = async (attendanceId, currentPaymentMethod, currentServices = []) => {
+const editAttendance = async (attendanceId, currentPaymentMethod, currentServices = [], currentBarbers = []) => {
   const paymentOptions = {
     Dinheiro: "Dinheiro",
     Cartão: "Cartão",
@@ -289,6 +300,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     acc[serviceName] = (acc[serviceName] || 0) + 1;
     return acc;
   }, {});
+  const currentBarber = currentBarbers[0] || barberOptions[0];
 
   const getSelectedTotal = () => {
     return serviceCatalog.reduce((sum, service) => {
@@ -345,12 +357,25 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
         </div>
         <div>
           <label class="mb-2 block text-sm font-medium text-gray-700">Pagamento</label>
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap justify-center gap-2">
             ${Object.entries(paymentOptions)
               .map(([key, label]) => `
                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${key === currentPaymentMethod ? 'border-yellow-500 bg-yellow-500/10 text-yellow-700' : 'border-gray-300 bg-white text-gray-700 hover:border-yellow-400'}">
                   <input type="radio" name="attendance-payment-edit" value="${key}" ${key === currentPaymentMethod ? "checked" : ""} class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
                   <span>${label}</span>
+                </label>
+              `)
+              .join("")}
+          </div>
+        </div>
+        <div class="mt-4">
+          <label class="mb-2 block text-sm font-medium text-gray-700">Barbeiro responsável</label>
+          <div class="flex flex-wrap justify-center gap-2">
+            ${barberOptions
+              .map((barber) => `
+                <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${barber === currentBarber ? 'border-yellow-500 bg-yellow-500/10 text-yellow-700' : 'border-gray-300 bg-white text-gray-700 hover:border-yellow-400'}">
+                  <input type="radio" name="attendance-barber-edit" value="${barber}" ${barber === currentBarber ? "checked" : ""} class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
+                  <span>${barber}</span>
                 </label>
               `)
               .join("")}
@@ -441,6 +466,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     },
     preConfirm: () => {
       const selectedPaymentMethod = document.querySelector('input[name="attendance-payment-edit"]:checked')?.value || "";
+      const selectedBarber = document.querySelector('input[name="attendance-barber-edit"]:checked')?.value || "";
       const selectedServices = [];
 
       document.querySelectorAll(".attendance-service-card").forEach((card) => {
@@ -452,8 +478,8 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
         }
       });
 
-      if (selectedServices.length === 0 || !selectedPaymentMethod) {
-        Swal.showValidationMessage("Selecione pelo menos um serviço e a forma de pagamento.");
+      if (selectedServices.length === 0 || !selectedPaymentMethod || !selectedBarber) {
+        Swal.showValidationMessage("Selecione pelo menos um serviço, a forma de pagamento e o barbeiro responsável.");
         return false;
       }
 
@@ -467,6 +493,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
 
       return {
         payment_method: selectedPaymentMethod,
+        barbers: [selectedBarber],
         services,
       };
     },
@@ -503,6 +530,7 @@ onMounted(() => {
     const attendanceId = $(this).data("id");
     const currentPaymentMethod = $(this).data("payment");
     const rawServices = $(this).attr("data-services") || "[]";
+    const rawBarbers = $(this).attr("data-barbers") || "[]";
     const currentServices = (() => {
       try {
         return JSON.parse(decodeURIComponent(rawServices));
@@ -510,8 +538,15 @@ onMounted(() => {
         return [];
       }
     })();
+    const currentBarbers = (() => {
+      try {
+        return JSON.parse(decodeURIComponent(rawBarbers));
+      } catch (error) {
+        return [];
+      }
+    })();
 
-    editAttendance(attendanceId, currentPaymentMethod, currentServices);
+    editAttendance(attendanceId, currentPaymentMethod, currentServices, currentBarbers);
   });
 });
 </script>

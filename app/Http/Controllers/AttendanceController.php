@@ -73,6 +73,7 @@ class AttendanceController extends Controller
                 'attendances.id as attendance_id',
                 'attendances.user_id',
                 'users.name as user_name',
+                'attendances.barbers',
                 DB::raw("GROUP_CONCAT(attendance_services.service_name SEPARATOR ', ') as service_name"),
                 DB::raw('COALESCE(SUM(attendance_services.price), 0) as price'),
                 'attendances.payment_method',
@@ -86,6 +87,7 @@ class AttendanceController extends Controller
                 'attendances.id',
                 'attendances.user_id',
                 'users.name',
+                'attendances.barbers',
                 'attendances.payment_method',
                 'attendances.created_at'
             )
@@ -161,6 +163,8 @@ class AttendanceController extends Controller
     {
         $validated = Validator::make($request->all(), [
             'payment_method' => ['nullable', 'string', 'in:Dinheiro,Cartão,Pix'],
+            'barbers' => ['nullable', 'array', 'min:1'],
+            'barbers.*' => ['string', 'in:Barbeiro 1,Barbeiro 2'],
             'services' => ['nullable', 'array'],
             'services.*.name' => ['required_with:services', 'string', 'min:1'],
             'services.*.price' => ['required_with:services', 'numeric', 'min:0'],
@@ -169,6 +173,12 @@ class AttendanceController extends Controller
         if (! empty($validated['payment_method'])) {
             $attendance->update([
                 'payment_method' => $validated['payment_method'],
+            ]);
+        }
+
+        if (array_key_exists('barbers', $validated)) {
+            $attendance->update([
+                'barbers' => $validated['barbers'],
             ]);
         }
 
