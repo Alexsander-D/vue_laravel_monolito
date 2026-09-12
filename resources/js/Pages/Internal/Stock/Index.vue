@@ -349,7 +349,7 @@ const formatDateTime = (value) => {
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Produtos em Estoque</h2>
                             <button type="button" @click="exportProducts"
-                                class="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500">
+                                class="rounded-md bg-gray-600 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
                                 Baixar Excel
                             </button>
                         </div>
@@ -412,7 +412,7 @@ const formatDateTime = (value) => {
                             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Log de Entradas e Baixas
                             </h2>
                             <button type="button" @click="exportMovements"
-                                class="rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500">
+                                class="rounded-md bg-gray-600 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
                                 Baixar Excel
                             </button>
                         </div>
