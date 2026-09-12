@@ -60,7 +60,13 @@ const getResponsibleBarber = (record) => {
 
   return record.user_name || "Não informado";
 };
-const getToday = () => new Date().toISOString().slice(0, 10);
+const getToday = () => {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${today.getFullYear()}-${month}-${day}`;
+};
 
 const form = useForm({
   startDate: props.date?.startDate || getToday(),
