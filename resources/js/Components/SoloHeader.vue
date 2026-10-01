@@ -168,7 +168,7 @@ onMounted(() => {
         <!-- FIM CADASTROS DROPDOWN -->
 
         <!-- CADASTROS DROPDOWN -->
-        <div v-if="$page.props.auth.user.current_team.name.includes('SAC')" :class="{
+        <div v-if="$page.props.auth.user.current_team?.name?.includes('SAC')" :class="{
           hidden: !isMenuOpen,
           block: isMenuOpen,
         }" class="ms-3 relative py-1">
@@ -217,7 +217,7 @@ onMounted(() => {
 
         <!-- MATERIAIS TRIAGEMDROPDOWN -->
         <div v-if="
-          $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
+          $page.props.auth.user.current_team?.name?.includes('TRIAGEM') &&
           $page.props.userPermissions.includes('gerir-materiais')
         " :class="{
           hidden: !isMenuOpen,
@@ -253,7 +253,7 @@ onMounted(() => {
 
         <!-- RELATÓRIOS TRIAGEM DROPDOWN -->
         <div v-if="
-          $page.props.auth.user.current_team.name.includes('TRIAGEM') &&
+          $page.props.auth.user.current_team?.name?.includes('TRIAGEM') &&
           $page.props.userPermissions.includes('relatorios-triagem')
         " :class="{
           hidden: !isMenuOpen,
@@ -287,7 +287,7 @@ onMounted(() => {
         <!-- FIM RELATÓRIOS TRIAGEM DROPDOWN -->
 
         <!-- ATENDIMENTO EXTERNO DROPDOWN -->
-        <div v-if="$page.props.auth.user.current_team.name.includes('TRIAGEM')" :class="{
+        <div v-if="$page.props.auth.user.current_team?.name?.includes('TRIAGEM')" :class="{
           hidden: !isMenuOpen,
           block: isMenuOpen,
         }" class="ms-3 relative py-1">
@@ -389,7 +389,7 @@ onMounted(() => {
         <!-- PRODUÇÃO DIÁRIA DROPDOWN -->
         <div v-if="
           ['RMA', 'SAC'].some((term) =>
-            $page.props.auth.user.current_team.name.includes(term)
+            $page.props.auth.user.current_team?.name?.includes(term)
           )
         " :class="{
           hidden: !isMenuOpen,
@@ -492,7 +492,7 @@ onMounted(() => {
               <span class="inline-flex rounded-md whitespace-nowrap">
                 <button type="button"
                   class="stringColor inline-flex items-center px-3 py-2 text-sm font-medium focus:outline-none">
-                  {{ $page.props.auth.user.current_team.name }}
+                  {{ $page.props.auth.user.current_team?.name ?? 'Sem equipe' }}
                   <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
@@ -504,7 +504,7 @@ onMounted(() => {
 
             <template #content>
               <div class="w-60">
-                <Link v-if="$page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-equipe')"
+                <Link v-if="$page.props.auth.user.current_team && ($page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                   :href="route('teams.show', $page.props.auth.user.current_team)">
                   Gerir equipe

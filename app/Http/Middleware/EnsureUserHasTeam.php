@@ -21,32 +21,23 @@ class EnsureUserHasTeam
         if (Auth::check()) {
             $user = Auth::user();
 
-            // Verifica se o usuário tem um currentTeam
-            if (!$user->current_team_id) {
-                // Verifica se o usuário já pertence a algum time
+            if (!$user->currentTeam) {
                 $userTeam = $user->teams->first();
 
-                if ($userTeam) {
-                    // Se o usuário já pertence a algum time, define o current_team_id para esse time
-                    $user->current_team_id = $userTeam->id;
-                } else {
-                    // Encontra o time padrão "EQUIPE NÃO ATRIBUÍDA"
-                    $defaultTeam = Team::where('name', 'EQUIPE NÃO ATRIBUÍDA')->first();
+                if (!$userTeam) {
+                    $userTeam = Team::where('name', 'EQUIPE NÃO ATRIBUÍDA')->first();
 
-                    if ($defaultTeam) {
-                        // Associa o usuário ao time "EQUIPE NÃO ATRIBUÍDA" se ele ainda não pertence
-                        if (!$user->teams->contains($defaultTeam->id)) {
-                            $user->teams()->attach($defaultTeam->id, ['role' => 'Espectador']);
-                        }
-                        $user->current_team_id = $defaultTeam->id;
+                    if ($userTeam) {
+                        $user->teams()->attach($userTeam->id, ['role' => 'Espectador']);
                     }
                 }
 
-                // Salva as alterações no usuário
-                $user->save();
+                if ($userTeam) {
+                    $user->current_team_id = $userTeam->id;
+                    $user->save();
 
-                // Redireciona para a mesma rota para garantir que o currentTeam seja recarregado corretamente
-                return back();
+                    return back();
+                }
             }
         }
 
