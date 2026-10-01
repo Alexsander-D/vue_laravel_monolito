@@ -1,6 +1,5 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
-import GoaliSelect2 from "@/Components/GoaliSelect2.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
 
@@ -26,6 +25,7 @@ const successMessage = computed(() => page.props.flash?.success || "");
 
 watch(() => form.solicitation, (company) => {
   form.origin = company || "";
+  if (company) form.clearErrors("solicitation");
 });
 
 const formatAmount = () => {
@@ -36,6 +36,11 @@ const formatAmount = () => {
 };
 
 const submit = () => {
+  if (!form.solicitation) {
+    form.setError("solicitation", "Selecione uma empresa.");
+    return;
+  }
+
   form.post(route("goali.store"), {
     preserveScroll: true,
     onSuccess: () => form.reset("travel_time", "status", "solicitation", "origin", "destination", "passenger", "amount"),
@@ -76,13 +81,10 @@ const submit = () => {
           </fieldset>
           <div>
             <label for="solicitation" class="field-label">Solicitação / empresa <span>*</span></label>
-            <GoaliSelect2
-              id="solicitation"
-              v-model="form.solicitation"
-              :options="props.solicitations"
-              placeholder="Selecione uma empresa"
-              required
-            />
+            <select id="solicitation" v-model="form.solicitation" class="field-input" required>
+              <option disabled value="">Selecione uma empresa</option>
+              <option v-for="company in props.solicitations" :key="company" :value="company">{{ company }}</option>
+            </select>
             <p v-if="form.errors.solicitation" class="field-error">{{ form.errors.solicitation }}</p>
           </div>
 
