@@ -1,6 +1,8 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
 import Select from "@/Components/Select.vue";
+import TextInput from "@/Components/TextInput.vue";
+import InputError from "@/Components/InputError.vue";
 import { router, useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 import Swal from "sweetalert2";
@@ -13,6 +15,7 @@ const props = defineProps({
 });
 
 const filters = useForm({ ...props.filters });
+const statusOptions = ["ENTRADA", "SAÍDA"];
 const editingId = ref(null);
 const editForm = useForm({});
 const reportUrl = computed(() => route("goali.export", filters.data()));
@@ -76,9 +79,9 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
       </header>
 
       <form class="mb-5 grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
-        <label class="filter-label">Data inicial<input v-model="filters.startDate" type="date" /></label>
-        <label class="filter-label">Data final<input v-model="filters.endDate" type="date" /></label>
-        <label class="filter-label">Status<select v-model="filters.status"><option value="">Todos</option><option>ENTRADA</option><option>SAÍDA</option></select></label>
+        <label class="filter-label">Data inicial<TextInput v-model="filters.startDate" type="date" class="mt-1 block w-full" /></label>
+        <label class="filter-label">Data final<TextInput v-model="filters.endDate" type="date" class="mt-1 block w-full" /></label>
+        <label class="filter-label">Status<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" /></label>
         <button class="self-end rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700" type="submit">Filtrar</button>
       </form>
@@ -112,13 +115,15 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
         <form class="my-6 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900" @submit.prevent="saveEdit">
           <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">Editar deslocamento</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label class="filter-label">Data<input v-model="editForm.travel_date" type="date" required /></label><label class="filter-label">Horário<input v-model="editForm.travel_time" type="time" required /></label>
-            <label class="filter-label">Status<select v-model="editForm.status" required><option>ENTRADA</option><option>SAÍDA</option></select></label>
+            <label class="filter-label">Data<TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_date" /></label>
+            <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
+            <label class="filter-label">Status<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione status" :allow-empty="false" required /><InputError :message="editForm.errors.status" /></label>
             <label class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
-            <label class="filter-label">Origem<input v-model="editForm.origin" type="text" readonly required /></label><label class="filter-label">Destino<input v-model="editForm.destination" type="text" required /></label>
-            <label class="filter-label">Passageiro<input v-model="editForm.passenger" type="text" required /></label>
-            <label class="filter-label">Responsável<input v-model="editForm.responsible" type="text" required /></label>
-            <label class="filter-label">Valor (R$)<input v-model="editForm.amount" type="number" min="0" step="0.01" inputmode="decimal" required /></label>
+            <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" readonly required /><InputError :message="editForm.errors.origin" /></label>
+            <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
+            <label class="filter-label">Passageiro<TextInput v-model="editForm.passenger" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>
+            <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.responsible" /></label>
+            <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
           </div>
           <p v-if="editForm.hasErrors" class="mt-3 text-sm text-red-700">Verifique os campos informados.</p>
           <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">Salvar alterações</button></div>
@@ -130,5 +135,4 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
 
 <style scoped>
 .filter-label { display: flex; flex-direction: column; gap: .4rem; color: #4b5563; font-size: .8rem; font-weight: 600; }
-.filter-label input, .filter-label select { min-height: 2.5rem; border: 1px solid #d1d5db; border-radius: 5px; background: white; padding: .45rem .65rem; color: #111827; font-size: .9rem; font-weight: 400; }
 </style>
