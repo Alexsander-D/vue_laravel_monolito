@@ -1,5 +1,6 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
+import Select from "@/Components/Select.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
 
@@ -81,10 +82,15 @@ const submit = () => {
           </fieldset>
           <div>
             <label for="solicitation" class="field-label">Solicitação / empresa <span>*</span></label>
-            <select id="solicitation" v-model="form.solicitation" class="field-input" required>
-              <option disabled value="">Selecione uma empresa</option>
-              <option v-for="company in props.solicitations" :key="company" :value="company">{{ company }}</option>
-            </select>
+            <Select
+              id="solicitation"
+              v-model="form.solicitation"
+              :options="props.solicitations"
+              class="mt-1 block w-full"
+              placeholder="Selecione uma empresa"
+              :allow-empty="false"
+              required
+            />
             <p v-if="form.errors.solicitation" class="field-error">{{ form.errors.solicitation }}</p>
           </div>
 

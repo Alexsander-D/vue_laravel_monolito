@@ -1,5 +1,6 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
+import Select from "@/Components/Select.vue";
 import { router, useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 import Swal from "sweetalert2";
@@ -78,7 +79,7 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
         <label class="filter-label">Data inicial<input v-model="filters.startDate" type="date" /></label>
         <label class="filter-label">Data final<input v-model="filters.endDate" type="date" /></label>
         <label class="filter-label">Status<select v-model="filters.status"><option value="">Todos</option><option>ENTRADA</option><option>SAÍDA</option></select></label>
-        <label class="filter-label">Solicitação<select v-model="filters.solicitation"><option value="">Todas</option><option v-for="company in props.solicitations" :key="company" :value="company">{{ company }}</option></select></label>
+        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" /></label>
         <button class="self-end rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700" type="submit">Filtrar</button>
       </form>
 
@@ -113,7 +114,7 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label class="filter-label">Data<input v-model="editForm.travel_date" type="date" required /></label><label class="filter-label">Horário<input v-model="editForm.travel_time" type="time" required /></label>
             <label class="filter-label">Status<select v-model="editForm.status" required><option>ENTRADA</option><option>SAÍDA</option></select></label>
-            <label class="filter-label">Solicitação<select v-model="editForm.solicitation" required><option disabled value="">Selecione uma empresa</option><option v-for="company in props.solicitations" :key="company" :value="company">{{ company }}</option></select><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
+            <label class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
             <label class="filter-label">Origem<input v-model="editForm.origin" type="text" readonly required /></label><label class="filter-label">Destino<input v-model="editForm.destination" type="text" required /></label>
             <label class="filter-label">Passageiro<input v-model="editForm.passenger" type="text" required /></label>
             <label class="filter-label">Responsável<input v-model="editForm.responsible" type="text" required /></label>
