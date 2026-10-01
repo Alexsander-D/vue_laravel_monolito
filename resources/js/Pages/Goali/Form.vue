@@ -4,6 +4,7 @@ import Select from "@/Components/Select.vue";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
+import Radio from "@/Components/Radio.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import { computed, watch } from "vue";
 
@@ -76,17 +77,15 @@ const submit = () => {
           <fieldset>
             <legend class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Status <span>*</span></legend>
             <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-              <label v-for="status in ['ENTRADA', 'SAÍDA']" :key="status" class="choice-label">
-                <input
-                  v-model="form.status"
-                  type="radio"
-                  name="status"
-                  :value="status"
-                  required
-                  class="border-gray-200 rounded-full text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                />
-                <span class="font-medium text-sm text-gray-800 dark:text-neutral-200">{{ status }}</span>
-              </label>
+              <Radio
+                v-for="status in ['ENTRADA', 'SAÍDA']"
+                :key="status"
+                v-model="form.status"
+                :value="status"
+                :label="status"
+                name="status"
+                required
+              />
             </div>
             <InputError :message="form.errors.status" class="mt-2" />
           </fieldset>
