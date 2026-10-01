@@ -2,8 +2,11 @@
 
 namespace App\Actions\Jetstream;
 
+use App\Models\Spatie\Permission;
+use App\Models\Spatie\Role;
 use App\Models\Spatie\Team;
 use App\Models\Spatie\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Jetstream\Contracts\CreatesTeams;
@@ -27,26 +30,38 @@ class CreateTeam implements CreatesTeams
 
         AddingTeam::dispatch($user);
 
-        $user->switchTeam($team = $user->ownedTeams()->create([
-            'name' => $input['name'],
-            'personal_team' => true,
-        ]));
+        return DB::transaction(function () use ($user, $input): Team {
+            $team = $user->ownedTeams()->create([
+                'name' => $input['name'],
+                'personal_team' => true,
+            ]);
 
-        $role = Role::create([
-            'name' => 'Admin',
-            'team_id' => $team->id,
-        ]);
+            $adminRole = Role::create([
+                'name' => 'Admin',
+                'team_id' => $team->id,
+            ]);
 
-        $team->users()->attach(
-            $user->id,
-            ['role' => $role->name]
-        );
+            Role::create([
+                'name' => 'Espectador',
+                'team_id' => $team->id,
+            ]);
 
-        Role::create([
-            'name' => 'Espectador',
-            'team_id' => $team->id,
-        ]);
+            $team->users()->attach($user->id, ['role' => $adminRole->name]);
 
-        return $team;
+            $permissionIds = [];
+            foreach (['gerir-equipe', 'gerir-permissoes'] as $permissionName) {
+                $permission = Permission::firstOrCreate([
+                    'name' => $permissionName,
+                    'team_id' => $team->id,
+                ]);
+
+                $permissionIds[] = $permission->id;
+            }
+
+            $adminRole->permissions()->sync($permissionIds);
+            $user->switchTeam($team);
+
+            return $team;
+        });
     }
 }

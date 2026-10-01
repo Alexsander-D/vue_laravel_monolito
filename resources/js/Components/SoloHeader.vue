@@ -1,7 +1,18 @@
 <script setup>
-import { onMounted, onUnmounted, ref, watch } from "vue";
-import { Link, router } from "@inertiajs/vue3";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import Dropdown from "@/Components/Dropdown.vue";
+
+const page = usePage();
+const isGoaliTransportesCurrentTeam = computed(() => {
+  const user = page.props.auth?.user;
+
+  return user?.all_teams?.some(
+    (team) =>
+      Number(team.id) === Number(user.current_team_id) &&
+      team.name?.trim().toLocaleUpperCase() === "GOALI TRANSPORTES"
+  ) ?? false;
+});
 
 const isDarkMode = ref(false);
 const isMenuOpen = ref(true);
@@ -90,6 +101,40 @@ onMounted(() => {
 
     <nav v-if="$page.props.auth?.user" class="flex basis-full w-full mx-auto justify-center items-center space-x-4 p-2">
       <div class="flex flex-col sm:w-full md:flex-row md:w-auto items-center md:ml-auto">
+        <div v-if="isGoaliTransportesCurrentTeam" :class="{
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
+          <Dropdown align="right" width="60">
+            <template #trigger>
+              <span class="inline-flex rounded-md whitespace-nowrap">
+                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                  GOALI TRANSPORTES
+                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              </span>
+            </template>
+
+            <template #content>
+              <div class="w-60">
+                <Link class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('goali.form')">
+                  Registrar deslocamento
+                </Link>
+                <Link class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('goali.index')">
+                  Relatório de deslocamentos
+                </Link>
+              </div>
+            </template>
+          </Dropdown>
+        </div>
+
+        <template v-else>
         <!-- CADASTROS DROPDOWN -->
         <div v-if="
           ['cadastrar-falhas', 'cadastrar-produtos'].some((term) =>
@@ -522,6 +567,7 @@ onMounted(() => {
           </Dropdown>
         </div>
         <!-- FIM EQUIPE DROPDOWN -->
+        </template>
 
         <!-- PERFIL DROPDOWN -->
         <div :class="{
