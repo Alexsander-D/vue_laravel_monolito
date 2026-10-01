@@ -1,6 +1,6 @@
 <!-- Radio.vue -->
 <script setup>
-import { computed, defineEmits, defineProps } from "vue";
+import { defineEmits, defineProps } from "vue";
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -27,12 +27,6 @@ const props = defineProps({
   },
 });
 
-const proxyChecked = computed({
-  get: () => props.modelValue === props.value,
-  set: (val) => {
-    if (val) emit("update:modelValue", props.value);
-  },
-});
 </script>
 
 <style scoped>
@@ -57,7 +51,8 @@ const proxyChecked = computed({
       :name="name"
       :value="value"
       :required="required"
-      v-model="proxyChecked"
+      :checked="modelValue === value"
+      @change="emit('update:modelValue', value)"
       class="colorBase shrink-0 mt-0.5 rounded-full text-blue-600 focus:ring-blue-500 checked:border-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
     />
     <label

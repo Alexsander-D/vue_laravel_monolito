@@ -57,9 +57,10 @@ const submit = () => {
   <BaseLayout title="GT DIONÍNIO BARBOSA">
     <div class="w-full mx-auto pt-2">
       <div class="rounded-xl bg-white p-4 shadow-lg dark:bg-gray-900 sm:p-6">
-        <header class="mb-6 border-b border-gray-200 pb-4 dark:border-gray-700">
-          <h1 class="text-xl font-semibold text-gray-900 dark:text-white">GT DIONÍNIO BARBOSA</h1>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Registro de deslocamento</p>
+        <header class="mb-6 border-b border-gray-200 pb-5 text-center dark:border-gray-700">
+          <h1 class="text-2xl font-bold uppercase text-gray-900 dark:text-white">GT DIONÍNIO BARBOSA</h1>
+          <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
+          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">Registro de deslocamento</p>
         </header>
 
         <form class="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2" @submit.prevent="submit">
