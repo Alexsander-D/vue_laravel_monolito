@@ -66,19 +66,21 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
 
 <template>
   <BaseLayout title="Relatório Goali">
-    <main class="mx-auto w-full max-w-screen-2xl px-3 py-5 sm:px-6">
-      <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
+    <main class="w-full mx-auto pt-1">
+      <section class="rounded-xl bg-white p-4 shadow-lg dark:bg-gray-900 sm:p-6">
+        <div class="grid grid-cols-12 gap-4">
+          <header class="col-span-12 grid grid-cols-12 gap-4 border-b border-gray-200 pb-5 dark:border-gray-700">
+            <div class="col-span-12">
           <p class="text-xs font-bold uppercase text-teal-700">GT Dionínio Barbosa</p>
           <h1 class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">Relatório de deslocamentos</h1>
         </div>
-        <div class="flex gap-2">
+            <div class="col-span-12 flex flex-wrap justify-end gap-2">
           <a :href="route('goali.form')" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Novo registro</a>
           <a :href="reportUrl" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Exportar Excel</a>
         </div>
       </header>
 
-      <form class="mb-5 grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
+      <form class="col-span-12 grid grid-cols-1 gap-3 border-b border-gray-200 pb-5 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
         <label class="filter-label">Data inicial<TextInput v-model="filters.startDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Data final<TextInput v-model="filters.endDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Status<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" /></label>
@@ -86,12 +88,12 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
         <button class="self-end rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700" type="submit">Filtrar</button>
       </form>
 
-      <section class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div class="border-l-4 border-teal-600 bg-white px-5 py-4 dark:bg-gray-900"><p class="text-sm text-gray-500">Registros no período</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ props.summary.count }}</p></div>
-        <div class="border-l-4 border-amber-500 bg-white px-5 py-4 dark:bg-gray-900"><p class="text-sm text-gray-500">Valor total</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.amount) }}</p></div>
+      <section class="col-span-12 grid grid-cols-1 gap-4 border-b border-gray-200 pb-5 dark:border-gray-700 sm:grid-cols-2">
+        <div class="border-l-4 border-teal-600 px-4 py-2"><p class="text-sm text-gray-500">Registros no período</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ props.summary.count }}</p></div>
+        <div class="border-l-4 border-amber-500 px-4 py-2"><p class="text-sm text-gray-500">Valor total</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.amount) }}</p></div>
       </section>
 
-      <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+      <div class="col-span-12 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
         <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-700">
           <thead class="bg-gray-50 text-xs uppercase text-gray-600 dark:bg-gray-800 dark:text-gray-300"><tr><th class="px-4 py-3">Data / Hora</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Solicitação</th><th class="px-4 py-3">Origem / Destino</th><th class="px-4 py-3">Passageiro</th><th class="px-4 py-3">Responsável</th><th class="px-4 py-3 text-right">Valor</th><th class="px-4 py-3 text-right">Ações</th></tr></thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -107,9 +109,11 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
         </table>
       </div>
 
-      <nav v-if="props.records.links?.length > 3" class="mt-4 flex flex-wrap gap-2" aria-label="Paginação">
+      <nav v-if="props.records.links?.length > 3" class="col-span-12 mt-1 flex flex-wrap gap-2" aria-label="Paginação">
         <template v-for="link in props.records.links" :key="link.label"><span v-if="!link.url" class="rounded border px-3 py-2 text-sm text-gray-400" v-html="link.label"></span><a v-else :href="link.url" class="rounded border px-3 py-2 text-sm" :class="link.active ? 'border-teal-700 bg-teal-700 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'" v-html="link.label"></a></template>
       </nav>
+        </div>
+      </section>
 
       <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" @click.self="editingId = null">
         <form class="my-6 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900" @submit.prevent="saveEdit">
