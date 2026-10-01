@@ -39,6 +39,7 @@ use App\Http\Controllers\Internal\ProductTransferController;
 use App\Http\Controllers\Internal\ProductTransferControllerAdmin;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\GoaliTripController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -47,6 +48,9 @@ Route::get('/', function () {
         'welcomeImage' => asset('images/welcome.png'),
     ]);
 })->name('welcome');
+
+Route::get('/goali/form', [GoaliTripController::class, 'form'])->name('goali.form');
+Route::post('/goali/form', [GoaliTripController::class, 'store'])->name('goali.store');
 
 Route::middleware([
     'auth:sanctum',
@@ -57,6 +61,11 @@ Route::middleware([
         Route::get('/dashboard', function () {
             return Inertia::render('Dashboard');
         })->name('dashboard');
+
+        Route::get('/goali/records', [GoaliTripController::class, 'index'])->name('goali.index');
+        Route::get('/goali/records/export', [GoaliTripController::class, 'export'])->name('goali.export');
+        Route::put('/goali/records/{trip}', [GoaliTripController::class, 'update'])->name('goali.update');
+        Route::delete('/goali/records/{trip}', [GoaliTripController::class, 'destroy'])->name('goali.destroy');
 
         Route::post(
             '/attendance/store',

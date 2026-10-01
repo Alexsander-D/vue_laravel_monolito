@@ -82,13 +82,13 @@ onMounted(() => {
     }" class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2">
       <Link
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
-        :href="route('dashboard')" aria-label="barbearia">
+        :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')" aria-label="barbearia">
         <img src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
       </Link>
     </div>
     <!-- FIM LOGOMARCA -->
 
-    <nav class="flex basis-full w-full mx-auto justify-center items-center space-x-4 p-2">
+    <nav v-if="$page.props.auth?.user" class="flex basis-full w-full mx-auto justify-center items-center space-x-4 p-2">
       <div class="flex flex-col sm:w-full md:flex-row md:w-auto items-center md:ml-auto">
         <!-- CADASTROS DROPDOWN -->
         <div v-if="
@@ -580,6 +580,14 @@ onMounted(() => {
         </div>
         <!-- FIM PERFIL DROPDOWN -->
       </div>
+    </nav>
+    <nav v-else class="flex basis-full items-center justify-end gap-3 px-5 py-2 sm:px-8">
+      <Link class="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800" :href="route('goali.form')">
+        Formulário de deslocamento
+      </Link>
+      <Link class="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800" :href="route('login')">
+        Entrar
+      </Link>
     </nav>
   </header>
   <!-- ========== END HEADER ========== -->
