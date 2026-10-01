@@ -70,10 +70,11 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
       <section class="rounded-xl bg-white p-4 shadow-lg dark:bg-gray-900 sm:p-6">
         <div class="grid grid-cols-12 gap-4">
           <header class="col-span-12 grid grid-cols-12 gap-4 border-b border-gray-200 pb-5 dark:border-gray-700">
-            <div class="col-span-12">
-          <p class="text-xs font-bold uppercase text-teal-700">GT Dionínio Barbosa</p>
-          <h1 class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">Relatório de deslocamentos</h1>
-        </div>
+            <div class="col-span-12 text-center">
+              <p class="text-xs font-bold uppercase text-teal-700">GT Dionínio Barbosa</p>
+              <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Relatório de deslocamentos</h1>
+              <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
+            </div>
             <div class="col-span-12 flex flex-wrap justify-end gap-2">
           <a :href="route('goali.form')" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Novo registro</a>
           <a :href="reportUrl" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Exportar Excel</a>
