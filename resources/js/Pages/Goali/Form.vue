@@ -1,17 +1,39 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
+import GoaliSelect2 from "@/Components/GoaliSelect2.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, watch } from "vue";
 
 const props = defineProps({
   solicitations: { type: Array, default: () => [] },
-  amounts: { type: Array, default: () => [] },
+  responsibleUser: { type: String, default: "" },
 });
 
 const today = new Date().toLocaleDateString("en-CA");
-const form = useForm({ travel_date: today, travel_time: "", status: "", solicitation: "", origin: "", destination: "", passenger: "", amount: "" });
+const form = useForm({
+  travel_date: today,
+  travel_time: "",
+  status: "",
+  solicitation: "",
+  origin: "",
+  destination: "",
+  passenger: "",
+  responsible: props.responsibleUser,
+  amount: "",
+});
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
+
+watch(() => form.solicitation, (company) => {
+  form.origin = company || "";
+});
+
+const formatAmount = () => {
+  const amount = Number(String(form.amount).replace(",", "."));
+  if (form.amount !== "" && Number.isFinite(amount)) {
+    form.amount = amount.toFixed(2);
+  }
+};
 
 const submit = () => {
   form.post(route("goali.store"), {
@@ -45,41 +67,89 @@ const submit = () => {
           <fieldset>
             <legend class="field-label">Status <span>*</span></legend>
             <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-              <label v-for="status in ['ENTRADA', 'SAÍDA']" :key="status" class="choice-label"><input v-model="form.status" type="radio" name="status" :value="status" required /><span>{{ status }}</span></label>
+              <label v-for="status in ['ENTRADA', 'SAÍDA']" :key="status" class="choice-label">
+                <input v-model="form.status" type="radio" name="status" :value="status" required />
+                <span>{{ status }}</span>
+              </label>
             </div>
             <p v-if="form.errors.status" class="field-error">{{ form.errors.status }}</p>
           </fieldset>
-          <fieldset>
-            <legend class="field-label">Solicitação <span>*</span></legend>
-            <select v-model="form.solicitation" class="field-input" required>
-              <option disabled value="">Selecione uma solicitação</option>
-              <option v-for="solicitation in props.solicitations" :key="solicitation" :value="solicitation">{{ solicitation }}</option>
-            </select>
+          <div>
+            <label for="solicitation" class="field-label">Solicitação / empresa <span>*</span></label>
+            <GoaliSelect2
+              id="solicitation"
+              v-model="form.solicitation"
+              :options="props.solicitations"
+              placeholder="Selecione uma empresa"
+              required
+            />
             <p v-if="form.errors.solicitation" class="field-error">{{ form.errors.solicitation }}</p>
-          </fieldset>
-
-          <div v-for="field in [{ key: 'origin', label: 'Origem' }, { key: 'destination', label: 'Destino' }, { key: 'passenger', label: 'Passageiro' }]" :key="field.key">
-            <label :for="field.key" class="field-label">{{ field.label }} <span>*</span></label>
-            <input :id="field.key" v-model="form[field.key]" type="text" class="field-input" maxlength="255" required />
-            <p v-if="form.errors[field.key]" class="field-error">{{ form.errors[field.key] }}</p>
           </div>
-          <fieldset>
-            <legend class="field-label">Valor <span>*</span></legend>
-            <select v-model="form.amount" class="field-input" required>
-              <option disabled value="">Selecione o valor</option>
-              <option v-for="amount in props.amounts" :key="amount" :value="String(amount)">R$ {{ amount }}</option>
-            </select>
+
+          <div>
+            <label for="origin" class="field-label">Origem <span>*</span></label>
+            <input id="origin" v-model="form.origin" type="text" class="field-input" readonly required />
+            <p class="mt-1 text-xs text-gray-500">Preenchida automaticamente pela empresa selecionada.</p>
+            <p v-if="form.errors.origin" class="field-error">{{ form.errors.origin }}</p>
+          </div>
+          <div>
+            <label for="destination" class="field-label">Destino <span>*</span></label>
+            <input id="destination" v-model="form.destination" type="text" class="field-input" maxlength="255" required />
+            <p v-if="form.errors.destination" class="field-error">{{ form.errors.destination }}</p>
+          </div>
+          <div>
+            <label for="passenger" class="field-label">Passageiro <span>*</span></label>
+            <input id="passenger" v-model="form.passenger" type="text" class="field-input" maxlength="255" required />
+            <p v-if="form.errors.passenger" class="field-error">{{ form.errors.passenger }}</p>
+          </div>
+          <div>
+            <label for="responsible" class="field-label">Usuário responsável <span>*</span></label>
+            <input
+              id="responsible"
+              v-model="form.responsible"
+              type="text"
+              class="field-input"
+              maxlength="255"
+              required
+              :readonly="Boolean(props.responsibleUser)"
+            />
+            <p v-if="form.errors.responsible" class="field-error">{{ form.errors.responsible }}</p>
+          </div>
+          <div>
+            <label for="amount" class="field-label">Valor (R$) <span>*</span></label>
+            <input
+              id="amount"
+              v-model="form.amount"
+              type="number"
+              class="field-input"
+              min="0"
+              step="0.01"
+              inputmode="decimal"
+              placeholder="0,00"
+              required
+              @blur="formatAmount"
+            />
             <p v-if="form.errors.amount" class="field-error">{{ form.errors.amount }}</p>
-          </fieldset>
+          </div>
 
           <div class="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 md:col-span-2">
-            <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" :disabled="form.processing">
+            <button
+              type="submit"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :disabled="form.processing"
+            >
               {{ form.processing ? "Enviando..." : "Enviar registro" }}
             </button>
-            <button type="reset" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800" @click="form.reset()">
+            <button
+              type="reset"
+              class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+              @click="form.reset()"
+            >
               Limpar formulário
             </button>
-            <p v-if="successMessage" class="text-sm text-green-700 dark:text-green-400" role="status">{{ successMessage }}</p>
+            <p v-if="successMessage" class="text-sm text-green-700 dark:text-green-400" role="status">
+              {{ successMessage }}
+            </p>
           </div>
         </form>
       </div>

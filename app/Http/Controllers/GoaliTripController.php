@@ -18,20 +18,20 @@ class GoaliTripController extends Controller
         'LOGVALE', 'CMW', 'REINALDO', 'PROHALL', 'INVENTA',
     ];
 
-    private const AMOUNTS = [30, 40, 45, 50, 60, 65, 70, 80, 90, 95, 100, 115, 120, 140, 150, 180, 230, 250];
-
     public function form()
     {
         return Inertia::render('Goali/Form', [
             'solicitations' => self::SOLICITATIONS,
-            'amounts' => self::AMOUNTS,
+            'responsibleUser' => Auth::user()?->name ?? '',
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate($this->rules());
-        $validated['user_id'] = Auth::id();
+        $validated['user_id'] = $request->user()?->getAuthIdentifier();
+        $validated['responsible'] = $request->user()?->name ?? $validated['responsible'];
+        $validated['origin'] = $validated['solicitation'];
         GoaliTrip::create($validated);
 
         return back()->with('success', 'Registro enviado com sucesso.');
@@ -56,13 +56,14 @@ class GoaliTripController extends Controller
             'summary' => ['count' => (int) $summary->count, 'amount' => (float) $summary->amount],
             'filters' => array_merge(['startDate' => '', 'endDate' => '', 'status' => '', 'solicitation' => ''], $filters),
             'solicitations' => self::SOLICITATIONS,
-            'amounts' => self::AMOUNTS,
         ]);
     }
 
     public function update(Request $request, GoaliTrip $trip)
     {
-        $trip->update($request->validate($this->rules()));
+        $validated = $request->validate($this->rules());
+        $validated['origin'] = $validated['solicitation'];
+        $trip->update($validated);
 
         return back()->with('success', 'Registro atualizado com sucesso.');
     }
@@ -86,7 +87,7 @@ class GoaliTripController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Relatório Goali');
-        $headers = ['Data', 'Horário', 'Status', 'Solicitação', 'Origem', 'Destino', 'Passageiro', 'Valor (R$)'];
+        $headers = ['Data', 'Horário', 'Status', 'Solicitação', 'Origem', 'Destino', 'Passageiro', 'Responsável', 'Valor (R$)'];
 
         foreach ($headers as $index => $header) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1) . '1', $header);
@@ -101,6 +102,7 @@ class GoaliTripController extends Controller
                 $record->origin,
                 $record->destination,
                 $record->passenger,
+                $record->responsible,
                 (float) $record->amount,
             ];
 
@@ -115,10 +117,10 @@ class GoaliTripController extends Controller
             }
         }
 
-        foreach (range('A', 'H') as $column) {
+        foreach (range('A', 'I') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
-        $sheet->getStyle('A1:H1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
         $tempFile = tempnam(sys_get_temp_dir(), 'goali-report-');
         (new Xlsx($spreadsheet))->save($tempFile);
 
@@ -143,10 +145,10 @@ class GoaliTripController extends Controller
             'travel_time' => ['required', 'date_format:H:i'],
             'status' => ['required', 'in:ENTRADA,SAÍDA'],
             'solicitation' => ['required', 'in:' . implode(',', self::SOLICITATIONS)],
-            'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
             'passenger' => ['required', 'string', 'max:255'],
-            'amount' => ['required', 'numeric', 'in:' . implode(',', self::AMOUNTS)],
+            'responsible' => ['required', 'string', 'max:255'],
+            'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0'],
         ];
     }
 }

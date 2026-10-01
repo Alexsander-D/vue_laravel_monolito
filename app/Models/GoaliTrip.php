@@ -15,6 +15,7 @@ class GoaliTrip extends Model
         'origin',
         'destination',
         'passenger',
+        'responsible',
         'amount',
     ];
 
