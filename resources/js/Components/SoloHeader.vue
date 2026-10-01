@@ -1,18 +1,7 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { Link, router, usePage } from "@inertiajs/vue3";
+import { onMounted, onUnmounted, ref, watch } from "vue";
+import { Link, router } from "@inertiajs/vue3";
 import Dropdown from "@/Components/Dropdown.vue";
-
-const page = usePage();
-const isGoaliTransportesCurrentTeam = computed(() => {
-  const user = page.props.auth?.user;
-
-  return user?.all_teams?.some(
-    (team) =>
-      Number(team.id) === Number(user.current_team_id) &&
-      team.name?.trim().toLocaleUpperCase() === "GOALI TRANSPORTES"
-  ) ?? false;
-});
 
 const isDarkMode = ref(false);
 const isMenuOpen = ref(true);
@@ -101,7 +90,7 @@ onMounted(() => {
 
     <nav v-if="$page.props.auth?.user" class="flex basis-full w-full mx-auto justify-center items-center space-x-4 p-2">
       <div class="flex flex-col sm:w-full md:flex-row md:w-auto items-center md:ml-auto">
-        <div v-if="isGoaliTransportesCurrentTeam" :class="{
+        <div v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')" :class="{
           hidden: !isMenuOpen,
           block: isMenuOpen,
         }" class="ms-3 relative py-1">
