@@ -81,6 +81,11 @@ class AttendanceController extends Controller
                 'attendances.created_at'
             )
             ->when($paymentMethod, function ($query, $value) {
+                if ($value === 'pix_cartao') {
+                    $query->whereIn('attendances.payment_method', ['Pix', 'Cartão']);
+                    return;
+                }
+
                 $query->where('attendances.payment_method', $value);
             })
             ->when($barber, function ($query, $value) {
@@ -119,7 +124,9 @@ class AttendanceController extends Controller
         $attendances = Attendance::query()
             ->when($startDate, fn($query) => $query->whereDate('created_at', '>=', $startDate))
             ->when($endDate, fn($query) => $query->whereDate('created_at', '<=', $endDate))
-            ->when($paymentMethod, fn($query) => $query->where('payment_method', $paymentMethod))
+            ->when($paymentMethod, function ($query, $value) {
+                $query->whereIn('payment_method', $value === 'pix_cartao' ? ['Pix', 'Cartão'] : [$value]);
+            })
             ->with('services')
             ->get();
 

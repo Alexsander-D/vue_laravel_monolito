@@ -52,6 +52,20 @@ class AttendanceReportTest extends TestCase
             'price' => 80,
         ]);
 
+        $cardAttendance = Attendance::create([
+            'user_id' => $user->id,
+            'total' => 90,
+            'payment_method' => 'Cartão',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        AttendanceService::create([
+            'attendance_id' => $cardAttendance->id,
+            'service_name' => 'Corte Social',
+            'price' => 90,
+        ]);
+
         $response = $this->get(route('attendance.report', [
             'startDate' => now()->toDateString(),
             'endDate' => now()->toDateString(),
@@ -62,6 +76,34 @@ class AttendanceReportTest extends TestCase
         $response->assertViewHas('records', function ($records) {
             return $records->count() === 1
                 && $records->first()->payment_method === 'Pix';
+        });
+
+        $cardResponse = $this->get(route('attendance.report', [
+            'startDate' => now()->toDateString(),
+            'endDate' => now()->toDateString(),
+            'paymentMethod' => 'Cartão',
+        ]));
+
+        $cardResponse->assertOk();
+        $cardResponse->assertViewHas('records', function ($records) {
+            return $records->count() === 1
+                && $records->first()->payment_method === 'Cartão';
+        });
+
+        $combinedResponse = $this->get(route('attendance.report', [
+            'startDate' => now()->toDateString(),
+            'endDate' => now()->toDateString(),
+            'paymentMethod' => 'pix_cartao',
+        ]));
+
+        $combinedResponse->assertOk();
+        $combinedResponse->assertViewHas('records', function ($records) {
+            $methods = $records->pluck('payment_method');
+
+            return $records->count() === 2
+                && $methods->contains('Pix')
+                && $methods->contains('Cartão')
+                && ! $methods->contains('Dinheiro');
         });
     }
 
