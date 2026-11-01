@@ -118,6 +118,24 @@ onMounted(() => {
                   :href="route('goali.index')">
                   Relatório de deslocamentos
                 </Link>
+                <Link
+                  v-if="$page.props.auth.user.current_team && (Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
+                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('teams.show', $page.props.auth.user.current_team)">
+                  Gerir equipe
+                </Link>
+                <Link
+                  v-if="Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-permissoes')"
+                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
+                  Gerir Permissões
+                </Link>
+                <Link
+                  v-if="Number($page.props.auth.user.id) === 1 && $page.props.jetstream.canCreateTeams"
+                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('teams.create')">
+                  Criar nova equipe
+                </Link>
               </div>
             </template>
           </Dropdown>
