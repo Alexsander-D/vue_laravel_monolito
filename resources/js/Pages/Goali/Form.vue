@@ -6,7 +6,7 @@ import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Radio from "@/Components/Radio.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
-import { computed, watch } from "vue";
+import { computed } from "vue";
 
 const props = defineProps({
   solicitations: { type: Array, default: () => [] },
@@ -27,11 +27,6 @@ const form = useForm({
 });
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
-
-watch(() => form.solicitation, (company) => {
-  form.origin = company || "";
-  if (company) form.clearErrors("solicitation");
-});
 
 const formatAmount = () => {
   const amount = Number(String(form.amount).replace(",", "."));
@@ -106,8 +101,7 @@ const submit = () => {
 
           <div>
             <label for="origin" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Origem <span>*</span></label>
-            <TextInput id="origin" v-model="form.origin" type="text" class="mt-1 block w-full" readonly required />
-            <p class="mt-1 text-xs text-gray-500">Preenchida automaticamente pela empresa selecionada.</p>
+            <TextInput id="origin" v-model="form.origin" type="text" class="mt-1 block w-full" maxlength="255" required />
             <InputError :message="form.errors.origin" class="mt-2" />
           </div>
           <div>
@@ -170,4 +164,3 @@ const submit = () => {
     </div>
   </BaseLayout>
 </template>
-

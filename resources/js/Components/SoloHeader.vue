@@ -86,7 +86,7 @@ onMounted(() => {
         <span
           v-if="$page.props.auth?.user?.current_team?.name?.trim()?.toLocaleUpperCase() === 'GOALI TRANSPORTES'"
           class="text-xl font-semibold stringColor">
-          GOALI TRANSPORTES
+          GOALI
         </span>
         <img v-else src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
       </Link>
@@ -135,12 +135,29 @@ onMounted(() => {
                   :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
                   Gerir Permissões
                 </Link>
-                <Link
-                  v-if="Number($page.props.auth.user.id) === 1 && $page.props.jetstream.canCreateTeams"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('teams.create')">
-                  Criar nova equipe
-                </Link>
+                <div v-if="$page.props.auth.user.all_teams.length > 1" class="group relative">
+                  <button
+                    type="button"
+                    class="themeColor w-full justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none">
+                    Mudar de equipe
+                    <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                      stroke="currentColor" stroke-width="2">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                  <div class="absolute hidden group-hover:block right-16 top-0 w-60 bg-white shadow-lg rounded z-50">
+                    <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
+                      <form @submit.prevent="switchToTeam(team)">
+                        <button
+                          type="submit"
+                          :class="team.id == $page.props.auth.user.current_team_id ? 'secondaryColor' : 'themeColor'"
+                          class="w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
+                          {{ team.name }}
+                        </button>
+                      </form>
+                    </template>
+                  </div>
+                </div>
               </div>
             </template>
           </Dropdown>

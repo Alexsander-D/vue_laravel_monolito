@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\GoaliTrip;
+use App\Models\Spatie\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -31,7 +32,6 @@ class GoaliTripController extends Controller
         $validated = $request->validate($this->rules());
         $validated['user_id'] = $request->user()?->getAuthIdentifier();
         $validated['responsible'] = $request->user()?->name ?? $validated['responsible'];
-        $validated['origin'] = $validated['solicitation'];
         GoaliTrip::create($validated);
 
         return back()->with('success', 'Registro enviado com sucesso.');
@@ -39,37 +39,42 @@ class GoaliTripController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->validate([
-            'startDate' => ['nullable', 'date'],
-            'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
-            'status' => ['nullable', 'in:ENTRADA,SAÍDA'],
-            'solicitation' => ['nullable', 'string', 'in:' . implode(',', self::SOLICITATIONS)],
-        ]);
-        $summary = (clone $this->filteredQuery($filters))
+        $filters = $this->validatedFilters($request);
+        $user = $request->user();
+        $query = $this->filteredQuery($filters, $user);
+        $summary = (clone $query)
             ->reorder()
             ->selectRaw('COUNT(*) as count, COALESCE(SUM(amount), 0) as amount')
             ->first();
-        $records = $this->filteredQuery($filters)->paginate(50)->withQueryString();
+        $records = $query->paginate(50)->withQueryString();
 
         return Inertia::render('Goali/Index', [
             'records' => $records,
             'summary' => ['count' => (int) $summary->count, 'amount' => (float) $summary->amount],
-            'filters' => array_merge(['startDate' => '', 'endDate' => '', 'status' => '', 'solicitation' => ''], $filters),
+            'filters' => $filters,
+            'isDriver' => $this->isDriver($user),
             'solicitations' => self::SOLICITATIONS,
         ]);
     }
 
     public function update(Request $request, GoaliTrip $trip)
     {
+        $user = $request->user();
+        $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
         $validated = $request->validate($this->rules());
-        $validated['origin'] = $validated['solicitation'];
+
+        if ($this->isDriver($user)) {
+            $validated['responsible'] = $user->name;
+        }
+
         $trip->update($validated);
 
         return back()->with('success', 'Registro atualizado com sucesso.');
     }
 
-    public function destroy(GoaliTrip $trip)
+    public function destroy(Request $request, GoaliTrip $trip)
     {
+        $trip = $this->queryForUser($request->user())->findOrFail($trip->getKey());
         $trip->delete();
 
         return back()->with('success', 'Registro excluído com sucesso.');
@@ -77,13 +82,8 @@ class GoaliTripController extends Controller
 
     public function export(Request $request)
     {
-        $filters = $request->validate([
-            'startDate' => ['nullable', 'date'],
-            'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
-            'status' => ['nullable', 'in:ENTRADA,SAÍDA'],
-            'solicitation' => ['nullable', 'string', 'in:' . implode(',', self::SOLICITATIONS)],
-        ]);
-        $records = $this->filteredQuery($filters)->get();
+        $filters = $this->validatedFilters($request);
+        $records = $this->filteredQuery($filters, $request->user())->get();
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Relatório Goali');
@@ -127,15 +127,54 @@ class GoaliTripController extends Controller
         return response()->download($tempFile, 'relatorio_goali_' . now()->format('Ymd_His') . '.xlsx')->deleteFileAfterSend(true);
     }
 
-    private function filteredQuery(array $filters)
+    private function validatedFilters(Request $request): array
     {
-        return GoaliTrip::query()
+        $dateFilterProvided = $request->query->has('startDate') || $request->query->has('endDate');
+        $filters = $request->validate([
+            'startDate' => ['nullable', 'date'],
+            'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
+            'status' => ['nullable', 'in:ENTRADA,SAÍDA'],
+            'solicitation' => ['nullable', 'string', 'in:' . implode(',', self::SOLICITATIONS)],
+        ]);
+        $dateDefaults = $dateFilterProvided
+            ? ['startDate' => '', 'endDate' => '']
+            : [
+                'startDate' => now()->startOfMonth()->toDateString(),
+                'endDate' => now()->endOfMonth()->toDateString(),
+            ];
+
+        return array_merge([
+            ...$dateDefaults,
+            'status' => '',
+            'solicitation' => '',
+        ], $filters);
+    }
+
+    private function filteredQuery(array $filters, User $user)
+    {
+        return $this->queryForUser($user)
             ->when($filters['startDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '>=', $date))
             ->when($filters['endDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '<=', $date))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['solicitation'] ?? null, fn ($query, $solicitation) => $query->where('solicitation', $solicitation))
             ->orderByDesc('travel_date')
             ->orderByDesc('travel_time');
+    }
+
+    private function queryForUser(User $user)
+    {
+        $query = GoaliTrip::query();
+
+        if ($this->isDriver($user)) {
+            $query->where('responsible', $user->name);
+        }
+
+        return $query;
+    }
+
+    private function isDriver(User $user): bool
+    {
+        return strcasecmp(trim((string) $user->getRoleByUser()), 'Motorista') === 0;
     }
 
     private function rules(): array
@@ -145,6 +184,7 @@ class GoaliTripController extends Controller
             'travel_time' => ['required', 'date_format:H:i'],
             'status' => ['required', 'in:ENTRADA,SAÍDA'],
             'solicitation' => ['required', 'in:' . implode(',', self::SOLICITATIONS)],
+            'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
             'passenger' => ['required', 'string', 'max:255'],
             'responsible' => ['required', 'string', 'max:255'],

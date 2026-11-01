@@ -12,6 +12,7 @@ const props = defineProps({
   filters: { type: Object, required: true },
   solicitations: { type: Array, default: () => [] },
   summary: { type: Object, required: true },
+  isDriver: { type: Boolean, default: false },
 });
 
 const filters = useForm({ ...props.filters });
@@ -21,11 +22,6 @@ const editForm = useForm({});
 const reportUrl = computed(() => route("goali.export", filters.data()));
 
 watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: true });
-watch(() => editForm.solicitation, (company) => {
-  editForm.origin = company || "";
-  if (company) editForm.clearErrors("solicitation");
-});
-
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
 const startEdit = (record) => {
   editingId.value = record.id;
@@ -124,10 +120,10 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
             <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
             <label class="filter-label">Status<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione status" :allow-empty="false" required /><InputError :message="editForm.errors.status" /></label>
             <label class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
-            <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" readonly required /><InputError :message="editForm.errors.origin" /></label>
+            <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
             <label class="filter-label">Passageiro<TextInput v-model="editForm.passenger" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>
-            <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.responsible" /></label>
+            <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" :readonly="props.isDriver" required /><InputError :message="editForm.errors.responsible" /></label>
             <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
           </div>
           <p v-if="editForm.hasErrors" class="mt-3 text-sm text-red-700">Verifique os campos informados.</p>
