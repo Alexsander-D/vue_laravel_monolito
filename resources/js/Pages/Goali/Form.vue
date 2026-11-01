@@ -13,10 +13,18 @@ const props = defineProps({
   responsibleUser: { type: String, default: "" },
 });
 
-const today = new Date().toLocaleDateString("en-CA");
+const currentDateTime = () => {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, "0");
+
+  return {
+    date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+    time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+  };
+};
+const initialDateTime = currentDateTime();
 const form = useForm({
-  travel_date: today,
-  travel_time: "",
+  travel_datetime: `${initialDateTime.date}T${initialDateTime.time}`,
   status: "",
   solicitation: "",
   origin: "",
@@ -43,31 +51,32 @@ const submit = () => {
 
   form.post(route("goali.store"), {
     preserveScroll: true,
-    onSuccess: () => form.reset("travel_time", "status", "solicitation", "origin", "destination", "passenger", "amount"),
+    onSuccess: () => {
+      form.reset("status", "solicitation", "origin", "destination", "passenger", "amount");
+      const dateTime = currentDateTime();
+      form.travel_datetime = `${dateTime.date}T${dateTime.time}`;
+    },
   });
 };
 </script>
 
 <template>
-  <BaseLayout title="GT DIONÍNIO BARBOSA">
+  <BaseLayout title="CORRIDAS">
     <div class="w-full mx-auto pt-2">
       <div class="rounded-xl bg-white p-4 shadow-lg dark:bg-gray-900 sm:p-6">
         <header class="mb-6 border-b border-gray-200 pb-5 text-center dark:border-gray-700">
-          <h1 class="text-2xl font-bold uppercase text-gray-900 dark:text-white">GT DIONÍNIO BARBOSA</h1>
+          <h1 class="text-2xl font-bold uppercase text-gray-900 dark:text-white">CORRIDAS</h1>
           <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
-          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">Registro de deslocamento</p>
+          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+            Registro de deslocamento do {{ props.responsibleUser || "usuário" }}
+          </p>
         </header>
 
         <form class="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2" @submit.prevent="submit">
           <div>
-            <label for="travel_date" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data <span>*</span></label>
-            <TextInput id="travel_date" v-model="form.travel_date" type="date" class="mt-1 block w-full" required />
-            <InputError :message="form.errors.travel_date" class="mt-2" />
-          </div>
-          <div>
-            <label for="travel_time" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Horário <span>*</span></label>
-            <TextInput id="travel_time" v-model="form.travel_time" type="time" class="mt-1 block w-full" required />
-            <InputError :message="form.errors.travel_time" class="mt-2" />
+            <label for="travel_datetime" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data e horário <span>*</span></label>
+            <TextInput id="travel_datetime" v-model="form.travel_datetime" type="datetime-local" class="mt-1 block w-full" required />
+            <InputError :message="form.errors.travel_datetime || form.errors.travel_date || form.errors.travel_time" class="mt-2" />
           </div>
 
           <fieldset>

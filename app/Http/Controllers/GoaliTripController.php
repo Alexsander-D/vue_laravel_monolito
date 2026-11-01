@@ -29,7 +29,7 @@ class GoaliTripController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate($this->rules());
+        $validated = $this->validatedTrip($request);
         $validated['user_id'] = $request->user()?->getAuthIdentifier();
         $validated['responsible'] = $request->user()?->name ?? $validated['responsible'];
         GoaliTrip::create($validated);
@@ -61,7 +61,7 @@ class GoaliTripController extends Controller
     {
         $user = $request->user();
         $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
-        $validated = $request->validate($this->rules());
+        $validated = $this->validatedTrip($request);
 
         if ($this->isDriver($user)) {
             $validated['responsible'] = $user->name;
@@ -190,5 +190,22 @@ class GoaliTripController extends Controller
             'responsible' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0'],
         ];
+    }
+
+    private function validatedTrip(Request $request): array
+    {
+        if ($request->exists('travel_datetime')) {
+            $request->validate([
+                'travel_datetime' => ['required', 'date_format:Y-m-d\TH:i'],
+            ]);
+
+            [$date, $time] = explode('T', $request->input('travel_datetime'), 2);
+            $request->merge([
+                'travel_date' => $date,
+                'travel_time' => $time,
+            ]);
+        }
+
+        return $request->validate($this->rules());
     }
 }
