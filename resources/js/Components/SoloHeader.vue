@@ -83,7 +83,12 @@ onMounted(() => {
       <Link
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
         :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')" aria-label="barbearia">
-        <img src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
+        <span
+          v-if="$page.props.auth?.user?.current_team?.name?.trim()?.toLocaleUpperCase() === 'GOALI TRANSPORTES'"
+          class="text-xl font-semibold stringColor">
+          GOALI TRANSPORTES
+        </span>
+        <img v-else src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
       </Link>
     </div>
     <!-- FIM LOGOMARCA -->
