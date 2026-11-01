@@ -25,7 +25,7 @@ const props = defineProps({
 });
 
 const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
-const barberOptions = ["Barbeiro 1", "Barbeiro 2"];
+const barberOptions = ["Kaique", "Ryan"];
 
 const serviceCatalog = [
   { name: "Corte Social", price: 35, icon: "✂️" },

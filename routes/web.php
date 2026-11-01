@@ -44,13 +44,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'welcomeImage' => asset('images/welcome.png'),
-    ]);
+    return redirect()->route('login');
 })->name('welcome');
-
-Route::get('/goali/form', [GoaliTripController::class, 'form'])->name('goali.form');
-Route::post('/goali/form', [GoaliTripController::class, 'store'])->name('goali.store');
 
 Route::middleware([
     'auth:sanctum',
@@ -59,9 +54,15 @@ Route::middleware([
 ])
     ->group(function () {
         Route::get('/dashboard', function () {
+            if (auth()->user()->teams()->where('name', 'GOALI TRANSPORTES')->exists()) {
+                return redirect()->route('goali.index');
+            }
+
             return Inertia::render('Dashboard');
         })->name('dashboard');
 
+        Route::get('/goali/form', [GoaliTripController::class, 'form'])->name('goali.form');
+        Route::post('/goali/form', [GoaliTripController::class, 'store'])->name('goali.store');
         Route::get('/goali/records', [GoaliTripController::class, 'index'])->name('goali.index');
         Route::get('/goali/records/export', [GoaliTripController::class, 'export'])->name('goali.export');
         Route::put('/goali/records/{trip}', [GoaliTripController::class, 'update'])->name('goali.update');

@@ -85,14 +85,14 @@ const features = [
 ];
 
 const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
-const barbers = ["Barbeiro 1", "Barbeiro 2"];
+const barbers = ["Kaique", "Ryan"];
 
 const form = useForm({
   services: [],
   total: 0,
   created_at: "",
   payment_method: "",
-  barbers: ["Barbeiro 1"],
+  barbers: ["Kaique"],
 });
 
 const confirmAttendance = async () => {
