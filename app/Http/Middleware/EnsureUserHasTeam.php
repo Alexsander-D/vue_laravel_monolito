@@ -18,11 +18,14 @@ class EnsureUserHasTeam
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check() && !$request->routeIs('dashboard')) {
+        if (Auth::check() && !$request->is('dashboard')) {
             $user = Auth::user();
 
             if (!$user->currentTeam) {
-                $userTeam = $user->teams->first();
+                $userTeam = $user->teams()
+                    ->where('teams.name', '!=', 'EQUIPE NÃO ATRIBUÍDA')
+                    ->first()
+                    ?? $user->teams()->first();
 
                 if (!$userTeam) {
                     $userTeam = Team::where('name', 'EQUIPE NÃO ATRIBUÍDA')->first();

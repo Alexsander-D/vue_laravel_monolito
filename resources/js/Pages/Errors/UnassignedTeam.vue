@@ -1,5 +1,7 @@
 <script setup>
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
+
+const logout = () => router.post(route("logout"));
 </script>
 
 <template>
@@ -14,6 +16,13 @@ import { Head } from "@inertiajs/vue3";
       <h1 class="mt-4 text-xl font-bold leading-relaxed text-gray-900 dark:text-white">
         ENTRE EM CONTATO COM UM ADMINISTRADOR PARA TER ACESSO AS INFORMAÇÕES
       </h1>
+      <button
+        type="button"
+        class="mt-6 rounded-md bg-gray-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-white"
+        @click="logout"
+      >
+        Sair
+      </button>
     </section>
   </main>
 </template>

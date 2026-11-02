@@ -282,6 +282,7 @@ class GoaliTripTest extends TestCase
             'name' => 'EQUIPE NÃO ATRIBUÍDA',
             'personal_team' => false,
         ]);
+        $team->id = 1;
         $team->user_id = $user->id;
         $team->save();
         $user->teams()->attach($team->id, ['role' => 'Espectador']);

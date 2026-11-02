@@ -56,15 +56,21 @@ Route::middleware([
     ->group(function () {
         Route::get('/dashboard', function () {
             $user = auth()->user();
-            $currentTeam = $user->current_team_id
-                ? Team::query()->find($user->current_team_id)
+            $currentTeamId = (int) $user->current_team_id;
+
+            if ($currentTeamId === 1) {
+                return Inertia::render('Errors/UnassignedTeam');
+            }
+
+            $currentTeam = $currentTeamId
+                ? Team::query()->whereKey($currentTeamId)->first()
                 : null;
 
             if ($currentTeam && strcasecmp(trim($currentTeam->name), 'GOALI TRANSPORTES') === 0) {
                 return redirect()->route('goali.index');
             }
 
-            if (!$currentTeam || strcasecmp(trim($currentTeam->name), 'EQUIPE NÃO ATRIBUÍDA') === 0) {
+            if (!$currentTeam) {
                 return Inertia::render('Errors/UnassignedTeam');
             }
 
