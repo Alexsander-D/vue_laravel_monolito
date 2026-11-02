@@ -294,6 +294,38 @@ class GoaliTripTest extends TestCase
                 ->component('Errors/UnassignedTeam'));
     }
 
+    public function test_user_with_an_assigned_team_does_not_see_unassigned_access_notice(): void
+    {
+        $user = User::create([
+            'name' => 'Usuário com equipe',
+            'email' => 'com-equipe@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        $unassignedTeam = new Team([
+            'name' => 'EQUIPE NÃO ATRIBUÍDA',
+            'personal_team' => false,
+        ]);
+        $unassignedTeam->user_id = $user->id;
+        $unassignedTeam->save();
+        $user->teams()->attach($unassignedTeam->id, ['role' => 'Espectador']);
+
+        $assignedTeam = new Team([
+            'name' => 'EQUIPE OPERACIONAL',
+            'personal_team' => false,
+        ]);
+        $assignedTeam->user_id = $user->id;
+        $assignedTeam->save();
+        $user->teams()->attach($assignedTeam->id, ['role' => 'Espectador']);
+        $user->forceFill(['current_team_id' => $unassignedTeam->id])->save();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Dashboard'));
+    }
+
     private function attachToGoaliTeam(User $user, string $role): Team
     {
         $team = new Team([

@@ -26,6 +26,9 @@ const editForm = useForm({});
 const reportUrl = computed(() => route("goali.export", filters.data()));
 const sortOrder = computed(() => filters.sortOrder || "desc");
 const editingRecord = computed(() => props.records.find((record) => record.id === editingId.value) || null);
+const tableKey = computed(() => props.records
+  .map((record) => `${record.id}:${record.updated_at || ""}`)
+  .join("|"));
 const editTripStatusOptions = computed(() => {
   if (!editingRecord.value) {
     return [];
@@ -44,19 +47,6 @@ const selectedEditDriver = computed({
     editForm.driver_id = driver?.id ?? null;
   },
 });
-const statusTransitionOptions = computed(() => {
-  if (!statusTransitionRecord.value) {
-    return [];
-  }
-
-  if (props.isDriver) {
-    return ["Finalizada"];
-  }
-
-  const nextStatus = nextTripStatus(statusTransitionRecord.value.trip_status);
-  return nextStatus ? [nextStatus] : [];
-});
-
 const tableId = "goali-trips-datatable";
 const tableHeaders = [
   { name: "Data / Hora" },
@@ -209,7 +199,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <div class="border-l-4 border-green-600 px-4 py-2"><p class="text-sm text-gray-500">Valor a receber</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
-      <Datatable class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" />
+      <Datatable :key="tableKey" class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" />
         </div>
       </section>
 
