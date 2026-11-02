@@ -3,6 +3,7 @@
 use App\Http\Controllers\Registration\AccessControlController;
 use App\Http\Controllers\Registration\ComponentsDefectsAndSolutionsController;
 use App\Http\Controllers\Registration\ProductsController;
+use App\Models\Spatie\Team;
 use App\Http\Controllers\External\CalendarController;
 use App\Http\Controllers\External\CustomersViewController;
 use App\Http\Controllers\External\CustomersController;
@@ -55,19 +56,15 @@ Route::middleware([
     ->group(function () {
         Route::get('/dashboard', function () {
             $user = auth()->user();
-            $currentTeam = $user->currentTeam;
-            $hasAssignedTeam = $user->teams()
-                ->where('teams.name', '!=', 'EQUIPE NÃO ATRIBUÍDA')
-                ->exists();
+            $currentTeam = $user->current_team_id
+                ? Team::query()->find($user->current_team_id)
+                : null;
 
             if ($currentTeam && strcasecmp(trim($currentTeam->name), 'GOALI TRANSPORTES') === 0) {
                 return redirect()->route('goali.index');
             }
 
-            if (
-                (!$currentTeam || strcasecmp(trim($currentTeam->name), 'EQUIPE NÃO ATRIBUÍDA') === 0)
-                && !$hasAssignedTeam
-            ) {
+            if (!$currentTeam || strcasecmp(trim($currentTeam->name), 'EQUIPE NÃO ATRIBUÍDA') === 0) {
                 return Inertia::render('Errors/UnassignedTeam');
             }
 

@@ -294,7 +294,7 @@ class GoaliTripTest extends TestCase
                 ->component('Errors/UnassignedTeam'));
     }
 
-    public function test_user_with_an_assigned_team_does_not_see_unassigned_access_notice(): void
+    public function test_dashboard_uses_the_current_team_id_when_user_belongs_to_multiple_teams(): void
     {
         $user = User::create([
             'name' => 'Usuário com equipe',
@@ -318,12 +318,43 @@ class GoaliTripTest extends TestCase
         $assignedTeam->user_id = $user->id;
         $assignedTeam->save();
         $user->teams()->attach($assignedTeam->id, ['role' => 'Espectador']);
-        $user->forceFill(['current_team_id' => $unassignedTeam->id])->save();
+        $user->forceFill(['current_team_id' => $assignedTeam->id])->save();
 
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('Dashboard'));
+    }
+
+    public function test_dashboard_redirects_to_goali_records_when_goali_is_the_current_team(): void
+    {
+        $user = User::create([
+            'name' => 'Usuário Goali',
+            'email' => 'goali-dashboard@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        $otherTeam = new Team([
+            'name' => 'EQUIPE OPERACIONAL',
+            'personal_team' => false,
+        ]);
+        $otherTeam->user_id = $user->id;
+        $otherTeam->save();
+        $user->teams()->attach($otherTeam->id, ['role' => 'Espectador']);
+
+        $goaliTeam = new Team([
+            'name' => 'GOALI TRANSPORTES',
+            'personal_team' => false,
+        ]);
+        $goaliTeam->user_id = $user->id;
+        $goaliTeam->save();
+        $user->teams()->attach($goaliTeam->id, ['role' => 'Admin']);
+        $user->forceFill(['current_team_id' => $goaliTeam->id])->save();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('goali.index'));
     }
 
     private function attachToGoaliTeam(User $user, string $role): Team

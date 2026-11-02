@@ -18,7 +18,7 @@ class EnsureUserHasTeam
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check()) {
+        if (Auth::check() && !$request->routeIs('dashboard')) {
             $user = Auth::user();
 
             if (!$user->currentTeam) {
