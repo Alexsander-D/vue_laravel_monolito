@@ -20,9 +20,6 @@
                     <template v-if="key.startsWith('button')">
                       <div v-html="value"></div>
                     </template>
-                    <template v-else-if="typeof value === 'string' && value.includes('<')">
-                      <span v-html="value"></span>
-                    </template>
                     <template v-else>
                       {{ value }}
                     </template>
@@ -75,10 +72,6 @@ const tableKey = ref(0);
 let dataTableInstance = null;
 
 const normalizeDateColumns = () => {
-  if (!dataTableInstance) {
-    return;
-  }
-
   $(`#${props.id} tbody td`).each(function () {
     const rawText = $(this).text().trim();
     if (!rawText) {
@@ -110,6 +103,7 @@ const normalizeDateColumns = () => {
 
 const initializeDataTable = () => {
   nextTick(() => {
+    normalizeDateColumns();
     dataTableInstance = $(`#${props.id}`).DataTable({
       dom:
         '<"d-flex align-items-center"<"col-6"B><"col-6 text-end"f>>t<"d-flex mt-2"<"col-6"i><"col-6 text-end"p>>',

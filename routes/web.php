@@ -54,8 +54,15 @@ Route::middleware([
 ])
     ->group(function () {
         Route::get('/dashboard', function () {
-            if (auth()->user()->teams()->where('name', 'GOALI TRANSPORTES')->exists()) {
+            $user = auth()->user();
+            $currentTeam = $user->currentTeam;
+
+            if ($currentTeam && strcasecmp(trim($currentTeam->name), 'GOALI TRANSPORTES') === 0) {
                 return redirect()->route('goali.index');
+            }
+
+            if (!$currentTeam || strcasecmp(trim($currentTeam->name), 'EQUIPE NÃO ATRIBUÍDA') === 0) {
+                return Inertia::render('Errors/UnassignedTeam');
             }
 
             return Inertia::render('Dashboard');
@@ -66,6 +73,7 @@ Route::middleware([
         Route::get('/goali/records', [GoaliTripController::class, 'index'])->name('goali.index');
         Route::get('/goali/records/export', [GoaliTripController::class, 'export'])->name('goali.export');
         Route::put('/goali/records/{trip}', [GoaliTripController::class, 'update'])->name('goali.update');
+        Route::put('/goali/records/{trip}/status', [GoaliTripController::class, 'advanceStatus'])->name('goali.advanceStatus');
         Route::delete('/goali/records/{trip}', [GoaliTripController::class, 'destroy'])->name('goali.destroy');
 
         Route::post(

@@ -1,16 +1,20 @@
 <script setup>
 import BaseLayout from "@/Layouts/BaseLayout.vue";
 import Select from "@/Components/Select.vue";
+import Datatable from "@/Components/Datatable.vue";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import { router, useForm } from "@inertiajs/vue3";
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import Swal from "sweetalert2";
 
 const props = defineProps({
-  records: { type: Object, required: true },
+  records: { type: Array, required: true },
   filters: { type: Object, required: true },
+  isAdmin: { type: Boolean, default: false },
   solicitations: { type: Array, default: () => [] },
+  drivers: { type: Array, default: () => [] },
+  tripStatuses: { type: Array, default: () => [] },
   summary: { type: Object, required: true },
   isDriver: { type: Boolean, default: false },
 });
@@ -20,6 +24,48 @@ const statusOptions = ["ENTRADA", "SAÍDA"];
 const editingId = ref(null);
 const editForm = useForm({});
 const reportUrl = computed(() => route("goali.export", filters.data()));
+const sortOrder = computed(() => filters.sortOrder || "desc");
+const selectedEditDriver = computed({
+  get: () => props.drivers.find((driver) => driver.id === Number(editForm.driver_id)) || null,
+  set: (driver) => {
+    editForm.driver_id = driver?.id ?? null;
+  },
+});
+
+const tableId = "goali-trips-datatable";
+const tableHeaders = [
+  { name: "Data / Hora" },
+  { name: "Tipo" },
+  { name: "Status corrida" },
+  { name: "Solicitação" },
+  { name: "Origem / Destino" },
+  { name: "Passageiro" },
+  { name: "Motorista" },
+  { name: "Responsável" },
+  { name: "Valor" },
+  { name: "Ações" },
+];
+const tableData = computed(() => props.records.map((record) => ({
+  travelDate: `${date(record.travel_date)} - ${time(record.travel_time)}`,
+  status: record.status,
+  tripStatus: record.trip_status,
+  solicitation: record.solicitation,
+  route: `${record.origin} → ${record.destination}`,
+  passenger: record.passenger,
+  driver: record.driver?.name || "—",
+  responsible: record.responsible,
+  amount: money(record.amount),
+  buttonActions: [
+    props.isAdmin && record.trip_status !== "Finalizada"
+      ? `<button type="button" class="mr-3 font-semibold text-teal-700 hover:underline" data-goali-action="advance-status" data-record-id="${Number(record.id)}">Avançar para ${nextTripStatus(record.trip_status)}</button>`
+      : "",
+    props.isAdmin
+      ? `<button type="button" class="mr-3 font-semibold text-teal-700 hover:underline" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button><button type="button" class="font-semibold text-red-700 hover:underline" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
+      : props.isDriver && record.trip_status === "Em Andamento"
+        ? `<button type="button" class="font-semibold text-teal-700 hover:underline" data-goali-action="advance-status" data-record-id="${Number(record.id)}">Finalizar corrida</button>`
+        : "",
+  ].join(""),
+})));
 
 watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: true });
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
@@ -30,6 +76,7 @@ const startEdit = (record) => {
     travel_time: String(record.travel_time).slice(0, 5),
     status: record.status,
     solicitation: record.solicitation,
+    driver_id: record.driver_id,
     origin: record.origin,
     destination: record.destination,
     passenger: record.passenger,
@@ -56,8 +103,47 @@ const deleteRecord = async (record) => {
   });
   if (result.isConfirmed) router.delete(route("goali.destroy", record.id), { preserveScroll: true });
 };
+const handleTableAction = (event) => {
+  const button = event.target.closest(`#${tableId} button[data-goali-action]`);
+  if (!button) {
+    return;
+  }
+
+  const record = props.records.find((item) => item.id === Number(button.dataset.recordId));
+  if (!record) {
+    return;
+  }
+
+  if (button.dataset.goaliAction === "edit") {
+    startEdit(record);
+  } else if (button.dataset.goaliAction === "delete") {
+    deleteRecord(record);
+  } else if (button.dataset.goaliAction === "advance-status") {
+    router.put(route("goali.advanceStatus", record.id), {}, { preserveScroll: true });
+  }
+};
+const nextTripStatus = (status) => ({
+  Criada: "Em Andamento",
+  "Em Andamento": "Finalizada",
+}[status] || "");
 const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR");
+const date = (value) => {
+  const datePart = String(value || "").slice(0, 10);
+  const [year, month, day] = datePart.split("-");
+
+  return year && month && day ? `${day}/${month}/${year}` : datePart;
+};
+const time = (value) => {
+  const valueString = String(value || "");
+  const timePart = valueString.includes("T")
+    ? valueString.split("T")[1]
+    : valueString;
+
+  return timePart.slice(0, 5);
+};
+
+onMounted(() => document.addEventListener("click", handleTableAction));
+onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
 </script>
 
 <template>
@@ -80,35 +166,19 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
       <form class="col-span-12 grid grid-cols-1 gap-3 border-b border-gray-200 pb-5 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
         <label class="filter-label">Data inicial<TextInput v-model="filters.startDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Data final<TextInput v-model="filters.endDate" type="date" class="mt-1 block w-full" /></label>
-        <label class="filter-label">Status<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" /></label>
-        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" /></label>
+        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" /></label>
+        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" /></label>
+        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" /></label>
         <button class="self-end rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700" type="submit">Filtrar</button>
       </form>
 
-      <section class="col-span-12 grid grid-cols-1 gap-4 border-b border-gray-200 pb-5 dark:border-gray-700 sm:grid-cols-2">
+      <section class="col-span-12 grid grid-cols-1 gap-4 border-b border-gray-200 pb-5 dark:border-gray-700 sm:grid-cols-3">
         <div class="border-l-4 border-teal-600 px-4 py-2"><p class="text-sm text-gray-500">Registros no período</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ props.summary.count }}</p></div>
         <div class="border-l-4 border-amber-500 px-4 py-2"><p class="text-sm text-gray-500">Valor total</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.amount) }}</p></div>
+        <div class="border-l-4 border-green-600 px-4 py-2"><p class="text-sm text-gray-500">Valor a receber</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
-      <div class="col-span-12 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-        <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-700">
-          <thead class="bg-gray-50 text-xs uppercase text-gray-600 dark:bg-gray-800 dark:text-gray-300"><tr><th class="px-4 py-3">Data / Hora</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Solicitação</th><th class="px-4 py-3">Origem / Destino</th><th class="px-4 py-3">Passageiro</th><th class="px-4 py-3">Responsável</th><th class="px-4 py-3 text-right">Valor</th><th class="px-4 py-3 text-right">Ações</th></tr></thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-            <tr v-for="record in props.records.data" :key="record.id" class="text-gray-700 dark:text-gray-200">
-              <td class="whitespace-nowrap px-4 py-3">{{ date(record.travel_date) }}<span class="block text-xs text-gray-500">{{ String(record.travel_time).slice(0, 5) }}</span></td>
-              <td class="px-4 py-3">{{ record.status }}</td><td class="px-4 py-3">{{ record.solicitation }}</td>
-              <td class="min-w-52 px-4 py-3">{{ record.origin }}<span class="mx-1 text-gray-400">→</span>{{ record.destination }}</td>
-              <td class="px-4 py-3">{{ record.passenger }}</td><td class="px-4 py-3">{{ record.responsible }}</td><td class="whitespace-nowrap px-4 py-3 text-right">{{ money(record.amount) }}</td>
-              <td class="whitespace-nowrap px-4 py-3 text-right"><button type="button" class="mr-3 font-semibold text-teal-700 hover:underline" @click="startEdit(record)">Editar</button><button type="button" class="font-semibold text-red-700 hover:underline" @click="deleteRecord(record)">Excluir</button></td>
-            </tr>
-            <tr v-if="props.records.data.length === 0"><td colspan="8" class="px-4 py-10 text-center text-gray-500">Nenhum registro encontrado para os filtros selecionados.</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <nav v-if="props.records.links?.length > 3" class="col-span-12 mt-1 flex flex-wrap gap-2" aria-label="Paginação">
-        <template v-for="link in props.records.links" :key="link.label"><span v-if="!link.url" class="rounded border px-3 py-2 text-sm text-gray-400" v-html="link.label"></span><a v-else :href="link.url" class="rounded border px-3 py-2 text-sm" :class="link.active ? 'border-teal-700 bg-teal-700 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'" v-html="link.label"></a></template>
-      </nav>
+      <Datatable :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" />
         </div>
       </section>
 
@@ -118,8 +188,10 @@ const date = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("pt-BR"
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label class="filter-label">Data<TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_date" /></label>
             <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
-            <label class="filter-label">Status<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione status" :allow-empty="false" required /><InputError :message="editForm.errors.status" /></label>
-            <label class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
+            <label class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.status" /></label>
+            <label class="filter-label">Status da corrida<TextInput :model-value="props.records.find((record) => record.id === editingId)?.trip_status || ''" type="text" class="mt-1 block w-full" readonly /></label>
+            <label class="filter-label">Motorista<Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="false" :select2="true" /><InputError :message="editForm.errors.driver_id" /></label>
+            <label class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
             <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
             <label class="filter-label">Passageiro<TextInput v-model="editForm.passenger" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>

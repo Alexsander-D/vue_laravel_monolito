@@ -11,6 +11,8 @@ import { computed } from "vue";
 const props = defineProps({
   solicitations: { type: Array, default: () => [] },
   responsibleUser: { type: String, default: "" },
+  initialTripStatus: { type: String, default: "Criada" },
+  drivers: { type: Array, default: () => [] },
 });
 
 const currentDateTime = () => {
@@ -27,6 +29,7 @@ const form = useForm({
   travel_datetime: `${initialDateTime.date}T${initialDateTime.time}`,
   status: "",
   solicitation: "",
+  driver_id: null,
   origin: "",
   destination: "",
   passenger: "",
@@ -35,6 +38,12 @@ const form = useForm({
 });
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
+const selectedDriver = computed({
+  get: () => props.drivers.find((driver) => driver.id === Number(form.driver_id)) || null,
+  set: (driver) => {
+    form.driver_id = driver?.id ?? null;
+  },
+});
 
 const formatAmount = () => {
   const amount = Number(String(form.amount).replace(",", "."));
@@ -52,7 +61,7 @@ const submit = () => {
   form.post(route("goali.store"), {
     preserveScroll: true,
     onSuccess: () => {
-      form.reset("status", "solicitation", "origin", "destination", "passenger", "amount");
+      form.reset("status", "solicitation", "driver_id", "origin", "destination", "passenger", "amount");
       const dateTime = currentDateTime();
       form.travel_datetime = `${dateTime.date}T${dateTime.time}`;
     },
@@ -73,95 +82,99 @@ const submit = () => {
         </header>
 
         <form class="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2" @submit.prevent="submit">
+
           <div>
-            <label for="travel_datetime" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data e horário <span>*</span></label>
-            <TextInput id="travel_datetime" v-model="form.travel_datetime" type="datetime-local" class="mt-1 block w-full" required />
-            <InputError :message="form.errors.travel_datetime || form.errors.travel_date || form.errors.travel_time" class="mt-2" />
+            <label for="responsible"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Usuário responsável
+              <span>*</span></label>
+            <TextInput id="responsible" v-model="form.responsible" type="text" class="mt-1 block w-full" maxlength="255"
+              required :readonly="Boolean(props.responsibleUser)" />
+            <InputError :message="form.errors.responsible" class="mt-2" />
+          </div>
+
+          <div>
+            <label for="travel_datetime"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data e horário
+              <span>*</span></label>
+            <TextInput id="travel_datetime" v-model="form.travel_datetime" type="datetime-local"
+              class="mt-1 block w-full" required />
+            <InputError :message="form.errors.travel_datetime || form.errors.travel_date || form.errors.travel_time"
+              class="mt-2" />
           </div>
 
           <fieldset>
-            <legend class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Status <span>*</span></legend>
+            <legend class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Status
+              <span>*</span></legend>
             <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-              <Radio
-                v-for="status in ['ENTRADA', 'SAÍDA']"
-                :key="status"
-                v-model="form.status"
-                :value="status"
-                :label="status"
-                name="status"
-                required
-              />
+              <Radio v-for="status in ['ENTRADA', 'SAÍDA']" :key="status" v-model="form.status" :value="status"
+                :label="status" name="status" required />
             </div>
             <InputError :message="form.errors.status" class="mt-2" />
           </fieldset>
           <div>
-            <label for="solicitation" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Solicitação / empresa <span>*</span></label>
-            <Select
-              id="solicitation"
-              v-model="form.solicitation"
-              :options="props.solicitations"
-              class="mt-1 block w-full"
-              placeholder="Selecione uma empresa"
-              :allow-empty="false"
-              required
-            />
+            <label for="initial_trip_status"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Status inicial</label>
+            <TextInput id="initial_trip_status" :model-value="props.initialTripStatus" type="text"
+              class="mt-1 block w-full" readonly />
+          </div>
+          <div>
+            <label for="solicitation"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Solicitação / empresa
+              <span>*</span></label>
+            <Select id="solicitation" v-model="form.solicitation" :options="props.solicitations"
+              class="mt-1 block w-full" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required />
             <InputError :message="form.errors.solicitation" class="mt-2" />
+          </div>
+          <div>
+            <label for="driver_id"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Motorista
+              <span>*</span></label>
+            <Select id="driver_id" v-model="selectedDriver" :options="props.drivers" label="name" track-by="id"
+              placeholder="Selecione um motorista" class="mt-1 block w-full" :allow-empty="false" :select2="true" />
+            <InputError :message="form.errors.driver_id" class="mt-2" />
           </div>
 
           <div>
-            <label for="origin" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Origem <span>*</span></label>
-            <TextInput id="origin" v-model="form.origin" type="text" class="mt-1 block w-full" maxlength="255" required />
+            <label for="origin"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Origem
+              <span>*</span></label>
+            <TextInput id="origin" v-model="form.origin" type="text" class="mt-1 block w-full" maxlength="255"
+              required />
             <InputError :message="form.errors.origin" class="mt-2" />
           </div>
           <div>
-            <label for="destination" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Destino <span>*</span></label>
-            <TextInput id="destination" v-model="form.destination" type="text" class="mt-1 block w-full" maxlength="255" required />
+            <label for="destination"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Destino
+              <span>*</span></label>
+            <TextInput id="destination" v-model="form.destination" type="text" class="mt-1 block w-full" maxlength="255"
+              required />
             <InputError :message="form.errors.destination" class="mt-2" />
           </div>
           <div>
-            <label for="passenger" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Passageiro <span>*</span></label>
-            <TextInput id="passenger" v-model="form.passenger" type="text" class="mt-1 block w-full" maxlength="255" required />
+            <label for="passenger"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Passageiro
+              <span>*</span></label>
+            <TextInput id="passenger" v-model="form.passenger" type="text" class="mt-1 block w-full" maxlength="255"
+              required />
             <InputError :message="form.errors.passenger" class="mt-2" />
           </div>
           <div>
-            <label for="responsible" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Usuário responsável <span>*</span></label>
-            <TextInput
-              id="responsible"
-              v-model="form.responsible"
-              type="text"
-              class="mt-1 block w-full"
-              maxlength="255"
-              required
-              :readonly="Boolean(props.responsibleUser)"
-            />
-            <InputError :message="form.errors.responsible" class="mt-2" />
-          </div>
-          <div>
-            <label for="amount" class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Valor (R$) <span>*</span></label>
-            <TextInput
-              id="amount"
-              v-model="form.amount"
-              type="number"
-              class="mt-1 block w-full"
-              min="0"
-              step="0.01"
-              inputmode="decimal"
-              placeholder="0,00"
-              required
-              @blur="formatAmount"
-            />
+            <label for="amount"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Valor (R$)
+              <span>*</span></label>
+            <TextInput id="amount" v-model="form.amount" type="number" class="mt-1 block w-full" min="0" step="0.01"
+              inputmode="decimal" placeholder="0,00" required @blur="formatAmount" />
             <InputError :message="form.errors.amount" class="mt-2" />
           </div>
 
-          <div class="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 md:col-span-2">
+          <div
+            class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 md:col-span-2">
             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
               {{ form.processing ? "Enviando..." : "Enviar registro" }}
             </PrimaryButton>
-            <button
-              type="reset"
+            <button type="reset"
               class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
-              @click="form.reset()"
-            >
+              @click="form.reset()">
               Limpar formulário
             </button>
             <p v-if="successMessage" class="text-sm text-green-700 dark:text-green-400" role="status">
