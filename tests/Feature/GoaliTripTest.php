@@ -192,7 +192,7 @@ class GoaliTripTest extends TestCase
         $this->assertSame('Criada', $createdTrip->trip_status);
 
         $this->actingAs($driver, 'sanctum')
-            ->put(route('goali.advanceStatus', $createdTrip))
+            ->put(route('goali.update', $createdTrip), ['trip_status' => 'Finalizada'])
             ->assertForbidden();
 
         $runningTrip = GoaliTrip::create([
@@ -216,7 +216,7 @@ class GoaliTripTest extends TestCase
                 ->where('isAdmin', false)
                 ->where('isDriver', true));
 
-        $this->put(route('goali.advanceStatus', $runningTrip), ['trip_status' => 'Finalizada'])
+        $this->put(route('goali.update', $runningTrip), ['trip_status' => 'Finalizada'])
             ->assertRedirect();
         $this->assertSame('Finalizada', $runningTrip->fresh()->trip_status);
         $this->put(route('goali.update', $runningTrip), [])
@@ -254,15 +254,18 @@ class GoaliTripTest extends TestCase
             'amount' => '75.00',
         ]);
 
-        $this->put(route('goali.advanceStatus', $trip), ['trip_status' => 'Em Andamento'])
+        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Em Andamento'))
             ->assertRedirect();
         $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
 
-        $this->put(route('goali.advanceStatus', $trip), ['trip_status' => 'Finalizada'])
+        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
             ->assertRedirect();
         $this->assertSame('Finalizada', $trip->fresh()->trip_status);
 
-        $this->put(route('goali.advanceStatus', $trip))
+        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
+            ->assertForbidden();
+
+        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip))
             ->assertForbidden();
     }
 
@@ -303,5 +306,22 @@ class GoaliTripTest extends TestCase
         $user->forceFill(['current_team_id' => $team->id])->save();
 
         return $team;
+    }
+
+    private function tripUpdatePayload(GoaliTrip $trip, ?string $tripStatus = null): array
+    {
+        return array_filter([
+            'travel_date' => $trip->travel_date->format('Y-m-d'),
+            'travel_time' => substr($trip->travel_time, 0, 5),
+            'status' => $trip->status,
+            'trip_status' => $tripStatus,
+            'driver_id' => $trip->driver_id ?? $trip->user_id,
+            'solicitation' => $trip->solicitation,
+            'origin' => $trip->origin,
+            'destination' => $trip->destination,
+            'passenger' => $trip->passenger,
+            'responsible' => $trip->responsible,
+            'amount' => $trip->amount,
+        ], fn ($value) => $value !== null);
     }
 }

@@ -81,41 +81,42 @@ class GoaliTripController extends Controller
     public function update(Request $request, GoaliTrip $trip)
     {
         $user = $request->user();
-        abort_unless($this->isAdmin($user), 403);
-
+        $isAdmin = $this->isAdmin($user);
+        $isDriver = $this->isDriver($user);
+        abort_unless($isAdmin || $isDriver, 403);
         $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
+
+        abort_if($trip->trip_status === 'Finalizada', 403, 'Corridas finalizadas não podem ser editadas.');
+
+        if ($isDriver) {
+            abort_unless($trip->trip_status === 'Em Andamento', 403);
+            $validated = $request->validate([
+                'trip_status' => ['required', Rule::in(['Finalizada'])],
+            ]);
+
+            $trip->update($validated);
+
+            return back()->with('success', 'Status da corrida atualizado com sucesso.');
+        }
+
         $validated = $this->validatedTrip($request, $user);
-        $validated['trip_status'] = $trip->trip_status;
+        $nextStatus = match ($trip->trip_status) {
+            'Criada' => 'Em Andamento',
+            'Em Andamento' => 'Finalizada',
+            default => null,
+        };
+        $requestedStatus = $validated['trip_status'] ?? null;
+
+        if ($requestedStatus !== null) {
+            abort_unless($requestedStatus === $nextStatus, 403);
+            $validated['trip_status'] = $requestedStatus;
+        } else {
+            unset($validated['trip_status']);
+        }
 
         $trip->update($validated);
 
         return back()->with('success', 'Registro atualizado com sucesso.');
-    }
-
-    public function advanceStatus(Request $request, GoaliTrip $trip)
-    {
-        $user = $request->user();
-        $isAdmin = $this->isAdmin($user);
-        $isDriver = $this->isDriver($user);
-
-        abort_unless($isAdmin || $isDriver, 403);
-
-        $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
-        $nextStatus = match ($trip->trip_status) {
-            'Criada' => $isAdmin ? 'Em Andamento' : null,
-            'Em Andamento' => 'Finalizada',
-            default => null,
-        };
-
-        abort_unless($nextStatus, 403);
-        $validated = $request->validate([
-            'trip_status' => ['required', Rule::in(self::TRIP_STATUSES)],
-        ]);
-        abort_unless($validated['trip_status'] === $nextStatus, 403);
-
-        $trip->update(['trip_status' => $validated['trip_status']]);
-
-        return back()->with('success', 'Status da corrida atualizado com sucesso.');
     }
 
     public function destroy(Request $request, GoaliTrip $trip)
@@ -254,7 +255,7 @@ class GoaliTripController extends Controller
             'travel_date' => ['required', 'date'],
             'travel_time' => ['required', 'date_format:H:i'],
             'status' => ['required', 'in:ENTRADA,SAÍDA'],
-            'trip_status' => ['sometimes', 'required', Rule::in(self::TRIP_STATUSES)],
+            'trip_status' => ['sometimes', 'nullable', Rule::in(self::TRIP_STATUSES)],
             'driver_id' => [
                 'required',
                 'integer',

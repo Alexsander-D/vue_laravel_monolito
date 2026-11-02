@@ -73,7 +73,6 @@ Route::middleware([
         Route::get('/goali/records', [GoaliTripController::class, 'index'])->name('goali.index');
         Route::get('/goali/records/export', [GoaliTripController::class, 'export'])->name('goali.export');
         Route::put('/goali/records/{trip}', [GoaliTripController::class, 'update'])->name('goali.update');
-        Route::put('/goali/records/{trip}/status', [GoaliTripController::class, 'advanceStatus'])->name('goali.advanceStatus');
         Route::delete('/goali/records/{trip}', [GoaliTripController::class, 'destroy'])->name('goali.destroy');
 
         Route::post(
