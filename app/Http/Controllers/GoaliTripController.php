@@ -108,8 +108,12 @@ class GoaliTripController extends Controller
         };
 
         abort_unless($nextStatus, 403);
+        $validated = $request->validate([
+            'trip_status' => ['required', Rule::in(self::TRIP_STATUSES)],
+        ]);
+        abort_unless($validated['trip_status'] === $nextStatus, 403);
 
-        $trip->update(['trip_status' => $nextStatus]);
+        $trip->update(['trip_status' => $validated['trip_status']]);
 
         return back()->with('success', 'Status da corrida atualizado com sucesso.');
     }

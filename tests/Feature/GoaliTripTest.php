@@ -216,7 +216,7 @@ class GoaliTripTest extends TestCase
                 ->where('isAdmin', false)
                 ->where('isDriver', true));
 
-        $this->put(route('goali.advanceStatus', $runningTrip))
+        $this->put(route('goali.advanceStatus', $runningTrip), ['trip_status' => 'Finalizada'])
             ->assertRedirect();
         $this->assertSame('Finalizada', $runningTrip->fresh()->trip_status);
         $this->put(route('goali.update', $runningTrip), [])
@@ -254,11 +254,11 @@ class GoaliTripTest extends TestCase
             'amount' => '75.00',
         ]);
 
-        $this->put(route('goali.advanceStatus', $trip))
+        $this->put(route('goali.advanceStatus', $trip), ['trip_status' => 'Em Andamento'])
             ->assertRedirect();
         $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
 
-        $this->put(route('goali.advanceStatus', $trip))
+        $this->put(route('goali.advanceStatus', $trip), ['trip_status' => 'Finalizada'])
             ->assertRedirect();
         $this->assertSame('Finalizada', $trip->fresh()->trip_status);
 

@@ -22,7 +22,9 @@ const props = defineProps({
 const filters = useForm({ ...props.filters });
 const statusOptions = ["ENTRADA", "SAÍDA"];
 const editingId = ref(null);
+const statusTransitionRecord = ref(null);
 const editForm = useForm({});
+const statusTransitionForm = useForm({ trip_status: "" });
 const reportUrl = computed(() => route("goali.export", filters.data()));
 const sortOrder = computed(() => filters.sortOrder || "desc");
 const selectedEditDriver = computed({
@@ -30,6 +32,18 @@ const selectedEditDriver = computed({
   set: (driver) => {
     editForm.driver_id = driver?.id ?? null;
   },
+});
+const statusTransitionOptions = computed(() => {
+  if (!statusTransitionRecord.value) {
+    return [];
+  }
+
+  if (props.isDriver) {
+    return ["Finalizada"];
+  }
+
+  const nextStatus = nextTripStatus(statusTransitionRecord.value.trip_status);
+  return nextStatus ? [nextStatus] : [];
 });
 
 const tableId = "goali-trips-datatable";
@@ -103,6 +117,25 @@ const deleteRecord = async (record) => {
   });
   if (result.isConfirmed) router.delete(route("goali.destroy", record.id), { preserveScroll: true });
 };
+const openStatusTransition = (record) => {
+  statusTransitionRecord.value = record;
+  statusTransitionForm.reset();
+  statusTransitionForm.trip_status = nextTripStatus(record.trip_status);
+};
+const closeStatusTransition = () => {
+  statusTransitionRecord.value = null;
+  statusTransitionForm.reset();
+};
+const submitStatusTransition = () => {
+  if (!statusTransitionRecord.value || !statusTransitionOptions.value.includes(statusTransitionForm.trip_status)) {
+    return;
+  }
+
+  statusTransitionForm.put(route("goali.advanceStatus", statusTransitionRecord.value.id), {
+    preserveScroll: true,
+    onSuccess: closeStatusTransition,
+  });
+};
 const handleTableAction = (event) => {
   const button = event.target.closest(`#${tableId} button[data-goali-action]`);
   if (!button) {
@@ -119,7 +152,7 @@ const handleTableAction = (event) => {
   } else if (button.dataset.goaliAction === "delete") {
     deleteRecord(record);
   } else if (button.dataset.goaliAction === "advance-status") {
-    router.put(route("goali.advanceStatus", record.id), {}, { preserveScroll: true });
+    openStatusTransition(record);
   }
 };
 const nextTripStatus = (status) => ({
@@ -178,7 +211,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <div class="border-l-4 border-green-600 px-4 py-2"><p class="text-sm text-gray-500">Valor a receber</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
-      <Datatable :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" />
+      <Datatable class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" />
         </div>
       </section>
 
@@ -200,6 +233,40 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
           </div>
           <p v-if="editForm.hasErrors" class="mt-3 text-sm text-red-700">Verifique os campos informados.</p>
           <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">Salvar alterações</button></div>
+        </form>
+      </div>
+
+      <div
+        v-if="statusTransitionRecord"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+        @click.self="closeStatusTransition"
+      >
+        <form
+          class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900"
+          @submit.prevent="submitStatusTransition"
+        >
+          <div class="mb-5 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Atualizar status da corrida</h2>
+            <button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="closeStatusTransition">&times;</button>
+          </div>
+          <label class="filter-label">
+            Próximo status
+            <Select
+              v-model="statusTransitionForm.trip_status"
+              :options="statusTransitionOptions"
+              placeholder="Selecione o próximo status"
+              :allow-empty="false"
+              :select2="true"
+              required
+            />
+            <InputError :message="statusTransitionForm.errors.trip_status" />
+          </label>
+          <div class="mt-6 flex justify-end gap-2">
+            <button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm" @click="closeStatusTransition">Cancelar</button>
+            <button type="submit" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white" :disabled="statusTransitionForm.processing">
+              {{ statusTransitionForm.processing ? "Salvando..." : "Confirmar" }}
+            </button>
+          </div>
         </form>
       </div>
     </main>

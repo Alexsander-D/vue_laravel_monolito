@@ -1,11 +1,11 @@
 <template>
   <!-- Tabela -->
-  <div class="bg-inherit rounded-xl border dark:border-gray-700 shadow p-4 mt-8">
+  <div class="w-full min-w-0 bg-inherit rounded-xl border dark:border-gray-700 shadow p-4 mt-8">
     <div class="flex flex-col">
       <div class="overflow-x-auto min-h-auto">
         <div class="min-w-full inline-block align-middle">
           <div class="overflow-hidden">
-            <table class="min-w-full" :id="id" :key="tableKey">
+            <table class="w-full min-w-full" :id="id" :key="tableKey">
               <thead>
                 <tr class="dark:text-white">
                   <th v-for="head in thead" :key="head.name">
