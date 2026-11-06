@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\GoaliTrip;
 use App\Models\Spatie\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -38,13 +40,42 @@ class GoaliTripController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
+        $rangeEndDate = null;
+
+        if ($request->exists('travel_start_date') || $request->exists('travel_end_date')) {
+            $dateRange = $request->validate([
+                'travel_start_date' => ['required', 'date_format:Y-m-d'],
+                'travel_end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:travel_start_date'],
+                'travel_time' => ['required', 'date_format:H:i'],
+            ]);
+
+            $rangeEndDate = $dateRange['travel_end_date'];
+            $request->merge(['travel_date' => $dateRange['travel_start_date']]);
+        }
+
         $validated = $this->validatedTrip($request, $user);
         $validated['user_id'] = $user->getAuthIdentifier();
         $validated['responsible'] = $user->name;
         $validated['trip_status'] = $this->isAdmin($user) ? 'Em Andamento' : 'Criada';
-        GoaliTrip::create($validated);
 
-        return back()->with('success', 'Registro enviado com sucesso.');
+        DB::transaction(function () use ($validated, $rangeEndDate) {
+            $date = CarbonImmutable::parse($validated['travel_date']);
+            $endDate = CarbonImmutable::parse($rangeEndDate ?? $validated['travel_date']);
+
+            for (; $date->lessThanOrEqualTo($endDate); $date = $date->addDay()) {
+                GoaliTrip::create([
+                    ...$validated,
+                    'travel_date' => $date->toDateString(),
+                ]);
+            }
+        });
+
+        return back()->with(
+            'success',
+            $rangeEndDate
+                ? 'Corridas criadas com sucesso para todas as datas do período.'
+                : 'Registro enviado com sucesso.'
+        );
     }
 
     public function index(Request $request)

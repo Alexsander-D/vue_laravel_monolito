@@ -26,7 +26,9 @@ const currentDateTime = () => {
 };
 const initialDateTime = currentDateTime();
 const form = useForm({
-  travel_datetime: `${initialDateTime.date}T${initialDateTime.time}`,
+  travel_start_date: initialDateTime.date,
+  travel_end_date: initialDateTime.date,
+  travel_time: initialDateTime.time,
   status: "",
   solicitation: "",
   driver_id: null,
@@ -61,9 +63,19 @@ const submit = () => {
   form.post(route("goali.store"), {
     preserveScroll: true,
     onSuccess: () => {
-      form.reset("status", "solicitation", "driver_id", "origin", "destination", "passenger", "amount");
+      form.reset(
+        "status",
+        "solicitation",
+        "driver_id",
+        "origin",
+        "destination",
+        "passenger",
+        "amount"
+      );
       const dateTime = currentDateTime();
-      form.travel_datetime = `${dateTime.date}T${dateTime.time}`;
+      form.travel_start_date = dateTime.date;
+      form.travel_end_date = dateTime.date;
+      form.travel_time = dateTime.time;
     },
   });
 };
@@ -93,13 +105,31 @@ const submit = () => {
           </div>
 
           <div>
-            <label for="travel_datetime"
-              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data e horário
+            <label for="travel_start_date"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data inicial
               <span>*</span></label>
-            <TextInput id="travel_datetime" v-model="form.travel_datetime" type="datetime-local"
+            <TextInput id="travel_start_date" v-model="form.travel_start_date" type="date"
               class="mt-1 block w-full" required />
-            <InputError :message="form.errors.travel_datetime || form.errors.travel_date || form.errors.travel_time"
-              class="mt-2" />
+            <InputError :message="form.errors.travel_start_date" class="mt-2" />
+          </div>
+          <div>
+            <label for="travel_end_date"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data final
+              <span>*</span></label>
+            <TextInput id="travel_end_date" v-model="form.travel_end_date" type="date"
+              class="mt-1 block w-full" :min="form.travel_start_date" required />
+            <InputError :message="form.errors.travel_end_date" class="mt-2" />
+          </div>
+          <div>
+            <label for="travel_time"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Horário
+              <span>*</span></label>
+            <TextInput id="travel_time" v-model="form.travel_time" type="time"
+              class="mt-1 block w-full" required />
+            <InputError :message="form.errors.travel_time" class="mt-2" />
+          </div>
+          <div class="self-end text-sm text-gray-600 dark:text-gray-300">
+            Será criada uma corrida por dia no período, incluindo as datas inicial e final.
           </div>
 
           <fieldset>

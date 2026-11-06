@@ -107,6 +107,107 @@ class GoaliTripTest extends TestCase
         $this->assertDatabaseMissing('goali_trips', ['id' => $trip->id]);
     }
 
+    public function test_it_creates_one_trip_per_day_across_month_boundaries(): void
+    {
+        $user = User::create([
+            'name' => 'Admin Goali',
+            'email' => 'range-admin@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($user, 'Admin');
+
+        $this->actingAs($user)
+            ->post(route('goali.store'), [
+                'travel_start_date' => '2026-10-30',
+                'travel_end_date' => '2026-11-02',
+                'travel_time' => '08:45',
+                'status' => 'ENTRADA',
+                'solicitation' => 'IMB',
+                'driver_id' => $user->id,
+                'origin' => 'Origem',
+                'destination' => 'Destino',
+                'passenger' => 'Passageiro do período',
+                'responsible' => $user->name,
+                'amount' => '125.50',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('goali_trips', 4);
+        foreach (['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'] as $date) {
+            $this->assertDatabaseHas('goali_trips', [
+                'user_id' => $user->id,
+                'travel_date' => $date,
+                'travel_time' => '08:45',
+                'status' => 'ENTRADA',
+                'trip_status' => 'Em Andamento',
+                'solicitation' => 'IMB',
+                'origin' => 'Origem',
+                'destination' => 'Destino',
+                'passenger' => 'Passageiro do período',
+                'amount' => '125.50',
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->post(route('goali.store'), [
+                'travel_start_date' => '2026-04-30',
+                'travel_end_date' => '2026-05-02',
+                'travel_time' => '09:15',
+                'status' => 'SAÍDA',
+                'solicitation' => 'IMB',
+                'driver_id' => $user->id,
+                'origin' => 'Origem',
+                'destination' => 'Destino',
+                'passenger' => 'Passageiro do mês de 30 dias',
+                'responsible' => $user->name,
+                'amount' => '80.00',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('goali_trips', 7);
+        foreach (['2026-04-30', '2026-05-01', '2026-05-02'] as $date) {
+            $this->assertDatabaseHas('goali_trips', [
+                'user_id' => $user->id,
+                'travel_date' => $date,
+                'travel_time' => '09:15',
+                'status' => 'SAÍDA',
+                'passenger' => 'Passageiro do mês de 30 dias',
+            ]);
+        }
+    }
+
+    public function test_it_rejects_a_date_range_that_ends_before_it_starts(): void
+    {
+        $user = User::create([
+            'name' => 'Admin Goali',
+            'email' => 'invalid-range-admin@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($user, 'Admin');
+
+        $this->actingAs($user)
+            ->from('/goali/form')
+            ->post(route('goali.store'), [
+                'travel_start_date' => '2026-11-02',
+                'travel_end_date' => '2026-10-30',
+                'travel_time' => '08:45',
+                'status' => 'ENTRADA',
+                'solicitation' => 'IMB',
+                'driver_id' => $user->id,
+                'origin' => 'Origem',
+                'destination' => 'Destino',
+                'passenger' => 'Período inválido',
+                'responsible' => $user->name,
+                'amount' => '125.50',
+            ])
+            ->assertRedirect('/goali/form')
+            ->assertSessionHasErrors('travel_end_date');
+
+        $this->assertDatabaseCount('goali_trips', 0);
+    }
+
     public function test_it_filters_and_sorts_trips_by_date_and_time(): void
     {
         $user = User::create([
