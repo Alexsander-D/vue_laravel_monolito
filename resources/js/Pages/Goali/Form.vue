@@ -6,13 +6,15 @@ import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Radio from "@/Components/Radio.vue";
 import { useForm, usePage } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps({
   solicitations: { type: Array, default: () => [] },
   responsibleUser: { type: String, default: "" },
   initialTripStatus: { type: String, default: "Criada" },
   drivers: { type: Array, default: () => [] },
+  initialDriverId: { type: Number, default: null },
+  isAdmin: { type: Boolean, default: false },
 });
 
 const currentDateTime = () => {
@@ -31,7 +33,7 @@ const form = useForm({
   travel_time: initialDateTime.time,
   status: "",
   solicitation: "",
-  driver_id: null,
+  driver_id: props.initialDriverId,
   origin: "",
   destination: "",
   passenger: "",
@@ -46,6 +48,18 @@ const selectedDriver = computed({
     form.driver_id = driver?.id ?? null;
   },
 });
+const createWithoutDriver = ref(false);
+const previousDriverId = ref(props.initialDriverId);
+
+const toggleWithoutDriver = (event) => {
+  if (event.target.checked) {
+    previousDriverId.value = form.driver_id ?? props.initialDriverId;
+    form.driver_id = null;
+    return;
+  }
+
+  form.driver_id = previousDriverId.value;
+};
 
 const formatAmount = () => {
   const amount = Number(String(form.amount).replace(",", "."));
@@ -72,6 +86,9 @@ const submit = () => {
         "passenger",
         "amount"
       );
+      createWithoutDriver.value = false;
+      previousDriverId.value = props.initialDriverId;
+      form.driver_id = props.initialDriverId;
       const dateTime = currentDateTime();
       form.travel_start_date = dateTime.date;
       form.travel_end_date = dateTime.date;
@@ -104,21 +121,23 @@ const submit = () => {
             <InputError :message="form.errors.responsible" class="mt-2" />
           </div>
 
-          <div>
-            <label for="travel_start_date"
-              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data inicial
-              <span>*</span></label>
-            <TextInput id="travel_start_date" v-model="form.travel_start_date" type="date"
-              class="mt-1 block w-full" required />
-            <InputError :message="form.errors.travel_start_date" class="mt-2" />
-          </div>
-          <div>
-            <label for="travel_end_date"
-              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data final
-              <span>*</span></label>
-            <TextInput id="travel_end_date" v-model="form.travel_end_date" type="date"
-              class="mt-1 block w-full" :min="form.travel_start_date" required />
-            <InputError :message="form.errors.travel_end_date" class="mt-2" />
+          <div class="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-2">
+            <div>
+              <label for="travel_start_date"
+                class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data inicial
+                <span>*</span></label>
+              <TextInput id="travel_start_date" v-model="form.travel_start_date" type="date"
+                class="mt-1 block w-full" required />
+              <InputError :message="form.errors.travel_start_date" class="mt-2" />
+            </div>
+            <div>
+              <label for="travel_end_date"
+                class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data final
+                <span>*</span></label>
+              <TextInput id="travel_end_date" v-model="form.travel_end_date" type="date"
+                class="mt-1 block w-full" :min="form.travel_start_date" required />
+              <InputError :message="form.errors.travel_end_date" class="mt-2" />
+            </div>
           </div>
           <div>
             <label for="travel_time"
@@ -127,9 +146,6 @@ const submit = () => {
             <TextInput id="travel_time" v-model="form.travel_time" type="time"
               class="mt-1 block w-full" required />
             <InputError :message="form.errors.travel_time" class="mt-2" />
-          </div>
-          <div class="self-end text-sm text-gray-600 dark:text-gray-300">
-            Será criada uma corrida por dia no período, incluindo as datas inicial e final.
           </div>
 
           <fieldset>
@@ -149,7 +165,7 @@ const submit = () => {
           </div>
           <div>
             <label for="solicitation"
-              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Solicitação / empresa
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Solicitação / Empresa
               <span>*</span></label>
             <Select id="solicitation" v-model="form.solicitation" :options="props.solicitations"
               class="mt-1 block w-full" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required />
@@ -158,10 +174,15 @@ const submit = () => {
           <div>
             <label for="driver_id"
               class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Motorista
-              <span>*</span></label>
+              <span v-if="!createWithoutDriver">*</span></label>
             <Select id="driver_id" v-model="selectedDriver" :options="props.drivers" label="name" track-by="id"
-              placeholder="Selecione um motorista" class="mt-1 block w-full" :allow-empty="false" :select2="true" />
+              placeholder="Selecione um motorista" class="mt-1 block w-full" :allow-empty="props.isAdmin"
+              :select2="true" :disabled="!props.isAdmin || createWithoutDriver" :required="!createWithoutDriver" />
             <InputError :message="form.errors.driver_id" class="mt-2" />
+            <label v-if="props.isAdmin" class="mt-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input v-model="createWithoutDriver" type="checkbox" class="rounded border-gray-300 text-teal-700" @change="toggleWithoutDriver" />
+              Criar corrida sem motorista
+            </label>
           </div>
 
           <div>

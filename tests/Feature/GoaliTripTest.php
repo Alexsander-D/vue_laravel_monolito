@@ -265,7 +265,7 @@ class GoaliTripTest extends TestCase
                 ->where('filters.sortOrder', 'desc'));
     }
 
-    public function test_non_admin_trip_starts_created_and_driver_can_only_finalize_running_trips(): void
+    public function test_non_admin_trip_starts_created_and_driver_sends_running_trips_for_analysis(): void
     {
         $driver = User::create([
             'name' => 'Motorista Goali',
@@ -294,7 +294,7 @@ class GoaliTripTest extends TestCase
 
         $this->actingAs($driver, 'sanctum')
             ->put(route('goali.update', $createdTrip), ['trip_status' => 'Finalizada'])
-            ->assertForbidden();
+            ->assertSessionHasErrors(['trip_status', 'driver_id']);
 
         $runningTrip = GoaliTrip::create([
             'user_id' => $driver->id,
@@ -310,6 +310,8 @@ class GoaliTripTest extends TestCase
             'responsible' => $driver->name,
             'amount' => '75.00',
         ]);
+        $this->assertSame($team->id, $driver->fresh()->currentTeam->id);
+        $this->assertSame('Motorista', $driver->fresh()->getRoleByUser());
 
         $this->get(route('goali.index'))
             ->assertOk()
@@ -317,16 +319,37 @@ class GoaliTripTest extends TestCase
                 ->where('isAdmin', false)
                 ->where('isDriver', true));
 
-        $this->put(route('goali.update', $runningTrip), ['trip_status' => 'Finalizada'])
-            ->assertRedirect();
-        $this->assertSame('Finalizada', $runningTrip->fresh()->trip_status);
-        $this->put(route('goali.update', $runningTrip), [])
-            ->assertForbidden();
+        $this->put(route('goali.update', $runningTrip), [
+            'trip_status' => 'Aguardando Analise',
+            'driver_id' => $driver->id,
+        ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Aguardando Analise', $runningTrip->fresh()->trip_status);
+        $this->put(route('goali.update', $runningTrip), [
+            'trip_status' => 'Finalizada',
+            'driver_id' => $driver->id,
+        ])->assertSessionHasErrors('trip_status');
         $this->delete(route('goali.destroy', $runningTrip))
             ->assertForbidden();
+
+        $driver->teams()->updateExistingPivot($team->id, ['role' => 'Admin']);
+
+        $this
+            ->get(route('goali.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('summary.receivable', 0));
+
+        $this
+            ->put(route('goali.update', $runningTrip), $this->tripUpdatePayload($runningTrip, 'Finalizada'))
+            ->assertRedirect();
+        $this->assertSame('Finalizada', $runningTrip->fresh()->trip_status);
+
+        $this
+            ->get(route('goali.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('summary.receivable', 75));
     }
 
-    public function test_admin_created_trips_start_in_progress_and_admin_can_only_advance_one_status(): void
+    public function test_admin_must_wait_for_driver_confirmation_before_finalizing(): void
     {
         $admin = User::create([
             'name' => 'Admin Goali',
@@ -335,6 +358,7 @@ class GoaliTripTest extends TestCase
         ]);
         $admin->forceFill(['email_verified_at' => now()])->save();
         $this->attachToGoaliTeam($admin, 'Admin');
+        $team = $admin->currentTeam;
 
         $this->actingAs($admin)
             ->get(route('goali.form'))
@@ -347,6 +371,7 @@ class GoaliTripTest extends TestCase
             'travel_time' => '12:00',
             'status' => 'ENTRADA',
             'trip_status' => 'Criada',
+            'driver_id' => $admin->id,
             'solicitation' => 'IMB',
             'origin' => 'Origem',
             'destination' => 'Destino',
@@ -360,14 +385,143 @@ class GoaliTripTest extends TestCase
         $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
 
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
+            ->assertForbidden();
+
+        $admin->teams()->updateExistingPivot($team->id, ['role' => 'Motorista']);
+        $this->put(route('goali.update', $trip), [
+                'trip_status' => 'Aguardando Analise',
+                'driver_id' => $admin->id,
+            ])
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+        $this->assertSame('Aguardando Analise', $trip->fresh()->trip_status);
+
+        $admin->teams()->updateExistingPivot($team->id, ['role' => 'Admin']);
+        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
             ->assertRedirect();
         $this->assertSame('Finalizada', $trip->fresh()->trip_status);
 
-        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
-            ->assertForbidden();
-
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip))
             ->assertForbidden();
+    }
+
+    public function test_admin_can_cancel_an_analysis_trip_back_to_the_unassigned_queue(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Cancelamento',
+            'email' => 'admin-cancel@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $team = $this->attachToGoaliTeam($admin, 'Admin');
+        $driver = User::create([
+            'name' => 'Motorista Cancelamento',
+            'email' => 'driver-cancel@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->teams()->attach($team->id, ['role' => 'Motorista']);
+
+        $trip = GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => $driver->id,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Aguardando Analise',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida cancelada',
+            'responsible' => $admin->name,
+            'amount' => '75.00',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('goali.update', $trip), ['cancel_trip' => true])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
+        $this->assertNull($trip->fresh()->driver_id);
+    }
+
+    public function test_admin_can_create_an_unassigned_trip_for_a_driver_to_claim(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Goali',
+            'email' => 'unassigned-admin@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $team = $this->attachToGoaliTeam($admin, 'Admin');
+
+        $this->actingAs($admin)
+            ->post(route('goali.store'), [
+                'travel_start_date' => now()->toDateString(),
+                'travel_end_date' => now()->toDateString(),
+                'travel_time' => '12:00',
+                'status' => 'ENTRADA',
+                'solicitation' => 'IMB',
+                'driver_id' => null,
+                'origin' => 'Origem',
+                'destination' => 'Destino',
+                'passenger' => 'Corrida sem motorista',
+                'responsible' => $admin->name,
+                'amount' => '100.00',
+            ])
+            ->assertRedirect();
+
+        $trip = GoaliTrip::where('passenger', 'Corrida sem motorista')->firstOrFail();
+        $this->assertNull($trip->driver_id);
+        $this->assertSame('Em Andamento', $trip->trip_status);
+
+        $admin->teams()->updateExistingPivot($team->id, ['role' => 'Motorista']);
+
+        $this->get(route('goali.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentDriverId', $admin->id)
+                ->where('records.0.id', $trip->id));
+
+        $this->put(route('goali.update', $trip), [
+            'trip_status' => 'Aguardando Analise',
+            'driver_id' => $admin->id,
+        ])->assertRedirect();
+
+        $this->assertSame($admin->id, $trip->fresh()->driver_id);
+        $this->assertSame('Aguardando Analise', $trip->fresh()->trip_status);
+
+    }
+
+    public function test_only_an_admin_can_create_a_trip_without_a_driver(): void
+    {
+        $driver = User::create([
+            'name' => 'Motorista Goali',
+            'email' => 'required-driver@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($driver, 'Motorista');
+
+        $this->actingAs($driver)
+            ->from('/goali/form')
+            ->post(route('goali.store'), [
+                'travel_start_date' => now()->toDateString(),
+                'travel_end_date' => now()->toDateString(),
+                'travel_time' => '12:00',
+                'status' => 'ENTRADA',
+                'solicitation' => 'IMB',
+                'driver_id' => null,
+                'origin' => 'Origem',
+                'destination' => 'Destino',
+                'passenger' => 'Corrida inválida',
+                'responsible' => $driver->name,
+                'amount' => '100.00',
+            ])
+            ->assertRedirect('/goali/form')
+            ->assertSessionHasErrors('driver_id');
+
+        $this->assertDatabaseMissing('goali_trips', ['passenger' => 'Corrida inválida']);
     }
 
     public function test_users_on_the_unassigned_team_see_the_access_notice_instead_of_dashboard(): void

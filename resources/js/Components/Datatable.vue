@@ -15,7 +15,7 @@
               </thead>
 
               <tbody class="divide-y divide-gray-600">
-                <tr v-for="(body, index) in tbody" :key="index">
+                <tr v-for="(body, index) in tbody" :key="index" :class="rowClass ? rowClass(body) : undefined">
                   <td class="dark:text-white" v-for="(value, key) in body" :key="key">
                     <template v-if="key.startsWith('button')">
                       <div v-html="value"></div>
@@ -64,6 +64,10 @@ const props = defineProps({
   orderBy: {
     type: Array,
     default: () => [0, "desc"],
+  },
+  rowClass: {
+    type: Function,
+    default: null,
   },
 });
 

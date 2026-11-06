@@ -17,6 +17,7 @@ const props = defineProps({
   tripStatuses: { type: Array, default: () => [] },
   summary: { type: Object, required: true },
   isDriver: { type: Boolean, default: false },
+  currentDriverId: { type: Number, default: null },
 });
 
 const filters = useForm({ ...props.filters });
@@ -35,7 +36,7 @@ const editTripStatusOptions = computed(() => {
   }
 
   if (props.isDriver) {
-    return ["Finalizada"];
+    return ["Aguardando Analise"];
   }
 
   const nextStatus = nextTripStatus(editingRecord.value.trip_status);
@@ -74,6 +75,9 @@ const tableData = computed(() => props.records.map((record) => ({
     (props.isAdmin && record.trip_status !== "Finalizada") || (props.isDriver && record.trip_status === "Em Andamento")
       ? `<button type="button" class="mr-3 font-semibold text-teal-700 hover:underline" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
+    record.trip_status === "Aguardando Analise" && (props.isAdmin || (props.isDriver && Number(record.driver_id) === Number(props.currentDriverId)))
+      ? `<button type="button" class="mr-3 font-semibold text-amber-700 hover:underline" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar corrida</button>`
+      : "",
     props.isAdmin
       ? `<button type="button" class="font-semibold text-red-700 hover:underline" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
       : "",
@@ -89,7 +93,10 @@ const startEdit = (record) => {
 
   editingId.value = record.id;
   if (props.isDriver) {
-    editForm.defaults({ trip_status: "Finalizada" }).reset();
+    editForm.defaults({
+      trip_status: "Aguardando Analise",
+      driver_id: props.currentDriverId,
+    }).reset();
     return;
   }
 
@@ -141,12 +148,35 @@ const handleTableAction = (event) => {
     startEdit(record);
   } else if (button.dataset.goaliAction === "delete") {
     deleteRecord(record);
+  } else if (button.dataset.goaliAction === "cancel") {
+    cancelTrip(record);
+  }
+};
+const cancelTrip = async (record) => {
+  const result = await Swal.fire({
+    title: "Devolver corrida às pendentes?",
+    text: `A corrida de ${record.passenger} ficará disponível para atribuição novamente.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Cancelar corrida",
+    cancelButtonText: "Manter corrida",
+    confirmButtonColor: "#b45309",
+  });
+
+  if (result.isConfirmed) {
+    router.put(route("goali.update", record.id), { cancel_trip: true }, { preserveScroll: true });
   }
 };
 const nextTripStatus = (status) => ({
   Criada: "Em Andamento",
-  "Em Andamento": "Finalizada",
+  "Aguardando Analise": "Finalizada",
 }[status] || "");
+const tripRowClass = (row) => ({
+  "goali-trip--created": row.tripStatus === "Criada",
+  "goali-trip--in-progress": row.tripStatus === "Em Andamento",
+  "goali-trip--awaiting": row.tripStatus === "Aguardando Analise",
+  "goali-trip--finished": row.tripStatus === "Finalizada",
+});
 const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const date = (value) => {
   const datePart = String(value || "").slice(0, 10);
@@ -199,7 +229,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <div class="border-l-4 border-green-600 px-4 py-2"><p class="text-sm text-gray-500">Valor a receber</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
-      <Datatable :key="tableKey" class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" />
+      <Datatable :key="tableKey" class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" />
         </div>
       </section>
 
@@ -207,6 +237,14 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <form class="my-6 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900" @submit.prevent="saveEdit">
           <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ props.isDriver ? "Atualizar status da corrida" : "Editar deslocamento" }}</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
           <div v-if="props.isDriver" class="grid grid-cols-1 gap-4">
+            <label class="filter-label">Motorista
+              <Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id"
+                placeholder="Seu nome" :allow-empty="false" :select2="true" disabled />
+              <InputError :message="editForm.errors.driver_id" />
+              <span v-if="editingRecord && !editingRecord.driver_id" class="font-normal text-gray-500">
+                Ao confirmar, esta corrida será atribuída a você.
+              </span>
+            </label>
             <label class="filter-label">Próximo status<Select v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Selecione o status" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.trip_status" /></label>
           </div>
           <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -214,7 +252,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
             <label class="filter-label">Data<TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_date" /></label>
             <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
             <label class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.status" /></label>
-            <label class="filter-label">Motorista<Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="false" :select2="true" /><InputError :message="editForm.errors.driver_id" /></label>
+            <label class="filter-label">Motorista<Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="true" :select2="true" /><InputError :message="editForm.errors.driver_id" /></label>
             <label class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
             <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
@@ -232,4 +270,8 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
 
 <style scoped>
 .filter-label { display: flex; flex-direction: column; gap: .4rem; color: #4b5563; font-size: .8rem; font-weight: 600; }
+:deep(.goali-trip--created > td) { background-color: #f3f4f6 !important; }
+:deep(.goali-trip--in-progress > td) { background-color: #eff6ff !important; }
+:deep(.goali-trip--awaiting > td) { background-color: #fef3c7 !important; }
+:deep(.goali-trip--finished > td) { background-color: #dcfce7 !important; }
 </style>
