@@ -32,7 +32,9 @@ class GoaliTripController extends Controller
         return Inertia::render('Goali/Form', [
             'solicitations' => self::SOLICITATIONS,
             'responsibleUser' => $user?->name ?? '',
-            'initialTripStatus' => $user && $this->isAdmin($user) ? 'Em Andamento' : 'Criada',
+            'initialTripStatus' => $user && ($this->isAdmin($user) || $this->isDriver($user))
+                ? 'Em Andamento'
+                : 'Criada',
             'drivers' => $user ? $this->driversForCurrentTeam($user) : [],
             'initialDriverId' => $user && collect($this->driversForCurrentTeam($user))->contains('id', $user->id)
                 ? $user->id
@@ -60,7 +62,9 @@ class GoaliTripController extends Controller
         $validated = $this->validatedTrip($request, $user);
         $validated['user_id'] = $user->getAuthIdentifier();
         $validated['responsible'] = $user->name;
-        $validated['trip_status'] = $this->isAdmin($user) ? 'Em Andamento' : 'Criada';
+        $validated['trip_status'] = ($this->isAdmin($user) || $this->isDriver($user))
+            ? 'Em Andamento'
+            : 'Criada';
 
         DB::transaction(function () use ($validated, $rangeEndDate) {
             $date = CarbonImmutable::parse($validated['travel_date']);

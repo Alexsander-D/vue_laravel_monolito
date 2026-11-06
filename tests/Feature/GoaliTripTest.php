@@ -290,7 +290,7 @@ class GoaliTripTest extends TestCase
             ->assertRedirect();
 
         $createdTrip = GoaliTrip::where('passenger', 'Passageiro')->firstOrFail();
-        $this->assertSame('Criada', $createdTrip->trip_status);
+        $this->assertSame('Em Andamento', $createdTrip->trip_status);
 
         $this->actingAs($driver, 'sanctum')
             ->put(route('goali.update', $createdTrip), ['trip_status' => 'Finalizada'])
@@ -313,6 +313,9 @@ class GoaliTripTest extends TestCase
         $this->assertSame($team->id, $driver->fresh()->currentTeam->id);
         $this->assertSame('Motorista', $driver->fresh()->getRoleByUser());
 
+        $this->get(route('goali.form'))
+            ->assertInertia(fn (Assert $page) => $page->where('initialTripStatus', 'Em Andamento'));
+
         $this->get(route('goali.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -326,6 +329,27 @@ class GoaliTripTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $this->assertSame('Aguardando Analise', $runningTrip->fresh()->trip_status);
+
+        $createdTrip = GoaliTrip::create([
+            'user_id' => $driver->id,
+            'driver_id' => $driver->id,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '13:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Criada',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida ainda criada',
+            'responsible' => $driver->name,
+            'amount' => '40.00',
+        ]);
+        $this->put(route('goali.update', $createdTrip), [
+            'trip_status' => 'Aguardando Analise',
+            'driver_id' => $driver->id,
+        ])->assertForbidden();
+        $this->assertSame('Criada', $createdTrip->fresh()->trip_status);
+
         $this->put(route('goali.update', $runningTrip), [
             'trip_status' => 'Finalizada',
             'driver_id' => $driver->id,
