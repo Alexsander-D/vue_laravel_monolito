@@ -18,7 +18,10 @@ const props = defineProps({
   team: Object,
   availableRoles: Array,
   userPermissions: Object,
-  unassignedUsers: Array,
+  unassignedUsers: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const page = usePage();
@@ -29,7 +32,7 @@ const addTeamMemberForm = useForm({
 });
 
 const unassignedUserOptions = computed(() =>
-  props.unassignedUsers.map((user) => ({
+  (props.unassignedUsers ?? []).map((user) => ({
     ...user,
     label: `${user.name} (${user.email})`,
   }))
@@ -158,7 +161,6 @@ const displayableRole = (role) => {
                 label="label"
                 track-by="id"
                 placeholder="Selecione um usuário"
-                :select2="true"
                 :disabled="unassignedUserOptions.length === 0"
                 required
               />

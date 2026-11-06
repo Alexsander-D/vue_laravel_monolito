@@ -10,6 +10,7 @@ const props = defineProps({
   team: Object,
   availableRoles: Array,
   permissions: Object,
+  unassignedUsers: Array,
 });
 </script>
 
@@ -25,6 +26,7 @@ const props = defineProps({
           :team="team"
           :available-roles="availableRoles"
           :user-permissions="permissions"
+          :unassigned-users="unassignedUsers"
         />
 
         <SectionBorder />
