@@ -5,6 +5,7 @@ namespace App\Actions\Jetstream;
 use App\Models\Spatie\Team;
 use App\Models\Spatie\User;
 use Closure;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Jetstream\Contracts\AddsTeamMembers;
@@ -18,14 +19,9 @@ class AddTeamMember implements AddsTeamMembers
      */
     public function detachDefaultTeam(User $user)
     {
-        // Carrega explicitamente as relações dos times do usuário
-        $user->load('teams');
-
-        // Encontra o time padrão
         $defaultTeam = Team::where('name', 'EQUIPE NÃO ATRIBUÍDA')->first();
 
-        if ($defaultTeam && $user->teams->contains($defaultTeam->id)) {
-            // Remove o usuário do time padrão
+        if ($defaultTeam) {
             $user->teams()->detach($defaultTeam->id);
         }
     }
@@ -33,29 +29,25 @@ class AddTeamMember implements AddsTeamMembers
     /**
      * Add a new team member to the given team.
      */
-    public function add(User $user, Team $team, string $email, string $role = null): void
+    public function add(User $user, Team $team, string $email, ?string $role = null): void
     {
         Gate::forUser($user)->authorize('addTeamMember', $team);
 
         $this->validate($team, $email, $role);
 
         // Busca o novo membro do time
-        $newTeamMember = Jetstream::findUserByEmailOrFail($email);
+        $newTeamMember = User::where('email', $email)->firstOrFail();
 
-        // Remove o novo membro do time padrão, se aplicável
-        if ($newTeamMember->id !== 1) {
-            $this->detachDefaultTeam($newTeamMember);
-        }
+        DB::transaction(function () use ($newTeamMember, $team, $role) {
+            if ($newTeamMember->id !== 1) {
+                $this->detachDefaultTeam($newTeamMember);
+            }
 
-        // Adiciona o novo membro ao time atual
-        $team->users()->attach(
-            $newTeamMember->id,
-            ['role' => $role]
-        );
+            $team->users()->attach($newTeamMember->id, ['role' => $role]);
 
-        // Define o time atual do usuário para o time ao qual foi adicionado
-        $newTeamMember->current_team_id = $team->id;
-        $newTeamMember->save();
+            $newTeamMember->current_team_id = $team->id;
+            $newTeamMember->save();
+        });
 
         TeamMemberAdded::dispatch($team, $newTeamMember);
     }

@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Spatie;
 
 use App\Models\Spatie\Role;
+use App\Models\Spatie\Team;
+use App\Models\Spatie\User;
 use App\Support\Jetstream;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Validator;
 use Laravel\Jetstream\Actions\UpdateTeamMemberRole;
 use Laravel\Jetstream\Contracts\AddsTeamMembers;
 use Laravel\Jetstream\Contracts\InvitesTeamMembers;
@@ -24,19 +27,45 @@ class TeamMemberController extends Controller
     public function store(Request $request, $teamId)
     {
         $team = Jetstream::newTeamModel()->findOrFail($teamId);
+        $email = $request->email ?: '';
 
-        if (Features::sendsTeamInvitations()) {
+        if (Features::sendsTeamInvitations() && !$request->filled('user_id')) {
             app(InvitesTeamMembers::class)->invite(
                 $request->user(),
                 $team,
-                $request->email ?: '',
+                $email,
                 $request->role
             );
         } else {
+            if ($request->filled('user_id')) {
+                $validated = $request->validateWithBag('addTeamMember', [
+                    'user_id' => ['required', 'integer', 'exists:users,id'],
+                ]);
+                $selectedUser = User::findOrFail($validated['user_id']);
+                $unassignedTeam = Team::whereName('EQUIPE NÃO ATRIBUÍDA')->first();
+
+                Validator::make([], [])->after(function ($validator) use ($selectedUser, $unassignedTeam, $team) {
+                    if (
+                        !$unassignedTeam
+                        || $unassignedTeam->id === $team->id
+                        || !$selectedUser->teams()->whereKey($unassignedTeam->id)->exists()
+                        || $team->users()->whereKey($selectedUser->id)->exists()
+                    ) {
+                        $validator->errors()->add('user_id', 'Selecione um usuário do time não atribuído.');
+                    }
+                })->validateWithBag('addTeamMember');
+
+                $email = $selectedUser->email;
+            } elseif (!$request->filled('email')) {
+                $request->validateWithBag('addTeamMember', [
+                    'user_id' => ['required'],
+                ]);
+            }
+
             app(AddsTeamMembers::class)->add(
                 $request->user(),
                 $team,
-                $request->email ?: '',
+                $email,
                 $request->role
             );
         }

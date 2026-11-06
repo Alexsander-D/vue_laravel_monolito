@@ -9,6 +9,7 @@ use Laravel\Jetstream\Contracts\CreatesTeams;
 use Laravel\Jetstream\Contracts\DeletesTeams;
 use Laravel\Jetstream\Contracts\UpdatesTeamNames;
 use App\Support\Jetstream;
+use App\Models\Spatie\Team;
 use Laravel\Jetstream\RedirectsActions;
 
 class TeamController extends Controller
@@ -28,8 +29,16 @@ class TeamController extends Controller
 
         Gate::authorize('view', $team);
 
+        $unassignedTeam = Team::whereName('EQUIPE NÃO ATRIBUÍDA')->first();
+        $unassignedUsers = $unassignedTeam && $unassignedTeam->id !== $team->id
+            ? $unassignedTeam->users()
+                ->whereDoesntHave('teams', fn ($query) => $query->where('teams.id', $team->id))
+                ->get(['users.id', 'users.name', 'users.email'])
+            : collect();
+
         return Jetstream::inertia()->render($request, 'Spatie/Teams/Show', [
             'team' => $team->load('owner', 'users', 'teamInvitations'),
+            'unassignedUsers' => $unassignedUsers,
             'availableRoles' => array_values(Jetstream::$roles),
             'availablePermissions' => Jetstream::$permissions,
             'defaultPermissions' => Jetstream::$defaultPermissions,

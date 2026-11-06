@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps } from "vue";
+import { computed, ref, defineProps } from "vue";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import ActionMessage from "@/Components/ActionMessage.vue";
 import ActionSection from "@/Components/ActionSection.vue";
@@ -12,19 +12,34 @@ import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import SectionBorder from "@/Components/SectionBorder.vue";
-import TextInput from "@/Components/TextInput.vue";
+import Select from "@/Components/Select.vue";
 
 const props = defineProps({
   team: Object,
   availableRoles: Array,
   userPermissions: Object,
+  unassignedUsers: Array,
 });
 
 const page = usePage();
 
 const addTeamMemberForm = useForm({
-  email: "",
+  user_id: "",
   role: null,
+});
+
+const unassignedUserOptions = computed(() =>
+  props.unassignedUsers.map((user) => ({
+    ...user,
+    label: `${user.name} (${user.email})`,
+  }))
+);
+
+const selectedUnassignedUser = computed({
+  get: () => unassignedUserOptions.value.find((user) => user.id === addTeamMemberForm.user_id) ?? null,
+  set: (user) => {
+    addTeamMemberForm.user_id = user?.id ?? "";
+  },
 });
 
 const updateRoleForm = useForm({
@@ -120,32 +135,40 @@ const displayableRole = (role) => {
         <template #form>
           <div align="center">
             <div class="max-w-xl text-sm text-gray-600 dark:text-gray-400">
-              Forneça o endereço de e-mail da pessoa que você gostaria de adicionar a esta
-              equipe.
+              Selecione um usuário do time não atribuído para adicioná-lo a esta equipe.
             </div>
           </div>
 
           <div class="grid sm:grid-cols-12 gap-2 sm:gap-6 mt-8">
             <div class="col-span-2">
-              <!-- Member Email -->
               <label
                 class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200"
-                for="email"
+                for="team-member"
               >
-                E-mail
+                Usuário
               </label>
             </div>
 
             <div class="col-span-9">
-              <div class="flex items-center gap-5">
-                <TextInput
-                  id="email"
-                  v-model="addTeamMemberForm.email"
-                  type="email"
-                  class="mt-1 block w-full"
-                />
-                <InputError :message="addTeamMemberForm.errors.email" class="mt-2" />
-              </div>
+              <Select
+                id="team-member"
+                v-model="selectedUnassignedUser"
+                class="mt-1 block w-full"
+                :options="unassignedUserOptions"
+                label="label"
+                track-by="id"
+                placeholder="Selecione um usuário"
+                :select2="true"
+                :disabled="unassignedUserOptions.length === 0"
+                required
+              />
+              <InputError :message="addTeamMemberForm.errors.user_id" class="mt-2" />
+              <p
+                v-if="unassignedUserOptions.length === 0"
+                class="mt-2 text-sm text-gray-500 dark:text-gray-400"
+              >
+                Não há usuários disponíveis no time não atribuído.
+              </p>
             </div>
           </div>
 
