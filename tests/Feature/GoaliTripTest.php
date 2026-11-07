@@ -347,14 +347,14 @@ class GoaliTripTest extends TestCase
         $admin->forceFill(['email_verified_at' => now()])->save();
         $this->attachToGoaliTeam($admin, 'Admin');
 
-        $createTrip = fn (string $status, string $time) => GoaliTrip::create([
+        $createTrip = fn (string $status, string $time, string $solicitation, string $type) => GoaliTrip::create([
             'user_id' => $admin->id,
             'driver_id' => $admin->id,
             'travel_date' => now()->toDateString(),
             'travel_time' => $time,
-            'status' => 'ENTRADA',
+            'status' => $type,
             'trip_status' => $status,
-            'solicitation' => 'IMB',
+            'solicitation' => $solicitation,
             'origin' => 'Origem',
             'destination' => 'Destino',
             'passenger' => $status,
@@ -362,10 +362,10 @@ class GoaliTripTest extends TestCase
             'amount' => '10.00',
         ]);
 
-        $finishedTrip = $createTrip('Finalizada', '08:00');
-        $awaitingTrip = $createTrip('Aguardando Analise', '09:00');
-        $inProgressTrip = $createTrip('Em Andamento', '10:00');
-        $createdTrip = $createTrip('Criada', '11:00');
+        $finishedTrip = $createTrip('Finalizada', '08:00', 'LOGVALE', 'SAÍDA');
+        $awaitingTrip = $createTrip('Aguardando Analise', '09:00', 'FRANGO DOURADO', 'ENTRADA');
+        $inProgressTrip = $createTrip('Em Andamento', '10:00', 'OSESP', 'SAÍDA');
+        $createdTrip = $createTrip('Criada', '11:00', 'IMB', 'ENTRADA');
 
         $this->actingAs($admin)
             ->get(route('goali.index'))
@@ -381,13 +381,18 @@ class GoaliTripTest extends TestCase
                 ]));
 
         $this->get(route('goali.index', [
-            'tripStatus' => ['Criada', 'Aguardando Analise'],
+            'status' => ['ENTRADA', 'SAÍDA'],
+            'tripStatus' => ['Criada', 'Em Andamento', 'Aguardando Analise'],
+            'solicitation' => ['IMB', 'OSESP', 'FRANGO DOURADO'],
         ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('filters.tripStatus', ['Criada', 'Aguardando Analise'])
+                ->where('filters.status', ['ENTRADA', 'SAÍDA'])
+                ->where('filters.tripStatus', ['Criada', 'Em Andamento', 'Aguardando Analise'])
+                ->where('filters.solicitation', ['IMB', 'OSESP', 'FRANGO DOURADO'])
                 ->where('records', fn ($records) => collect($records)->pluck('id')->all() === [
                     $createdTrip->id,
+                    $inProgressTrip->id,
                     $awaitingTrip->id,
                 ]));
     }

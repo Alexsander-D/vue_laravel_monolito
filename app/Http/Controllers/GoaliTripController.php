@@ -308,7 +308,22 @@ class GoaliTripController extends Controller
         $filters = $request->validate([
             'startDate' => ['nullable', 'date'],
             'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
-            'status' => ['nullable', 'in:ENTRADA,SAÍDA'],
+            'status' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    $statuses = is_array($value) ? $value : [$value];
+                    foreach ($statuses as $status) {
+                        if ($status === '') {
+                            continue;
+                        }
+
+                        if (! is_string($status) || ! in_array($status, ['ENTRADA', 'SAÍDA'], true)) {
+                            $fail('O tipo selecionado é inválido.');
+                            return;
+                        }
+                    }
+                },
+            ],
             'tripStatus' => [
                 'nullable',
                 function ($attribute, $value, $fail) {
@@ -325,12 +340,29 @@ class GoaliTripController extends Controller
                     }
                 },
             ],
-            'solicitation' => ['nullable', 'string', 'in:' . implode(',', self::SOLICITATIONS)],
+            'solicitation' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    $solicitations = is_array($value) ? $value : [$value];
+                    foreach ($solicitations as $solicitation) {
+                        if ($solicitation === '') {
+                            continue;
+                        }
+
+                        if (! is_string($solicitation) || ! in_array($solicitation, self::SOLICITATIONS, true)) {
+                            $fail('A solicitação selecionada é inválida.');
+                            return;
+                        }
+                    }
+                },
+            ],
             'sortOrder' => ['nullable', 'in:asc,desc'],
         ]);
-        if (array_key_exists('tripStatus', $filters)) {
-            $statuses = is_array($filters['tripStatus']) ? $filters['tripStatus'] : [$filters['tripStatus']];
-            $filters['tripStatus'] = array_values(array_filter($statuses, fn ($status) => $status !== ''));
+        foreach (['status', 'tripStatus', 'solicitation'] as $filterName) {
+            if (array_key_exists($filterName, $filters)) {
+                $values = is_array($filters[$filterName]) ? $filters[$filterName] : [$filters[$filterName]];
+                $filters[$filterName] = array_values(array_filter($values, fn ($value) => $value !== ''));
+            }
         }
 
         $dateDefaults = $dateFilterProvided
@@ -342,9 +374,9 @@ class GoaliTripController extends Controller
 
         return array_merge([
             ...$dateDefaults,
-            'status' => '',
+            'status' => [],
             'tripStatus' => '',
-            'solicitation' => '',
+            'solicitation' => [],
             'sortOrder' => 'desc',
         ], $filters);
     }
@@ -356,7 +388,14 @@ class GoaliTripController extends Controller
         return $this->queryForUser($user)
             ->when($filters['startDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '>=', $date))
             ->when($filters['endDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '<=', $date))
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['status'] ?? null, function ($query, $statuses) {
+                $statuses = is_array($statuses) ? $statuses : [$statuses];
+                $statuses = array_values(array_filter($statuses, fn ($status) => $status !== ''));
+
+                if ($statuses) {
+                    $query->whereIn('status', $statuses);
+                }
+            })
             ->when($filters['tripStatus'] ?? null, function ($query, $statuses) {
                 $statuses = is_array($statuses) ? $statuses : [$statuses];
                 $statuses = array_values(array_filter($statuses, fn ($status) => $status !== ''));
@@ -365,7 +404,14 @@ class GoaliTripController extends Controller
                     $query->whereIn('trip_status', $statuses);
                 }
             })
-            ->when($filters['solicitation'] ?? null, fn ($query, $solicitation) => $query->where('solicitation', $solicitation))
+            ->when($filters['solicitation'] ?? null, function ($query, $solicitations) {
+                $solicitations = is_array($solicitations) ? $solicitations : [$solicitations];
+                $solicitations = array_values(array_filter($solicitations, fn ($solicitation) => $solicitation !== ''));
+
+                if ($solicitations) {
+                    $query->whereIn('solicitation', $solicitations);
+                }
+            })
             ->with('driver:id,name')
             ->orderByRaw("CASE trip_status WHEN 'Criada' THEN 0 WHEN 'Em Andamento' THEN 1 WHEN 'Aguardando Analise' THEN 2 WHEN 'Finalizada' THEN 3 ELSE 4 END")
             ->orderBy('travel_date', $sortOrder)

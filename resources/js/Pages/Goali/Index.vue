@@ -22,18 +22,28 @@ const props = defineProps({
 
 const normalizedFilters = (value) => ({
   ...value,
+  status: Array.isArray(value.status)
+    ? value.status
+    : value.status
+      ? [value.status]
+      : [],
   tripStatus: Array.isArray(value.tripStatus)
     ? value.tripStatus
     : value.tripStatus
       ? [value.tripStatus]
       : [],
+  solicitation: Array.isArray(value.solicitation)
+    ? value.solicitation
+    : value.solicitation
+      ? [value.solicitation]
+      : [],
 });
 const getFilterKey = (value) => JSON.stringify([
   value.startDate || "",
   value.endDate || "",
-  value.status || "",
+  [...(Array.isArray(value.status) ? value.status : [])].sort(),
   [...(Array.isArray(value.tripStatus) ? value.tripStatus : [])].sort(),
-  value.solicitation || "",
+  [...(Array.isArray(value.solicitation) ? value.solicitation : [])].sort(),
 ]);
 const filters = useForm(normalizedFilters(props.filters));
 let lastAppliedFilterKey = getFilterKey(filters);
@@ -189,9 +199,9 @@ watch(
   () => [
     filters.startDate,
     filters.endDate,
-    filters.status,
+    JSON.stringify(filters.status),
     JSON.stringify(filters.tripStatus),
-    filters.solicitation,
+    JSON.stringify(filters.solicitation),
   ],
   () => {
     clearTimeout(filterTimeout);
@@ -199,9 +209,9 @@ watch(
   }
 );
 const clearFilters = () => {
-  filters.status = "";
+  filters.status = [];
   filters.tripStatus = [];
-  filters.solicitation = "";
+  filters.solicitation = [];
 };
 const startEdit = (record) => {
   if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverEditTrip(record))) {
@@ -342,9 +352,9 @@ onBeforeUnmount(() => {
       <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
         <label class="filter-label">Data inicial<TextInput v-model="filters.startDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Data final<TextInput v-model="filters.endDate" type="date" class="mt-1 block w-full" /></label>
-        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" /></label>
+        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" multiple /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" multiple /></label>
-        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" /></label>
+        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" multiple /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
@@ -505,7 +515,18 @@ onBeforeUnmount(() => {
             </label>
           </div>
           <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div class="filter-label sm:col-span-2">Andamento<Select :key="`admin-trip-status-${editingRecord?.id}-${editingRecord?.trip_status}`" v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Manter status atual" :allow-empty="true" /><InputError :message="editForm.errors.trip_status" /></div>
+            <label class="filter-label sm:col-span-2">Andamento
+              <select
+                v-model="editForm.trip_status"
+                class="mt-1 min-h-11 w-full rounded-md border-gray-300 shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              >
+                <option value="">Manter status atual</option>
+                <option v-for="status in editTripStatusOptions" :key="status" :value="status">
+                  {{ status }}
+                </option>
+              </select>
+              <InputError :message="editForm.errors.trip_status" />
+            </label>
             <label class="filter-label">Data<TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_date" /></label>
             <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
             <div class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" required /><InputError :message="editForm.errors.status" /></div>
