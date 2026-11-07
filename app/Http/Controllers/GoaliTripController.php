@@ -201,6 +201,7 @@ class GoaliTripController extends Controller
         $validated = $this->validatedTrip($request, $user);
         $nextStatus = match ($trip->trip_status) {
             'Criada' => 'Em Andamento',
+            'Em Andamento' => 'Finalizada',
             'Aguardando Analise' => 'Finalizada',
             default => null,
         };

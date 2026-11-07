@@ -384,7 +384,7 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('summary.receivable', 75));
     }
 
-    public function test_admin_must_wait_for_driver_confirmation_before_finalizing(): void
+    public function test_admin_can_finalize_an_in_progress_trip(): void
     {
         $admin = User::create([
             'name' => 'Admin Goali',
@@ -393,7 +393,6 @@ class GoaliTripTest extends TestCase
         ]);
         $admin->forceFill(['email_verified_at' => now()])->save();
         $this->attachToGoaliTeam($admin, 'Admin');
-        $team = $admin->currentTeam;
 
         $this->actingAs($admin)
             ->get(route('goali.form'))
@@ -419,19 +418,6 @@ class GoaliTripTest extends TestCase
             ->assertRedirect();
         $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
 
-        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
-            ->assertForbidden();
-
-        $admin->teams()->updateExistingPivot($team->id, ['role' => 'Motorista']);
-        $this->put(route('goali.update', $trip), [
-                'trip_status' => 'Aguardando Analise',
-                'driver_id' => $admin->id,
-            ])
-                ->assertRedirect()
-                ->assertSessionHasNoErrors();
-        $this->assertSame('Aguardando Analise', $trip->fresh()->trip_status);
-
-        $admin->teams()->updateExistingPivot($team->id, ['role' => 'Admin']);
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
             ->assertRedirect();
         $this->assertSame('Finalizada', $trip->fresh()->trip_status);

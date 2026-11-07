@@ -187,6 +187,7 @@ const cancelTrip = async (record) => {
 };
 const nextTripStatus = (status) => ({
   Criada: "Em Andamento",
+  "Em Andamento": "Finalizada",
   "Aguardando Analise": "Finalizada",
 }[status] || "");
 const tripRowClass = (row) => ({
