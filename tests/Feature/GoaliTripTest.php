@@ -50,7 +50,6 @@ class GoaliTripTest extends TestCase
                 ]));
 
         $this->actingAs($user)
-            ->from('/goali/form')
             ->post(route('goali.store'), [
                 'travel_datetime' => '2026-10-31T23:45',
                 'status' => 'ENTRADA',
@@ -62,7 +61,7 @@ class GoaliTripTest extends TestCase
                 'responsible' => 'Outro responsável',
                 'amount' => '125.50',
             ])
-            ->assertRedirect('/goali/form');
+            ->assertRedirect(route('goali.index'));
 
         $this->assertDatabaseHas('goali_trips', [
             'user_id' => $user->id,
@@ -91,7 +90,7 @@ class GoaliTripTest extends TestCase
                 'responsible' => $user->name,
                 'amount' => '50.00',
             ])
-            ->assertRedirect('/goali/form');
+            ->assertRedirect(route('goali.index'));
         $this->assertDatabaseHas('goali_trips', [
             'passenger' => 'Corrida do administrador',
             'trip_status' => 'Em Andamento',

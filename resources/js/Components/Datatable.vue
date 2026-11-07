@@ -14,7 +14,7 @@
                 </tr>
               </thead>
 
-              <tbody class="divide-y divide-gray-600">
+              <tbody v-if="!managedRows" class="divide-y divide-gray-600">
                 <tr v-for="(body, index) in tbody" :key="index" :class="rowClass ? rowClass(body) : undefined">
                   <td class="dark:text-white" v-for="(value, key) in body" :key="key">
                     <template v-if="key.startsWith('button')">
@@ -69,6 +69,10 @@ const props = defineProps({
     type: Function,
     default: null,
   },
+  managedRows: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const tableKey = ref(0);
@@ -115,6 +119,25 @@ const initializeDataTable = () => {
 
     normalizeDateColumns();
     dataTableInstance = $(tableElement.value).DataTable({
+      ...(props.managedRows
+        ? {
+            data: props.tbody,
+            columns: Object.keys(props.tbody[0] || {}).map((key) => ({
+              data: key,
+              render: key.startsWith("button")
+                ? (value) => `<div class="datatable-actions">${value}</div>`
+                : undefined,
+            })),
+            createdRow: (row, body) => {
+              const classes = props.rowClass?.(body) || {};
+              Object.entries(classes).forEach(([className, enabled]) => {
+                if (enabled) {
+                  $(row).addClass(className);
+                }
+              });
+            },
+          }
+        : {}),
       dom:
         '<"d-flex align-items-center"<"col-6"B><"col-6 text-end"f>>t<"d-flex mt-2"<"col-6"i><"col-6 text-end"p>>',
       buttons: [
@@ -170,6 +193,11 @@ onBeforeUnmount(() => {
 watch(
   () => [props.thead, props.tbody, props.tfooter],
   () => {
+    if (props.managedRows && dataTableInstance) {
+      dataTableInstance.clear().rows.add(props.tbody).draw();
+      return;
+    }
+
     destroyDataTable();
     tableKey.value++;
     nextTick(() => {

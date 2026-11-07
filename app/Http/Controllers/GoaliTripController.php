@@ -82,7 +82,7 @@ class GoaliTripController extends Controller
             }
         });
 
-        return back()->with(
+        return redirect()->route('goali.index')->with(
             'success',
             $rangeEndDate
                 ? 'Corridas criadas com sucesso para todas as datas do período.'

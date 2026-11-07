@@ -56,6 +56,10 @@ const selectedEditDriver = computed({
     editForm.driver_id = driver?.id ?? null;
   },
 });
+const canDriverEditTrip = (record) => (
+  (record.trip_status === "Em Andamento" || record.trip_status === "Criada")
+  && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId))
+);
 const tableId = "goali-trips-datatable";
 const tableHeaders = [
   { name: "Data / Hora" },
@@ -85,9 +89,7 @@ const tableData = computed(() => props.records.map((record) => ({
     : "—",
   buttonActions: [
     (props.isAdmin && record.trip_status !== "Finalizada")
-      || (props.isDriver && record.trip_status === "Em Andamento")
-      || (props.isDriver && record.trip_status === "Criada"
-        && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId)))
+      || (props.isDriver && canDriverEditTrip(record))
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
     record.trip_status !== "Finalizada"
@@ -102,10 +104,7 @@ const tableData = computed(() => props.records.map((record) => ({
 watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: true });
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
 const startEdit = (record) => {
-  const canDriverUpdate = record.trip_status === "Em Andamento"
-    || (record.trip_status === "Criada"
-      && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId)));
-  if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverUpdate)) {
+  if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverEditTrip(record))) {
     return;
   }
 
@@ -257,7 +256,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor a receber</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
-      <Datatable class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" />
+      <Datatable class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" managed-rows />
         </div>
       </section>
 
@@ -265,13 +264,19 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <form class="my-2 max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900 sm:my-6 sm:max-h-[90vh] sm:p-6" @click.stop @submit.prevent="saveEdit">
           <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ props.isDriver ? "Atualizar status da corrida" : "Editar deslocamento" }}</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
           <div v-if="props.isDriver" class="grid grid-cols-1 gap-4">
-            <div class="filter-label">Motorista
+            <div v-if="!editingRecord?.driver_id" class="filter-label">Motorista
               <Select v-model="selectedEditDriver" :options="editDriverOptions" label="name" track-by="id"
                 placeholder="Selecione seu nome para aceitar" :allow-empty="false" :select2="true" required />
               <InputError :message="editForm.errors.driver_id" />
-              <span v-if="editingRecord && !editingRecord.driver_id" class="font-normal text-gray-500">
+              <span class="font-normal text-gray-500">
                 Selecione seu nome para atribuir esta corrida a você. Ela passará para Em Andamento ao salvar.
               </span>
+            </div>
+            <div v-else class="filter-label">
+              Motorista
+              <p class="mt-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 font-normal text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+                {{ selectedEditDriver?.name || "Atribuída a você" }}
+              </p>
             </div>
             <div class="filter-label">Próximo status<Select :key="`driver-trip-status-${editingRecord?.id}-${editingRecord?.trip_status}`" v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Selecione o status" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.trip_status" /></div>
           </div>
