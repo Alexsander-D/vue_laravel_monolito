@@ -20,14 +20,15 @@ const props = defineProps({
   currentDriverId: { type: Number, default: null },
 });
 
-const filters = useForm({
-  ...props.filters,
-  tripStatus: Array.isArray(props.filters.tripStatus)
-    ? props.filters.tripStatus
-    : props.filters.tripStatus
-      ? [props.filters.tripStatus]
+const normalizedFilters = (value) => ({
+  ...value,
+  tripStatus: Array.isArray(value.tripStatus)
+    ? value.tripStatus
+    : value.tripStatus
+      ? [value.tripStatus]
       : [],
 });
+const filters = useForm(normalizedFilters(props.filters));
 const statusOptions = ["ENTRADA", "SAÍDA"];
 const editingId = ref(null);
 const editForm = useForm({});
@@ -156,12 +157,21 @@ const mobilePageStart = computed(() => (
 ));
 const mobilePageEnd = computed(() => Math.min(mobilePage.value * mobilePageSize, mobileFilteredRecords.value.length));
 
-watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: true });
+watch(() => props.filters, (value) => {
+  const normalized = normalizedFilters(value);
+  filters.defaults(normalized).reset();
+}, { deep: true });
 watch([mobileSearch, () => props.records], () => { mobilePage.value = 1; });
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
 let filterTimeout;
 watch(
-  () => [filters.startDate, filters.endDate, filters.status, filters.tripStatus, filters.solicitation],
+  () => [
+    filters.startDate,
+    filters.endDate,
+    filters.status,
+    JSON.stringify(filters.tripStatus),
+    filters.solicitation,
+  ],
   () => {
     clearTimeout(filterTimeout);
     filterTimeout = setTimeout(applyFilters, 250);
