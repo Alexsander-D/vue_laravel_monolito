@@ -105,7 +105,9 @@ const tableData = computed(() => props.records.map((record) => ({
       || (props.isDriver && canDriverEditTrip(record))
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
-    !["Finalizada", "Aguardando Analise"].includes(record.trip_status)
+    record.trip_status !== "Criada"
+      && record.driver_id !== null
+      && !["Finalizada", "Aguardando Analise"].includes(record.trip_status)
       ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
       : "",
     (props.isAdmin && record.trip_status !== "Finalizada")
@@ -159,8 +161,6 @@ watch(
   }
 );
 const clearFilters = () => {
-  filters.startDate = "";
-  filters.endDate = "";
   filters.status = "";
   filters.tripStatus = "";
   filters.solicitation = "";
@@ -232,6 +232,10 @@ const handleTableAction = (event) => {
   }
 };
 const cancelTrip = async (record) => {
+  if (record.trip_status === "Criada" || record.driver_id === null) {
+    return;
+  }
+
   const result = await Swal.fire({
     title: "Cancelar corrida?",
     text: `A corrida de ${record.passenger} voltará para Criada, sem motorista. Seu nome e perfil ficarão registrados.`,
@@ -379,7 +383,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record)) || !['Finalizada', 'Aguardando Analise'].includes(record.trip_status)"
+              v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record)) || (record.trip_status !== 'Criada' && record.driver_id !== null && !['Finalizada', 'Aguardando Analise'].includes(record.trip_status))"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
@@ -389,7 +393,7 @@ onBeforeUnmount(() => {
                 @click="startEdit(record)"
               >{{ props.isDriver ? "Atualizar status" : "Editar" }}</button>
               <button
-                v-if="!['Finalizada', 'Aguardando Analise'].includes(record.trip_status)"
+                v-if="record.trip_status !== 'Criada' && record.driver_id !== null && !['Finalizada', 'Aguardando Analise'].includes(record.trip_status)"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
                 @click="cancelTrip(record)"

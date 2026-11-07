@@ -239,6 +239,7 @@ class GoaliTripTest extends TestCase
 
         $createTrip = fn (string $time, string $status) => GoaliTrip::create([
             'user_id' => $user->id,
+            'driver_id' => $user->id,
             'travel_date' => now()->toDateString(),
             'travel_time' => $time,
             'status' => $status,
@@ -265,6 +266,7 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Goali/Index')
                 ->where('summary.count', 2)
+                ->where('summary.amount', 20)
                 ->where('summary.receivable', 20)
                 ->where('records.0.id', $earlyTrip->id)
                 ->where('records.1.id', $lateTrip->id)
@@ -279,10 +281,60 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Goali/Index')
                 ->where('summary.count', 2)
+                ->where('summary.amount', 20)
                 ->where('summary.receivable', 20)
                 ->where('records.0.id', $lateTrip->id)
                 ->where('records.1.id', $earlyTrip->id)
                 ->where('filters.sortOrder', 'desc'));
+    }
+
+    public function test_trip_value_totals_exclude_unassigned_trips(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Resumo',
+            'email' => 'admin-summary@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($admin, 'Admin');
+
+        $assignedTrip = GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => $admin->id,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Finalizada',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem atribuída',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida atribuída',
+            'responsible' => $admin->name,
+            'amount' => '75.00',
+        ]);
+
+        GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => null,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '13:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Criada',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem sem motorista',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida sem motorista',
+            'responsible' => $admin->name,
+            'amount' => '50.00',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('goali.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.count', 2)
+                ->where('summary.amount', 75)
+                ->where('summary.receivable', 75));
     }
 
     public function test_non_admin_trip_starts_created_and_driver_sends_running_trips_for_analysis(): void
@@ -486,6 +538,40 @@ class GoaliTripTest extends TestCase
         $this->assertSame('Admin', $trip->fresh()->cancelled_by_role);
         $this->assertSame($admin->name, $trip->fresh()->cancelled_by_name);
         $this->assertNotNull($trip->fresh()->cancelled_at);
+    }
+
+    public function test_admin_cannot_cancel_an_unassigned_created_trip(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Corrida Criada',
+            'email' => 'admin-created-cancel@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($admin, 'Admin');
+
+        $trip = GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => null,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Criada',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida sem motorista',
+            'responsible' => $admin->name,
+            'amount' => '75.00',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('goali.update', $trip), ['cancel_trip' => true])
+            ->assertForbidden();
+
+        $this->assertSame('Criada', $trip->fresh()->trip_status);
+        $this->assertNull($trip->fresh()->driver_id);
+        $this->assertNull($trip->fresh()->cancelled_at);
     }
 
     public function test_driver_can_cancel_a_trip_and_is_identified_as_the_canceller(): void

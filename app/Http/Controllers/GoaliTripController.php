@@ -98,8 +98,9 @@ class GoaliTripController extends Controller
         $summary = (clone $query)
             ->reorder()
             ->selectRaw(
-                'COUNT(*) as count, COALESCE(SUM(amount), 0) as amount, ' .
-                'COALESCE(SUM(CASE WHEN trip_status = ? THEN amount ELSE 0 END), 0) as receivable',
+                'COUNT(*) as count, ' .
+                'COALESCE(SUM(CASE WHEN driver_id IS NOT NULL THEN amount ELSE 0 END), 0) as amount, ' .
+                'COALESCE(SUM(CASE WHEN trip_status = ? AND driver_id IS NOT NULL THEN amount ELSE 0 END), 0) as receivable',
                 ['Finalizada']
             )
             ->first();
@@ -136,7 +137,12 @@ class GoaliTripController extends Controller
                     ->lockForUpdate()
                     ->findOrFail($trip->getKey());
 
-                abort_unless($lockedTrip->trip_status !== 'Finalizada', 403);
+                abort_unless(
+                    $lockedTrip->trip_status !== 'Finalizada'
+                        && $lockedTrip->trip_status !== 'Criada'
+                        && $lockedTrip->driver_id !== null,
+                    403
+                );
 
                 $lockedTrip->update([
                     'trip_status' => 'Criada',
