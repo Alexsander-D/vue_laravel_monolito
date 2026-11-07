@@ -4,13 +4,14 @@ namespace App\Actions\Jetstream;
 
 use App\Models\Spatie\Team;
 use App\Models\Spatie\User;
+use App\Support\Jetstream;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Laravel\Jetstream\Contracts\AddsTeamMembers;
 use Laravel\Jetstream\Events\TeamMemberAdded;
-use Laravel\Jetstream\Jetstream;
 
 class AddTeamMember implements AddsTeamMembers
 {
@@ -75,10 +76,10 @@ class AddTeamMember implements AddsTeamMembers
      */
     protected function rules(): array
     {
-        return array_filter([
+        return [
             'email' => ['required', 'email', 'exists:users,email'],
-            'role' => ['nullable', 'string', Jetstream::hasRoles()],
-        ]);
+            'role' => ['required', 'string', Rule::in(array_keys(Jetstream::roles()))],
+        ];
     }
 
 

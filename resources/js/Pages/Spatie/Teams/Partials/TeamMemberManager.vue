@@ -58,6 +58,11 @@ const confirmingLeavingTeam = ref(false);
 const teamMemberBeingRemoved = ref(null);
 
 const addTeamMember = () => {
+  if (!addTeamMemberForm.role) {
+    addTeamMemberForm.setError("role", "Selecione também a função do colaborador.");
+    return;
+  }
+
   addTeamMemberForm.post(route("team-members.store", props.team), {
     errorBag: "addTeamMember",
     preserveScroll: true,
@@ -192,7 +197,10 @@ const displayableRole = (role) => {
                     i > 0,
                   'rounded-b-none': i != Object.keys(availableRoles).length - 1,
                 }"
-                @click="addTeamMemberForm.role = role.key"
+                @click="
+                  addTeamMemberForm.role = role.key;
+                  addTeamMemberForm.clearErrors('role');
+                "
               >
                 <div
                   :class="{

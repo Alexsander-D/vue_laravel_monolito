@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Spatie\Team;
 use App\Models\Spatie\User;
+use App\Models\Spatie\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -19,6 +20,11 @@ class TeamMemberAssignmentTest extends TestCase
         $team = $this->createTeam($admin, 'GOALI TRANSPORTES');
         $team->users()->attach($admin->id, ['role' => 'Admin']);
         $admin->forceFill(['current_team_id' => $team->id])->save();
+        Role::create([
+            'name' => 'Admin',
+            'guard_name' => 'web',
+            'team_id' => $team->id,
+        ]);
 
         $unassignedTeam = $this->createTeam($admin, 'EQUIPE NÃO ATRIBUÍDA');
         $unassignedUser = $this->createUser('member@example.com');
@@ -32,12 +38,27 @@ class TeamMemberAssignmentTest extends TestCase
                 ->where('unassignedUsers.0.email', $unassignedUser->email));
 
         $this->actingAs($admin)
+            ->from(route('teams.show', $team))
             ->post(route('team-members.store', $team), ['user_id' => $unassignedUser->id])
+            ->assertRedirect(route('teams.show', $team))
+            ->assertSessionHasErrorsIn('addTeamMember', 'role');
+
+        $this->assertDatabaseMissing('team_user', [
+            'team_id' => $team->id,
+            'user_id' => $unassignedUser->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('team-members.store', $team), [
+                'user_id' => $unassignedUser->id,
+                'role' => 'Admin',
+            ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('team_user', [
             'team_id' => $team->id,
             'user_id' => $unassignedUser->id,
+            'role' => 'Admin',
         ]);
         $this->assertDatabaseMissing('team_user', [
             'team_id' => $unassignedTeam->id,
