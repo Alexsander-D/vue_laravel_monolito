@@ -45,8 +45,8 @@ const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
 const initialTripStatus = computed(() => (
   props.isAdmin
-  && form.driver_id !== null
-  && Number(form.driver_id) !== Number(props.currentUserId)
+    && form.driver_id !== null
+    && Number(form.driver_id) !== Number(props.currentUserId)
     ? "Criada"
     : props.initialTripStatus
 ));

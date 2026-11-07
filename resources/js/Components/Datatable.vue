@@ -5,7 +5,7 @@
       <div class="overflow-x-auto min-h-auto">
         <div class="min-w-full inline-block align-middle">
           <div class="overflow-hidden">
-            <table class="w-full min-w-full" :id="id" :key="tableKey">
+            <table ref="tableElement" class="w-full min-w-full" :id="id" :key="tableKey">
               <thead>
                 <tr class="dark:text-white">
                   <th v-for="head in thead" :key="head.name">
@@ -18,7 +18,7 @@
                 <tr v-for="(body, index) in tbody" :key="index" :class="rowClass ? rowClass(body) : undefined">
                   <td class="dark:text-white" v-for="(value, key) in body" :key="key">
                     <template v-if="key.startsWith('button')">
-                      <div v-html="value"></div>
+                      <div class="datatable-actions" v-html="value"></div>
                     </template>
                     <template v-else>
                       {{ value }}
@@ -46,7 +46,7 @@
 
 <script setup>
 import $ from "jquery";
-import { defineProps, onMounted, nextTick, watch, ref } from "vue";
+import { defineProps, onMounted, onBeforeUnmount, nextTick, watch, ref } from "vue";
 
 import "datatables.net";
 import "datatables.net-fixedheader";
@@ -72,11 +72,13 @@ const props = defineProps({
 });
 
 const tableKey = ref(0);
+const tableElement = ref(null);
 
 let dataTableInstance = null;
+let isUnmounted = false;
 
 const normalizeDateColumns = () => {
-  $(`#${props.id} tbody td`).each(function () {
+  $(tableElement.value).find("tbody td").each(function () {
     const rawText = $(this).text().trim();
     if (!rawText) {
       return;
@@ -107,8 +109,12 @@ const normalizeDateColumns = () => {
 
 const initializeDataTable = () => {
   nextTick(() => {
+    if (isUnmounted || !tableElement.value) {
+      return;
+    }
+
     normalizeDateColumns();
-    dataTableInstance = $(`#${props.id}`).DataTable({
+    dataTableInstance = $(tableElement.value).DataTable({
       dom:
         '<"d-flex align-items-center"<"col-6"B><"col-6 text-end"f>>t<"d-flex mt-2"<"col-6"i><"col-6 text-end"p>>',
       buttons: [
@@ -154,6 +160,11 @@ const destroyDataTable = () => {
 
 onMounted(() => {
   initializeDataTable();
+});
+
+onBeforeUnmount(() => {
+  isUnmounted = true;
+  destroyDataTable();
 });
 
 watch(

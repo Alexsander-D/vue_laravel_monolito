@@ -43,6 +43,7 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Goali/Form')
                 ->where('initialTripStatus', 'Em Andamento')
+                ->where('currentUserId', $user->id)
                 ->where('drivers', [
                     ['id' => $driver->id, 'name' => $driver->name],
                     ['id' => $user->id, 'name' => $user->name],
@@ -76,6 +77,25 @@ class GoaliTripTest extends TestCase
             'passenger' => 'Passageiro Teste',
             'responsible' => 'Operador Teste',
             'amount' => '125.50',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('goali.store'), [
+                'travel_datetime' => '2026-11-02T09:00',
+                'status' => 'ENTRADA',
+                'solicitation' => 'IMB',
+                'driver_id' => $user->id,
+                'origin' => 'Origem própria',
+                'destination' => 'Destino próprio',
+                'passenger' => 'Corrida do administrador',
+                'responsible' => $user->name,
+                'amount' => '50.00',
+            ])
+            ->assertRedirect('/goali/form');
+        $this->assertDatabaseHas('goali_trips', [
+            'passenger' => 'Corrida do administrador',
+            'trip_status' => 'Em Andamento',
+            'driver_id' => $user->id,
         ]);
 
         $trip = GoaliTrip::where('passenger', 'Passageiro Teste')->firstOrFail();
@@ -462,8 +482,47 @@ class GoaliTripTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
+        $this->assertSame('Criada', $trip->fresh()->trip_status);
         $this->assertNull($trip->fresh()->driver_id);
+        $this->assertSame('Admin', $trip->fresh()->cancelled_by_role);
+        $this->assertSame($admin->name, $trip->fresh()->cancelled_by_name);
+        $this->assertNotNull($trip->fresh()->cancelled_at);
+    }
+
+    public function test_driver_can_cancel_a_trip_and_is_identified_as_the_canceller(): void
+    {
+        $driver = User::create([
+            'name' => 'Motorista Cancelador',
+            'email' => 'driver-canceller@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($driver, 'Motorista');
+
+        $trip = GoaliTrip::create([
+            'user_id' => $driver->id,
+            'driver_id' => $driver->id,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Em Andamento',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida cancelada pelo motorista',
+            'responsible' => $driver->name,
+            'amount' => '75.00',
+        ]);
+
+        $this->actingAs($driver)
+            ->put(route('goali.update', $trip), ['cancel_trip' => true])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Criada', $trip->fresh()->trip_status);
+        $this->assertNull($trip->fresh()->driver_id);
+        $this->assertSame('Motorista', $trip->fresh()->cancelled_by_role);
+        $this->assertSame($driver->name, $trip->fresh()->cancelled_by_name);
     }
 
     public function test_admin_can_create_an_unassigned_trip_for_a_driver_to_claim(): void

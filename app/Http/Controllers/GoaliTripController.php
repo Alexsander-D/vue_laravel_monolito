@@ -136,12 +136,14 @@ class GoaliTripController extends Controller
                     ->lockForUpdate()
                     ->findOrFail($trip->getKey());
 
-                abort_unless($lockedTrip->trip_status === 'Aguardando Analise', 403);
-                abort_unless($isAdmin || (int) $lockedTrip->driver_id === (int) $user->id, 403);
+                abort_unless($lockedTrip->trip_status !== 'Finalizada', 403);
 
                 $lockedTrip->update([
-                    'trip_status' => 'Em Andamento',
+                    'trip_status' => 'Criada',
                     'driver_id' => null,
+                    'cancelled_by_name' => $user->name,
+                    'cancelled_by_role' => $isAdmin ? 'Admin' : 'Motorista',
+                    'cancelled_at' => now(),
                 ]);
             });
 
@@ -161,13 +163,19 @@ class GoaliTripController extends Controller
 
                 if ($lockedTrip->trip_status === 'Criada') {
                     abort_unless(
-                        $lockedTrip->driver_id !== null
-                            && (int) $lockedTrip->driver_id === (int) $user->id
+                        ($lockedTrip->driver_id === null
+                            || (int) $lockedTrip->driver_id === (int) $user->id)
                             && $validated['trip_status'] === 'Em Andamento',
                         403
                     );
 
-                    $lockedTrip->update(['trip_status' => 'Em Andamento']);
+                    $lockedTrip->update([
+                        'driver_id' => $user->id,
+                        'trip_status' => 'Em Andamento',
+                        'cancelled_by_name' => null,
+                        'cancelled_by_role' => null,
+                        'cancelled_at' => null,
+                    ]);
                     return;
                 }
 
@@ -184,6 +192,9 @@ class GoaliTripController extends Controller
                 $lockedTrip->update([
                     'driver_id' => $user->id,
                     'trip_status' => 'Aguardando Analise',
+                    'cancelled_by_name' => null,
+                    'cancelled_by_role' => null,
+                    'cancelled_at' => null,
                 ]);
             });
 
@@ -210,6 +221,9 @@ class GoaliTripController extends Controller
         if ($requestedStatus !== null) {
             abort_unless($requestedStatus === $nextStatus, 403);
             $validated['trip_status'] = $requestedStatus;
+            $validated['cancelled_by_name'] = null;
+            $validated['cancelled_by_role'] = null;
+            $validated['cancelled_at'] = null;
         } else {
             unset($validated['trip_status']);
         }
@@ -237,7 +251,7 @@ class GoaliTripController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Relatório Goali');
-        $headers = ['Data', 'Horário', 'Tipo', 'Status da corrida', 'Solicitação', 'Origem', 'Destino', 'Passageiro', 'Motorista', 'Responsável', 'Valor (R$)'];
+        $headers = ['Data', 'Horário', 'Tipo', 'Status da corrida', 'Solicitação', 'Origem', 'Destino', 'Passageiro', 'Motorista', 'Responsável', 'Valor (R$)', 'Cancelada por'];
 
         foreach ($headers as $index => $header) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1) . '1', $header);
@@ -256,6 +270,9 @@ class GoaliTripController extends Controller
                 $record->driver?->name ?? '',
                 $record->responsible,
                 (float) $record->amount,
+                $record->cancelled_by_role
+                    ? $record->cancelled_by_role . ': ' . $record->cancelled_by_name
+                    : '',
             ];
 
             foreach ($values as $columnIndex => $value) {
@@ -269,10 +286,10 @@ class GoaliTripController extends Controller
             }
         }
 
-        foreach (range('A', 'K') as $column) {
+        foreach (range('A', 'L') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
-        $sheet->getStyle('A1:K1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:L1')->getFont()->setBold(true);
         $tempFile = tempnam(sys_get_temp_dir(), 'goali-report-');
         (new Xlsx($spreadsheet))->save($tempFile);
 

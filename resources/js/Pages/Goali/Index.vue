@@ -27,9 +27,6 @@ const editForm = useForm({});
 const reportUrl = computed(() => route("goali.export", filters.data()));
 const sortOrder = computed(() => filters.sortOrder || "desc");
 const editingRecord = computed(() => props.records.find((record) => String(record.id) === String(editingId.value)) || null);
-const tableKey = computed(() => props.records
-  .map((record) => `${record.id}:${record.updated_at || ""}`)
-  .join("|"));
 const editTripStatusOptions = computed(() => {
   if (!editingRecord.value) {
     return [];
@@ -65,6 +62,7 @@ const tableHeaders = [
   { name: "Motorista" },
   { name: "Responsável" },
   { name: "Valor" },
+  { name: "Cancelada por" },
   { name: "Ações" },
 ];
 const tableData = computed(() => props.records.map((record) => ({
@@ -77,16 +75,19 @@ const tableData = computed(() => props.records.map((record) => ({
   driver: record.driver?.name || "—",
   responsible: record.responsible,
   amount: money(record.amount),
+  cancelledBy: record.cancelled_by_role
+    ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
+    : "—",
   buttonActions: [
     (props.isAdmin && record.trip_status !== "Finalizada") || (props.isDriver && record.trip_status === "Em Andamento")
       || (props.isDriver && record.trip_status === "Criada" && Number(record.driver_id) === Number(props.currentDriverId))
-      ? `<button type="button" class="mr-3 font-semibold text-teal-700 hover:underline" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
+      ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
-    record.trip_status === "Aguardando Analise" && (props.isAdmin || (props.isDriver && Number(record.driver_id) === Number(props.currentDriverId)))
-      ? `<button type="button" class="mr-3 font-semibold text-amber-700 hover:underline" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar corrida</button>`
+    record.trip_status !== "Finalizada"
+      ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
       : "",
     props.isAdmin
-      ? `<button type="button" class="font-semibold text-red-700 hover:underline" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
+      ? `<button type="button" class="goali-action goali-action--delete" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
       : "",
   ].join(""),
 })));
@@ -172,11 +173,11 @@ const handleTableAction = (event) => {
 };
 const cancelTrip = async (record) => {
   const result = await Swal.fire({
-    title: "Devolver corrida às pendentes?",
-    text: `A corrida de ${record.passenger} ficará disponível para atribuição novamente.`,
+    title: "Cancelar corrida?",
+    text: `A corrida de ${record.passenger} voltará para Criada, sem motorista. Seu nome e perfil ficarão registrados.`,
     icon: "warning",
     showCancelButton: true,
-    confirmButtonText: "Cancelar corrida",
+    confirmButtonText: "Confirmar cancelamento",
     cancelButtonText: "Manter corrida",
     confirmButtonColor: "#b45309",
   });
@@ -248,7 +249,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <div class="border-l-4 border-green-600 px-4 py-2"><p class="text-sm text-gray-500">Valor a receber</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
-      <Datatable :key="tableKey" class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" />
+      <Datatable class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" />
         </div>
       </section>
 
@@ -289,6 +290,40 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
 
 <style scoped>
 .filter-label { display: flex; flex-direction: column; gap: .4rem; color: #4b5563; font-size: .8rem; font-weight: 600; }
+:deep(#goali-trips-datatable .datatable-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  min-width: 13rem;
+}
+:deep(#goali-trips-datatable .goali-action) {
+  display: inline-flex;
+  min-height: 2.75rem;
+  min-width: 5.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: .375rem;
+  padding: .5rem .875rem;
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: white;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  touch-action: manipulation;
+  transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+:deep(#goali-trips-datatable .goali-action--edit) { background-color: #0f766e; }
+:deep(#goali-trips-datatable .goali-action--edit:hover) { background-color: #115e59; }
+:deep(#goali-trips-datatable .goali-action--cancel) { background-color: #d97706; }
+:deep(#goali-trips-datatable .goali-action--cancel:hover) { background-color: #b45309; }
+:deep(#goali-trips-datatable .goali-action--delete) { background-color: #dc2626; }
+:deep(#goali-trips-datatable .goali-action--delete:hover) { background-color: #b91c1c; }
+:deep(#goali-trips-datatable .goali-action:focus-visible) {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+:deep(#goali-trips-datatable .goali-action:active) { transform: translateY(1px); }
 :deep(.goali-trip--created > td) { background-color: #f3f4f6 !important; }
 :deep(.goali-trip--in-progress > td) { background-color: #eff6ff !important; }
 :deep(.goali-trip--awaiting > td) { background-color: #fef3c7 !important; }

@@ -11,6 +11,9 @@ class GoaliTrip extends Model
     protected $fillable = [
         'user_id',
         'driver_id',
+        'cancelled_by_name',
+        'cancelled_by_role',
+        'cancelled_at',
         'travel_date',
         'travel_time',
         'status',
@@ -25,6 +28,7 @@ class GoaliTrip extends Model
 
     protected $casts = [
         'travel_date' => 'date:Y-m-d',
+        'cancelled_at' => 'datetime',
         'amount' => 'decimal:2',
     ];
 
