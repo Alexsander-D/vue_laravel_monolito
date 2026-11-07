@@ -58,6 +58,10 @@ Route::get('/download/android', function () {
     ]);
 })->name('app.download');
 
+Route::get('/download', function () {
+    return Inertia::render('App/Download');
+})->name('app.download.page');
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),

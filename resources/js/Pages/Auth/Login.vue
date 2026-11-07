@@ -26,6 +26,11 @@ const submit = () => {
       remember: form.remember ? "on" : "",
     }))
     .post(route("login"), {
+      onSuccess: (page) => {
+        if (page.props.auth?.user && window.matchMedia("(max-width: 1023px)").matches) {
+          window.location.assign(route("app.download.page"));
+        }
+      },
       onFinish: () => form.reset("password"),
     });
 };
