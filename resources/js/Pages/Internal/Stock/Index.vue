@@ -490,7 +490,6 @@ const formatDateTime = (value) => {
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
                                             formatCurrency(movement.price) }}</td>
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">
-                                            {{ movement.quantity }} x {{ formatCurrency(movement.price) }} =
                                             {{ formatCurrency(movementTotal(movement)) }}
                                         </td>
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
