@@ -144,6 +144,7 @@ function initializeSelect2() {
     placeholder: props.placeholder,
     allowClear: props.allowEmpty,
     closeOnSelect: !props.multiple,
+    maximumSelectionLength: 0,
     width: "100%",
     ...(dropdownParent.length ? { dropdownParent } : modal.length ? { dropdownParent: modal } : {}),
   });
