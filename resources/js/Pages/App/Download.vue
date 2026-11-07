@@ -1,14 +1,17 @@
 <script setup>
 import { Head } from "@inertiajs/vue3";
 import { onMounted, ref } from "vue";
+import { Capacitor } from "@capacitor/core";
 
 const isAndroid = ref(false);
+const isNativeApp = ref(false);
 const downloadUrl = route("app.download");
 
 onMounted(() => {
   isAndroid.value = /android/i.test(navigator.userAgent);
+  isNativeApp.value = Capacitor.isNativePlatform();
 
-  if (isAndroid.value) {
+  if (isAndroid.value && !isNativeApp.value) {
     window.location.assign(downloadUrl);
   }
 });
@@ -42,8 +45,11 @@ onMounted(() => {
         Aplicativo Android
       </h1>
       <p class="mt-3 text-gray-600 dark:text-gray-300">
-        <template v-if="isAndroid">
+        <template v-if="isAndroid && !isNativeApp">
           Seu download está começando. Quando terminar, abra o arquivo APK para instalar o aplicativo.
+        </template>
+        <template v-else-if="isNativeApp">
+          Toque no botão para baixar o APK. Ao terminar, abra a notificação para iniciar a instalação.
         </template>
         <template v-else>
           Acesse esta página em um dispositivo Android para iniciar o download automaticamente.

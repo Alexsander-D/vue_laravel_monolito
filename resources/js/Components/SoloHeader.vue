@@ -84,7 +84,8 @@ onUnmounted(() => {
     <!-- HAMBURGUER BUTTON -->
 
     <!-- LOGOMARCA -->
-    <div class="absolute left-1/2 flex -translate-x-1/2 items-center justify-start lg:static lg:translate-x-0">
+    <div :class="{ 'hidden lg:flex': isMenuOpen }"
+      class="absolute left-1/2 flex -translate-x-1/2 items-center justify-start lg:static lg:translate-x-0">
       <Link
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
         :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')" aria-label="barbearia">
