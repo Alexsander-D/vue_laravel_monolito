@@ -38,15 +38,17 @@ const switchToTeam = (team) => {
   );
 };
 
-const mediaQuery = window.matchMedia("(min-width: 900px)");
+let mediaQuery;
 
-const updateMenuState = (matches) => {
-  isButtonHidden.value = matches;
-  isMenuOpen.value = matches;
+const updateMenuState = (event) => {
+  isButtonHidden.value = event.matches;
+  isMenuOpen.value = event.matches;
 };
 
 onMounted(() => {
-  updateMenuState(mediaQuery.matches);
+  mediaQuery = window.matchMedia("(min-width: 1024px)");
+  updateMenuState(mediaQuery);
+  mediaQuery.addEventListener("change", updateMenuState);
 
   if (localStorage.getItem("theme") === "dark") {
     isDarkMode.value = true;
@@ -56,17 +58,23 @@ onMounted(() => {
     document.documentElement.classList.remove("dark");
   }
 });
+
+onUnmounted(() => {
+  mediaQuery?.removeEventListener("change", updateMenuState);
+});
 </script>
 
 <template>
   <!-- ========== HEADER ========== -->
   <header
-    class="sticky top-0 inset-x-0 flex z-[48] w-full bg-white shadow shadow-md py-2 sm:py-1 lg:ps-64 dark:bg-gray-900">
+    class="sticky top-0 inset-x-0 z-[48] flex w-full flex-wrap items-center bg-white px-4 py-2 shadow shadow-md sm:py-1 lg:ps-64 dark:bg-gray-900">
     <!-- HAMBURGUER BUTTON -->
-    <div class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2">
+    <div v-if="$page.props.auth?.user" class="flex items-center justify-start">
       <button :class="{
         hidden: isButtonHidden,
-      }" class="rounded-md focus:outline-none" @click="toggleMenu" aria-label="Toggle menu">
+      }" class="rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 lg:hidden"
+        @click="toggleMenu" aria-label="Toggle menu" aria-controls="solo-header-menu"
+        :aria-expanded="isMenuOpen">
         <svg class="w-6 h-6 text-black dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
           viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
@@ -76,25 +84,25 @@ onMounted(() => {
     <!-- HAMBURGUER BUTTON -->
 
     <!-- LOGOMARCA -->
-    <div :class="{
-      hidden: !isButtonHidden,
-      flex: isButtonHidden,
-    }" class="flex items-center absolute left-12 mx-auto justify-start top-1/2 -translate-y-1/2">
+    <div class="flex items-center justify-start">
       <Link
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
         :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')" aria-label="barbearia">
         <span
           v-if="$page.props.auth?.user?.current_team?.name?.trim()?.toLocaleUpperCase() === 'GOALI TRANSPORTES'"
-          class="text-xl font-semibold stringColor">
+          class="text-lg font-semibold stringColor sm:text-xl">
           GOALI
         </span>
-        <img v-else src="/images/logomarca.png" alt="barbearia" class="w-32 h-16" />
+        <img v-else src="/images/logomarca.png" alt="barbearia" class="h-12 w-24 sm:h-16 sm:w-32" />
       </Link>
     </div>
     <!-- FIM LOGOMARCA -->
 
-    <nav v-if="$page.props.auth?.user" class="flex basis-full w-full mx-auto justify-center items-center space-x-4 p-2">
-      <div class="flex flex-col sm:w-full md:flex-row md:w-auto items-center md:ml-auto">
+    <nav v-if="$page.props.auth?.user" id="solo-header-menu" :class="{
+      'flex flex-col border-t border-gray-200 py-2 dark:border-gray-700': isMenuOpen,
+      hidden: !isMenuOpen,
+    }" class="w-full basis-full lg:flex lg:w-auto lg:basis-auto lg:flex-1 lg:items-center lg:justify-center lg:space-x-4 lg:border-0 lg:p-2">
+      <div class="flex w-full flex-col items-stretch lg:ml-auto lg:w-auto lg:flex-row lg:items-center">
         <div v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')" :class="{
           hidden: !isMenuOpen,
           block: isMenuOpen,
@@ -656,7 +664,7 @@ onMounted(() => {
         <!-- FIM PERFIL DROPDOWN -->
       </div>
     </nav>
-    <nav v-else class="flex basis-full items-center justify-end gap-3 px-5 py-2 sm:px-8">
+    <nav v-else class="flex w-full basis-full flex-col items-stretch justify-end gap-2 py-2 sm:flex-row sm:items-center sm:gap-3 sm:px-4 lg:w-auto lg:basis-auto">
       <Link class="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800" :href="route('goali.form')">
         Formulário de deslocamento
       </Link>
