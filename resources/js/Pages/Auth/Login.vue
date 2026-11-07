@@ -6,6 +6,7 @@ import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
 import Button from "@/Components/Button.vue";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/vue/24/outline";
+import { Capacitor } from "@capacitor/core";
 import { defineProps, ref } from "vue";
 
 const props = defineProps({
@@ -27,7 +28,11 @@ const submit = () => {
     }))
     .post(route("login"), {
       onSuccess: (page) => {
-        if (page.props.auth?.user && window.matchMedia("(max-width: 1023px)").matches) {
+        if (
+          page.props.auth?.user &&
+          !Capacitor.isNativePlatform() &&
+          window.matchMedia("(max-width: 1023px)").matches
+        ) {
           window.location.assign(route("app.download.page"));
         }
       },
