@@ -177,8 +177,16 @@ const mobilePageEnd = computed(() => Math.min(mobilePage.value * mobilePageSize,
 
 watch(() => props.filters, (value) => {
   const normalized = normalizedFilters(value);
+  const responseFilterKey = getFilterKey(normalized);
+
+  if (
+    responseFilterKey !== lastAppliedFilterKey
+    || getFilterKey(filters) !== lastAppliedFilterKey
+  ) {
+    return;
+  }
+
   filters.defaults(normalized).reset();
-  lastAppliedFilterKey = getFilterKey(normalized);
 }, { deep: true });
 watch([mobileSearch, () => props.records], () => { mobilePage.value = 1; });
 const applyFilters = () => {
