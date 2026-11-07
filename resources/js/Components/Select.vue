@@ -5,11 +5,12 @@
     ref="selectElement"
     v-bind="attrs"
     :value="selectedOptionValue"
+    :multiple="multiple"
     :required="required"
     :disabled="disabled"
     class="select2-control"
   >
-    <option v-if="allowEmpty" value="">{{ placeholder }}</option>
+    <option v-if="allowEmpty && !multiple" value="">{{ placeholder }}</option>
     <option v-for="option in options" :key="String(optionValue(option))" :value="optionValue(option)">
       {{ optionLabel(option) }}
     </option>
@@ -22,6 +23,8 @@
     :label="label"
     :track-by="trackBy"
     :placeholder="placeholder"
+    :multiple="multiple"
+    :close-on-select="!multiple"
     :allow-empty="allowEmpty"
     :required="required"
     :disabled="disabled"
@@ -67,6 +70,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  multiple: {
+    type: Boolean,
+    default: false,
+  },
   required: {
     type: Boolean,
     default: false,
@@ -92,6 +99,11 @@ const optionLabel = (option) => (
   option && typeof option === "object" ? option[props.label] ?? "" : option
 );
 const selectedOptionValue = computed(() => {
+  if (props.multiple) {
+    return (Array.isArray(props.modelValue) ? props.modelValue : [])
+      .map((value) => String(value && typeof value === "object" ? optionValue(value) : value));
+  }
+
   const value = props.modelValue && typeof props.modelValue === "object"
     ? optionValue(props.modelValue)
     : props.modelValue;
@@ -104,8 +116,10 @@ function syncSelect2Value(value) {
     return;
   }
 
-  const selectedValue = value && typeof value === "object" ? optionValue(value) : value;
-  $(selectElement.value).val(selectedValue == null ? "" : String(selectedValue)).trigger("change.select2");
+  const selectedValue = props.multiple
+    ? (Array.isArray(value) ? value : []).map((item) => String(item && typeof item === "object" ? optionValue(item) : item))
+    : value && typeof value === "object" ? optionValue(value) : value;
+  $(selectElement.value).val(props.multiple ? selectedValue : selectedValue == null ? "" : String(selectedValue)).trigger("change.select2");
 }
 
 function initializeSelect2() {
@@ -123,11 +137,20 @@ function initializeSelect2() {
   element.select2({
     placeholder: props.placeholder,
     allowClear: props.allowEmpty,
+    closeOnSelect: !props.multiple,
     width: "100%",
     ...(dropdownParent.length ? { dropdownParent } : modal.length ? { dropdownParent: modal } : {}),
   });
   element.on("change", () => {
     const selectedValue = element.val();
+    if (props.multiple) {
+      const selectedOptions = (Array.isArray(selectedValue) ? selectedValue : [])
+        .map((value) => props.options.find((item) => String(optionValue(item)) === String(value)) ?? value);
+      emit("update:modelValue", selectedOptions);
+      emit("selected", selectedOptions);
+      return;
+    }
+
     const option = props.options.find((item) => String(optionValue(item)) === String(selectedValue));
     const value = selectedValue === "" || selectedValue == null
       ? null
@@ -152,7 +175,9 @@ function destroySelect2() {
 watch(
   () => props.modelValue,
   (newValue) => {
-    if (!newValue || (Array.isArray(newValue) && newValue.length === 0)) {
+    if (props.multiple) {
+      localValue.value = Array.isArray(newValue) ? newValue : [];
+    } else if (!newValue || (Array.isArray(newValue) && newValue.length === 0)) {
       localValue.value = null;
     } else {
       localValue.value = newValue;
@@ -162,7 +187,7 @@ watch(
 );
 
 watch(
-  () => [props.options, props.select2],
+  () => [props.options, props.select2, props.multiple],
   () => {
     if (props.select2) {
       destroySelect2();
@@ -177,8 +202,9 @@ watch(
 watch(() => props.modelValue, syncSelect2Value, { deep: true });
 
 function updateModelValue(value) {
-  emit("update:modelValue", value);
-  emit("selected", value);
+  const modelValue = props.multiple ? (Array.isArray(value) ? value : []) : value;
+  emit("update:modelValue", modelValue);
+  emit("selected", modelValue);
 }
 
 onMounted(initializeSelect2);

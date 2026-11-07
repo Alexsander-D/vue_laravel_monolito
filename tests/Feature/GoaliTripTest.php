@@ -337,6 +337,61 @@ class GoaliTripTest extends TestCase
                 ->where('summary.receivable', 75));
     }
 
+    public function test_it_defaults_to_today_and_prioritizes_trips_by_status(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Prioridade',
+            'email' => 'admin-priority@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($admin, 'Admin');
+
+        $createTrip = fn (string $status, string $time) => GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => $admin->id,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => $time,
+            'status' => 'ENTRADA',
+            'trip_status' => $status,
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => $status,
+            'responsible' => $admin->name,
+            'amount' => '10.00',
+        ]);
+
+        $finishedTrip = $createTrip('Finalizada', '08:00');
+        $awaitingTrip = $createTrip('Aguardando Analise', '09:00');
+        $inProgressTrip = $createTrip('Em Andamento', '10:00');
+        $createdTrip = $createTrip('Criada', '11:00');
+
+        $this->actingAs($admin)
+            ->get(route('goali.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.startDate', now()->toDateString())
+                ->where('filters.endDate', now()->toDateString())
+                ->where('records', fn ($records) => collect($records)->pluck('id')->all() === [
+                    $createdTrip->id,
+                    $inProgressTrip->id,
+                    $awaitingTrip->id,
+                    $finishedTrip->id,
+                ]));
+
+        $this->get(route('goali.index', [
+            'tripStatus' => ['Criada', 'Aguardando Analise'],
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.tripStatus', ['Criada', 'Aguardando Analise'])
+                ->where('records', fn ($records) => collect($records)->pluck('id')->all() === [
+                    $createdTrip->id,
+                    $awaitingTrip->id,
+                ]));
+    }
+
     public function test_non_admin_trip_starts_created_and_driver_sends_running_trips_for_analysis(): void
     {
         $driver = User::create([

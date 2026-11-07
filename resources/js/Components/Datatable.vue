@@ -171,7 +171,7 @@ const initializeDataTable = () => {
       },
       fixedHeader: true,
       pageLength: 10,
-      order: [props.orderBy],
+      order: props.orderBy.length ? [props.orderBy] : [],
     });
 
     dataTableInstance.on("draw.dt", normalizeDateColumns);

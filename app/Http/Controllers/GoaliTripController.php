@@ -309,15 +309,35 @@ class GoaliTripController extends Controller
             'startDate' => ['nullable', 'date'],
             'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
             'status' => ['nullable', 'in:ENTRADA,SAÍDA'],
-            'tripStatus' => ['nullable', Rule::in(self::TRIP_STATUSES)],
+            'tripStatus' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    $statuses = is_array($value) ? $value : [$value];
+                    foreach ($statuses as $status) {
+                        if ($status === '') {
+                            continue;
+                        }
+
+                        if (! is_string($status) || ! in_array($status, self::TRIP_STATUSES, true)) {
+                            $fail('O status da corrida selecionado é inválido.');
+                            return;
+                        }
+                    }
+                },
+            ],
             'solicitation' => ['nullable', 'string', 'in:' . implode(',', self::SOLICITATIONS)],
             'sortOrder' => ['nullable', 'in:asc,desc'],
         ]);
+        if (array_key_exists('tripStatus', $filters)) {
+            $statuses = is_array($filters['tripStatus']) ? $filters['tripStatus'] : [$filters['tripStatus']];
+            $filters['tripStatus'] = array_values(array_filter($statuses, fn ($status) => $status !== ''));
+        }
+
         $dateDefaults = $dateFilterProvided
             ? ['startDate' => '', 'endDate' => '']
             : [
-                'startDate' => now()->startOfMonth()->toDateString(),
-                'endDate' => now()->endOfMonth()->toDateString(),
+                'startDate' => now()->toDateString(),
+                'endDate' => now()->toDateString(),
             ];
 
         return array_merge([
@@ -337,9 +357,17 @@ class GoaliTripController extends Controller
             ->when($filters['startDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '>=', $date))
             ->when($filters['endDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '<=', $date))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
-            ->when($filters['tripStatus'] ?? null, fn ($query, $status) => $query->where('trip_status', $status))
+            ->when($filters['tripStatus'] ?? null, function ($query, $statuses) {
+                $statuses = is_array($statuses) ? $statuses : [$statuses];
+                $statuses = array_values(array_filter($statuses, fn ($status) => $status !== ''));
+
+                if ($statuses) {
+                    $query->whereIn('trip_status', $statuses);
+                }
+            })
             ->when($filters['solicitation'] ?? null, fn ($query, $solicitation) => $query->where('solicitation', $solicitation))
             ->with('driver:id,name')
+            ->orderByRaw("CASE trip_status WHEN 'Criada' THEN 0 WHEN 'Em Andamento' THEN 1 WHEN 'Aguardando Analise' THEN 2 WHEN 'Finalizada' THEN 3 ELSE 4 END")
             ->orderBy('travel_date', $sortOrder)
             ->orderBy('travel_time', $sortOrder)
             ->orderBy('id', $sortOrder);

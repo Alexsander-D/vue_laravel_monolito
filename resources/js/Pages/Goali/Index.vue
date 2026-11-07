@@ -20,7 +20,14 @@ const props = defineProps({
   currentDriverId: { type: Number, default: null },
 });
 
-const filters = useForm({ ...props.filters });
+const filters = useForm({
+  ...props.filters,
+  tripStatus: Array.isArray(props.filters.tripStatus)
+    ? props.filters.tripStatus
+    : props.filters.tripStatus
+      ? [props.filters.tripStatus]
+      : [],
+});
 const statusOptions = ["ENTRADA", "SAÍDA"];
 const editingId = ref(null);
 const editForm = useForm({});
@@ -162,7 +169,7 @@ watch(
 );
 const clearFilters = () => {
   filters.status = "";
-  filters.tripStatus = "";
+  filters.tripStatus = [];
   filters.solicitation = "";
 };
 const startEdit = (record) => {
@@ -305,7 +312,7 @@ onBeforeUnmount(() => {
         <label class="filter-label">Data inicial<TextInput v-model="filters.startDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Data final<TextInput v-model="filters.endDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" /></label>
-        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" /></label>
+        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" multiple /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
@@ -431,7 +438,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <Datatable class="col-span-12 hidden w-full min-w-0 lg:block" :thead="tableHeaders" :tbody="tableData" :row-columns="tableColumns" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" managed-rows />
+      <Datatable class="col-span-12 hidden w-full min-w-0 lg:block" :thead="tableHeaders" :tbody="tableData" :row-columns="tableColumns" :id="tableId" :order-by="[]" :row-class="tripRowClass" managed-rows />
         </div>
       </section>
 
