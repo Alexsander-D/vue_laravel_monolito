@@ -118,12 +118,13 @@ function initializeSelect2() {
   }
 
   const element = $(selectElement.value);
+  const dropdownParent = element.closest("[data-select2-dropdown-parent]");
   const modal = element.closest(".fixed");
   element.select2({
     placeholder: props.placeholder,
     allowClear: props.allowEmpty,
     width: "100%",
-    ...(modal.length ? { dropdownParent: modal } : {}),
+    ...(dropdownParent.length ? { dropdownParent } : modal.length ? { dropdownParent: modal } : {}),
   });
   element.on("change", () => {
     const selectedValue = element.val();

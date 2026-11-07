@@ -130,6 +130,15 @@ const saveEdit = () => {
   }
   editForm.put(route("goali.update", editingId.value), { preserveScroll: true, onSuccess: () => { editingId.value = null; } });
 };
+const handleEditModalClick = (event) => {
+  if (event.target.closest(".select2-container, .select2-dropdown")) {
+    return;
+  }
+
+  if (event.target === event.currentTarget) {
+    editingId.value = null;
+  }
+};
 const deleteRecord = async (record) => {
   const result = await Swal.fire({
     title: "Excluir registro?",
@@ -242,27 +251,27 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         </div>
       </section>
 
-      <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" @click.self="editingId = null">
-        <form class="my-6 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900" @submit.prevent="saveEdit">
+      <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" data-select2-dropdown-parent @click="handleEditModalClick">
+        <form class="my-6 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900" @click.stop @submit.prevent="saveEdit">
           <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ props.isDriver ? "Atualizar status da corrida" : "Editar deslocamento" }}</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
           <div v-if="props.isDriver" class="grid grid-cols-1 gap-4">
-            <label class="filter-label" @click.prevent>Motorista
+            <div class="filter-label">Motorista
               <Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id"
                 placeholder="Seu nome" :allow-empty="false" :select2="true" disabled />
               <InputError :message="editForm.errors.driver_id" />
               <span v-if="editingRecord && !editingRecord.driver_id" class="font-normal text-gray-500">
                 Ao confirmar, esta corrida será atribuída a você.
               </span>
-            </label>
-            <label class="filter-label" @click.prevent>Próximo status<Select v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Selecione o status" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.trip_status" /></label>
+            </div>
+            <div class="filter-label">Próximo status<Select :key="`driver-trip-status-${editingRecord?.id}-${editingRecord?.trip_status}`" v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Selecione o status" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.trip_status" /></div>
           </div>
           <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label class="filter-label sm:col-span-2" @click.prevent>Andamento<Select v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Manter status atual" :allow-empty="true" :select2="true" /><InputError :message="editForm.errors.trip_status" /></label>
+            <div class="filter-label sm:col-span-2">Andamento<Select :key="`admin-trip-status-${editingRecord?.id}-${editingRecord?.trip_status}`" v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Manter status atual" :allow-empty="true" :select2="true" /><InputError :message="editForm.errors.trip_status" /></div>
             <label class="filter-label">Data<TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_date" /></label>
             <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
-            <label class="filter-label" @click.prevent>Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.status" /></label>
-            <label class="filter-label" @click.prevent>Motorista<Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="true" :select2="true" /><InputError :message="editForm.errors.driver_id" /></label>
-            <label class="filter-label" @click.prevent>Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></label>
+            <div class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.status" /></div>
+            <div class="filter-label">Motorista<Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="true" :select2="true" /><InputError :message="editForm.errors.driver_id" /></div>
+            <div class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></div>
             <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
             <label class="filter-label">Passageiro<TextInput v-model="editForm.passenger" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>
