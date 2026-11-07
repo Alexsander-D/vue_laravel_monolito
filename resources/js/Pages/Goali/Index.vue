@@ -269,7 +269,18 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
                 {{ selectedEditDriver?.name || "Atribuída a você" }}
               </p>
             </div>
-            <div class="filter-label">Próximo status<Select :key="`driver-trip-status-${editingRecord?.id}-${editingRecord?.trip_status}`" v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Selecione o status" :allow-empty="false" required /><InputError :message="editForm.errors.trip_status" /></div>
+            <label class="filter-label">Próximo status
+              <select
+                v-model="editForm.trip_status"
+                class="mt-1 min-h-11 w-full rounded-md border-gray-300 shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                required
+              >
+                <option v-for="status in editTripStatusOptions" :key="status" :value="status">
+                  {{ status }}
+                </option>
+              </select>
+              <InputError :message="editForm.errors.trip_status" />
+            </label>
           </div>
           <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="filter-label sm:col-span-2">Andamento<Select :key="`admin-trip-status-${editingRecord?.id}-${editingRecord?.trip_status}`" v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Manter status atual" :allow-empty="true" /><InputError :message="editForm.errors.trip_status" /></div>
