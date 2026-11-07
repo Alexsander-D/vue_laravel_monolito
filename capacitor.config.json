@@ -3,7 +3,7 @@
   "appName": "GOALI",
   "webDir": "public/build",
   "server": {
-    "url": "http://13.222.142.210/goali/records",
+    "url": "http://13.222.142.210/",
     "cleartext": true
   }
 }

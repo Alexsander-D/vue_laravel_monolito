@@ -3,7 +3,7 @@ import $ from "jquery";
 import BaseLayout from "@/Layouts/BaseLayout.vue";
 import DateFilter from "@/Components/DateFilter.vue";
 import Datatable from "@/Components/Datatable.vue";
-import { computed, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, watch } from "vue";
 import { Inertia } from "@inertiajs/inertia";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import Swal from "sweetalert2";
@@ -22,10 +22,13 @@ const props = defineProps({
       barber: "",
     }),
   },
+  barberOptions: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
-const barberOptions = ["Kaique", "Ryan"];
 
 const serviceCatalog = [
   { name: "Corte Social", price: 35, icon: "✂️" },
@@ -78,7 +81,6 @@ const form = useForm({
 const page = usePage();
 const currentUserRole = computed(() => page.props.userRole || "");
 const isAdmin = computed(() => currentUserRole.value === "Admin");
-console.log("Current User Role:", currentUserRole.value , "Is Admin:", isAdmin.value);
 
 const submitFilters = () => {
   form.get(route("attendance.report"), {
@@ -86,6 +88,18 @@ const submitFilters = () => {
     preserveState: true,
   });
 };
+let filterTimeout;
+watch(
+  () => [form.startDate, form.endDate, form.paymentMethod, form.barber],
+  () => {
+    clearTimeout(filterTimeout);
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      return;
+    }
+
+    filterTimeout = setTimeout(submitFilters, 250);
+  }
+);
 
 const sendProductivityEmail = async () => {
   const result = await Swal.fire({
@@ -209,6 +223,20 @@ const tableFooter = computed(() => {
   return [row];
 });
 
+const dailyTotals = computed(() => {
+  const totals = new Map();
+  props.records.forEach((record) => {
+    const day = getLocalDateKey(record.created_at);
+    if (day) {
+      totals.set(day, (totals.get(day) || 0) + Number(record.price || 0));
+    }
+  });
+
+  return [...totals.entries()]
+    .sort(([first], [second]) => second.localeCompare(first))
+    .map(([day, total]) => ({ day, total }));
+});
+
 const idleHours = computed(() => {
   const hoursWithAttendance = new Set();
 
@@ -251,6 +279,16 @@ const formatDateTime = (value) => {
   });
 
   return formatted.replace(", ", " - ");
+};
+
+const getLocalDateKey = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 const formatCurrency = (value) => {
@@ -308,7 +346,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
     acc[serviceName] = (acc[serviceName] || 0) + 1;
     return acc;
   }, {});
-  const currentBarber = currentBarbers[0] || barberOptions[0];
+  const currentBarber = currentBarbers[0] || props.barberOptions[0];
 
   const getSelectedTotal = () => {
     return serviceCatalog.reduce((sum, service) => {
@@ -379,7 +417,7 @@ const editAttendance = async (attendanceId, currentPaymentMethod, currentService
         <div class="mt-4">
           <label class="mb-2 block text-sm font-medium text-gray-700">Barbeiro responsável</label>
           <div class="flex flex-wrap justify-center gap-2">
-            ${barberOptions
+            ${props.barberOptions
               .map((barber) => `
                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${barber === currentBarber ? 'border-yellow-500 bg-yellow-500/10 text-yellow-700' : 'border-gray-300 bg-white text-gray-700 hover:border-yellow-400'}">
                   <input type="radio" name="attendance-barber-edit" value="${barber}" ${barber === currentBarber ? "checked" : ""} class="h-4 w-4 text-yellow-500 focus:ring-yellow-500" />
@@ -557,6 +595,11 @@ onMounted(() => {
     editAttendance(attendanceId, currentPaymentMethod, currentServices, currentBarbers);
   });
 });
+
+onBeforeUnmount(() => {
+  clearTimeout(filterTimeout);
+  $(document).off("click", ".delete-btn, .edit-btn");
+});
 </script>
 
 <template>
@@ -566,14 +609,13 @@ onMounted(() => {
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex-1">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <DateFilter v-if="isAdmin" v-model:startDate="form.startDate" v-model:endDate="form.endDate" @submit="submitFilters" />
+              <DateFilter v-model:startDate="form.startDate" v-model:endDate="form.endDate" />
               <div v-if="isAdmin" class="mt-8 w-full lg:mt-0 lg:ml-4 lg:max-w-xs">
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
                   Método de pagamento
                 </label>
                 <select
                   v-model="form.paymentMethod"
-                  @change="submitFilters"
                   class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">Todos</option>
@@ -589,11 +631,10 @@ onMounted(() => {
                 </label>
                 <select
                   v-model="form.barber"
-                  @change="submitFilters"
                   class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                 >
                   <option value="">Todos</option>
-                  <option v-for="barber in barberOptions" :key="barber" :value="barber">
+                  <option v-for="barber in props.barberOptions" :key="barber" :value="barber">
                     {{ barber }}
                   </option>
                 </select>
@@ -612,8 +653,32 @@ onMounted(() => {
 
         <Datatable :thead="tableHeaders" :tbody="tableData" :tfooter="tableFooter" :id="tableId" />
 
+        <section class="mt-8 rounded-lg border-l-4 border-green-500 bg-gradient-to-br from-green-50 to-blue-50 p-5 dark:from-green-900 dark:to-blue-900 sm:p-6">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+            {{ form.barber ? `Faturamento de ${form.barber}` : "Faturamento do período" }}
+          </h3>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Total dos atendimentos conforme os filtros selecionados.
+          </p>
+          <p class="mt-3 text-3xl font-bold text-green-700 dark:text-green-300">
+            {{ formatCurrency(totalPrice) }}
+          </p>
+          <div v-if="dailyTotals.length > 1" class="mt-5 border-t border-green-200 pt-4 dark:border-green-800">
+            <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Totais por dia</h4>
+            <dl class="space-y-2">
+              <div v-for="item in dailyTotals" :key="item.day" class="flex items-center justify-between gap-3 text-sm">
+                <dt class="text-gray-600 dark:text-gray-300">{{ new Date(`${item.day}T00:00:00`).toLocaleDateString("pt-BR") }}</dt>
+                <dd class="font-semibold text-gray-800 dark:text-gray-100">{{ formatCurrency(item.total) }}</dd>
+              </div>
+            </dl>
+          </div>
+          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+            {{ props.records.length }} {{ props.records.length === 1 ? "atendimento" : "atendimentos" }} no período
+          </p>
+        </section>
+
         <!-- Relatório de Ociosidade -->
-        <div v-if="isAdmin" class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div v-if="isAdmin" class="mt-8">
           <!-- Card de Ociosidade -->
           <div
             class="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900 dark:to-red-900 rounded-lg p-6 border-l-4 border-orange-500">
@@ -638,36 +703,6 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- Card de Resumo -->
-          <div
-            class="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900 dark:to-blue-900 rounded-lg p-6 border-l-4 border-green-500">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
-              Resumo do Período
-            </h3>
-            <div class="space-y-3">
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-300">Atendimentos:</span>
-                <span class="font-bold text-lg text-gray-800 dark:text-gray-100">{{
-                  props.records.length
-                }}</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-300">Faturamento:</span>
-                <span class="font-bold text-lg text-green-600 dark:text-green-400">{{
-                  formatCurrency(totalPrice)
-                }}</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-300">Turno (09:00 - 18:00):</span>
-                <span class="font-bold text-lg text-gray-800 dark:text-gray-100">{{ 18 - 9 }}h</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600 dark:text-gray-300">Ocupação:</span>
-                <span class="font-bold text-lg text-blue-600 dark:text-blue-400">{{ Math.round(((9 - idleHoursTotal) /
-                  9) * 100) }}%</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -14,6 +14,8 @@ use Inertia\Inertia;
 
 class AttendanceController extends Controller
 {
+    private const BARBERS = ['Kaique', 'Ryan'];
+
     public function store(Request $request)
     {
         $validated = Validator::make($request->all(), [
@@ -22,7 +24,7 @@ class AttendanceController extends Controller
             'services.*.price' => ['required', 'numeric'],
             'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
             'barbers' => ['required', 'array', 'min:1'],
-            'barbers.*' => ['string', 'in:Kaique,Ryan'],
+            'barbers.*' => ['string', 'in:' . implode(',', self::BARBERS)],
         ], [
             'services.required' => 'SELECIONE AO MENOS UM SERVIÇO.',
             'payment_method.in' => 'FORMA DE PAGAMENTO INVÁLIDA.',
@@ -62,10 +64,24 @@ class AttendanceController extends Controller
 
     public function report(Request $request)
     {
-        $startDate = $request->input('start_date', $request->input('startDate'));
-        $endDate = $request->input('end_date', $request->input('endDate'));
-        $paymentMethod = $request->input('payment_method', $request->input('paymentMethod'));
-        $barber = $request->input('barber');
+        $filters = Validator::make([
+            'startDate' => $request->input('start_date', $request->input('startDate')),
+            'endDate' => $request->input('end_date', $request->input('endDate')),
+            'paymentMethod' => $request->input('payment_method', $request->input('paymentMethod')),
+            'barber' => $request->input('barber'),
+        ], [
+            'startDate' => ['nullable', 'date'],
+            'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
+            'paymentMethod' => ['nullable', 'in:Dinheiro,Cartão,Pix,pix_cartao'],
+            'barber' => ['nullable', 'in:' . implode(',', self::BARBERS)],
+        ])->validate();
+        $startDate = $filters['startDate'] ?? null;
+        $endDate = $filters['endDate'] ?? null;
+        $paymentMethod = $filters['paymentMethod'] ?? null;
+        $barber = $filters['barber'] ?? null;
+        $serviceNames = DB::connection()->getDriverName() === 'sqlite'
+            ? "GROUP_CONCAT(attendance_services.service_name, ', ')"
+            : "GROUP_CONCAT(attendance_services.service_name SEPARATOR ', ')";
 
         $records = Attendance::query()
             ->join('users', 'attendances.user_id', '=', 'users.id')
@@ -75,7 +91,7 @@ class AttendanceController extends Controller
                 'attendances.user_id',
                 'users.name as user_name',
                 'attendances.barbers',
-                DB::raw("GROUP_CONCAT(attendance_services.service_name SEPARATOR ', ') as service_name"),
+                DB::raw($serviceNames . ' as service_name'),
                 DB::raw('COALESCE(SUM(attendance_services.price), 0) as price'),
                 'attendances.payment_method',
                 'attendances.created_at'
@@ -112,6 +128,7 @@ class AttendanceController extends Controller
                 'paymentMethod' => $paymentMethod,
                 'barber' => $barber,
             ],
+            'barberOptions' => self::BARBERS,
         ]);
     }
 
@@ -176,7 +193,7 @@ class AttendanceController extends Controller
         $validated = Validator::make($request->all(), [
             'payment_method' => ['nullable', 'string', 'in:Dinheiro,Cartão,Pix'],
             'barbers' => ['nullable', 'array', 'min:1'],
-            'barbers.*' => ['string', 'in:Kaique,Ryan'],
+            'barbers.*' => ['string', 'in:' . implode(',', self::BARBERS)],
             'services' => ['nullable', 'array'],
             'services.*.name' => ['required_with:services', 'string', 'min:1'],
             'services.*.price' => ['required_with:services', 'numeric', 'min:0'],

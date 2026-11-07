@@ -108,7 +108,7 @@ const tableData = computed(() => props.records.map((record) => ({
     !["Finalizada", "Aguardando Analise"].includes(record.trip_status)
       ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
       : "",
-    props.isAdmin
+    (props.isAdmin && record.trip_status !== "Finalizada")
       ? `<button type="button" class="goali-action goali-action--delete" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
       : "",
   ].join(""),
@@ -379,7 +379,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record)) || !['Finalizada', 'Aguardando Analise'].includes(record.trip_status) || props.isAdmin"
+              v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record)) || !['Finalizada', 'Aguardando Analise'].includes(record.trip_status)"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
@@ -395,7 +395,7 @@ onBeforeUnmount(() => {
                 @click="cancelTrip(record)"
               >Cancelar</button>
               <button
-                v-if="props.isAdmin"
+                v-if="props.isAdmin && record.trip_status !== 'Finalizada'"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
                 @click="deleteRecord(record)"

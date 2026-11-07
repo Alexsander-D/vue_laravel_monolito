@@ -6,7 +6,9 @@ use App\Models\Attendance;
 use App\Models\AttendanceService;
 use App\Models\Spatie\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AttendanceReportTest extends TestCase
@@ -19,8 +21,8 @@ class AttendanceReportTest extends TestCase
             'name' => 'Teste User',
             'email' => 'teste@example.com',
             'password' => Hash::make('password'),
-            'email_verified_at' => now(),
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         $this->actingAs($user);
 
@@ -28,6 +30,7 @@ class AttendanceReportTest extends TestCase
             'user_id' => $user->id,
             'total' => 100,
             'payment_method' => 'Pix',
+            'barbers' => ['Kaique'],
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -42,6 +45,7 @@ class AttendanceReportTest extends TestCase
             'user_id' => $user->id,
             'total' => 80,
             'payment_method' => 'Dinheiro',
+            'barbers' => ['Ryan'],
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -56,6 +60,7 @@ class AttendanceReportTest extends TestCase
             'user_id' => $user->id,
             'total' => 90,
             'payment_method' => 'Cartão',
+            'barbers' => ['Kaique'],
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -66,17 +71,35 @@ class AttendanceReportTest extends TestCase
             'price' => 90,
         ]);
 
+        $previousAttendance = Attendance::create([
+            'user_id' => $user->id,
+            'total' => 200,
+            'payment_method' => 'Pix',
+            'barbers' => ['Kaique'],
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
+        ]);
+        AttendanceService::create([
+            'attendance_id' => $previousAttendance->id,
+            'service_name' => 'Corte',
+            'price' => 200,
+        ]);
+        DB::table('attendances')
+            ->where('id', $previousAttendance->id)
+            ->update(['created_at' => now()->subDay()]);
+        $this->assertSame(now()->subDay()->toDateString(), $previousAttendance->fresh()->created_at->toDateString());
+
         $response = $this->get(route('attendance.report', [
             'startDate' => now()->toDateString(),
             'endDate' => now()->toDateString(),
             'payment_method' => 'Pix',
         ]));
 
-        $response->assertOk();
-        $response->assertViewHas('records', function ($records) {
-            return $records->count() === 1
-                && $records->first()->payment_method === 'Pix';
-        });
+        $response->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Attendance/Report')
+            ->has('records', 1)
+            ->where('records.0.payment_method', 'Pix')
+            ->where('barberOptions', ['Kaique', 'Ryan']));
 
         $cardResponse = $this->get(route('attendance.report', [
             'startDate' => now()->toDateString(),
@@ -84,11 +107,10 @@ class AttendanceReportTest extends TestCase
             'paymentMethod' => 'Cartão',
         ]));
 
-        $cardResponse->assertOk();
-        $cardResponse->assertViewHas('records', function ($records) {
-            return $records->count() === 1
-                && $records->first()->payment_method === 'Cartão';
-        });
+        $cardResponse->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Attendance/Report')
+            ->has('records', 1)
+            ->where('records.0.payment_method', 'Cartão'));
 
         $combinedResponse = $this->get(route('attendance.report', [
             'startDate' => now()->toDateString(),
@@ -96,15 +118,28 @@ class AttendanceReportTest extends TestCase
             'paymentMethod' => 'pix_cartao',
         ]));
 
-        $combinedResponse->assertOk();
-        $combinedResponse->assertViewHas('records', function ($records) {
-            $methods = $records->pluck('payment_method');
+        $combinedResponse->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Attendance/Report')
+            ->has('records', 2)
+            ->where('records', fn ($records) => collect($records)
+                ->pluck('payment_method')
+                ->sort()
+                ->values()
+                ->all() === ['Cartão', 'Pix']));
 
-            return $records->count() === 2
-                && $methods->contains('Pix')
-                && $methods->contains('Cartão')
-                && ! $methods->contains('Dinheiro');
-        });
+        $barberResponse = $this->get(route('attendance.report', [
+            'startDate' => now()->toDateString(),
+            'endDate' => now()->toDateString(),
+            'barber' => 'Kaique',
+            'paymentMethod' => 'Cartão',
+        ]));
+
+        $barberResponse->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Attendance/Report')
+            ->has('records', 1)
+            ->where('records.0.payment_method', 'Cartão')
+            ->where('records.0.barbers', ['Kaique'])
+            ->where('date.barber', 'Kaique'));
     }
 
     public function test_it_updates_attendance_service_and_payment_method(): void

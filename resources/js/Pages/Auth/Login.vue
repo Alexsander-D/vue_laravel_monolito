@@ -43,10 +43,10 @@ const showPassword = ref(false);
 <template>
   <Head title="Log in" />
   <div
-    class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-800"
+    class="flex min-h-screen w-full items-center justify-center overflow-x-hidden bg-gray-800 px-4 py-6 sm:px-6"
   >
     <div
-      class="bg-white border border-neutral-600 rounded-xl shadow-sm dark:bg-neutral-900 dark:border-neutral-600 w-full sm:w-2/3 lg:w-1/3"
+      class="mx-auto w-full max-w-md rounded-xl border border-neutral-600 bg-white shadow-sm dark:bg-neutral-900"
     >
       <div class="p-4 sm:p-7">
         <div class="text-center">
