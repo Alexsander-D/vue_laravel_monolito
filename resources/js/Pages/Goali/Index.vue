@@ -92,7 +92,7 @@ const tableData = computed(() => props.records.map((record) => ({
       || (props.isDriver && canDriverEditTrip(record))
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
-    record.trip_status !== "Finalizada"
+    !["Finalizada", "Aguardando Analise"].includes(record.trip_status)
       ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
       : "",
     props.isAdmin
