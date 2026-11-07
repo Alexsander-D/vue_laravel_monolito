@@ -153,7 +153,7 @@ onUnmounted(() => {
                       <path d="M6 9l6 6 6-6" />
                     </svg>
                   </button>
-                  <div class="absolute hidden group-hover:block right-16 top-0 w-60 bg-white shadow-lg rounded z-50">
+                  <div class="absolute hidden group-hover:block right-0 top-full pt-1 w-60 bg-white shadow-lg rounded z-50">
                     <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
                       <form @submit.prevent="switchToTeam(team)">
                         <button
@@ -406,8 +406,7 @@ onUnmounted(() => {
         <!-- BARBERSHOP -->
         <div :class="{
           hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
+        }" class="ms-3 relative flex justify-center py-1 lg:justify-start">
           <!-- Teams Dropdown -->
           <Dropdown align="right" width="60">
             <template #trigger>
@@ -583,7 +582,7 @@ onUnmounted(() => {
                   </button>
 
                   <!-- Submenu dropdown -->
-                  <div class="absolute hidden group-hover:block right-16 top-0 w-60 bg-white shadow-lg rounded z-50">
+                  <div class="absolute hidden group-hover:block right-0 top-full pt-1 w-60 bg-white shadow-lg rounded z-50">
                     <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
                       <form @submit.prevent="switchToTeam(team)">
                         <button v-if="team.id == $page.props.auth.user.current_team_id" type="submit"

@@ -48,6 +48,16 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('welcome');
 
+Route::get('/download/android', function () {
+    $apkPath = base_path('android/app/build/outputs/apk/debug/app-debug.apk');
+
+    abort_unless(is_file($apkPath), 404, 'O aplicativo Android não está disponível para download.');
+
+    return response()->download($apkPath, 'app-debug.apk', [
+        'Content-Type' => 'application/vnd.android.package-archive',
+    ]);
+})->name('app.download');
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
