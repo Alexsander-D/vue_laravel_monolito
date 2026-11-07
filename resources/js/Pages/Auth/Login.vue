@@ -28,8 +28,12 @@ const submit = () => {
     }))
     .post(route("login"), {
       onSuccess: (page) => {
+        const belongsToGoali = page.props.auth?.user?.all_teams?.some(
+          (team) => team.name?.trim()?.toLocaleUpperCase() === "GOALI TRANSPORTES"
+        );
+
         if (
-          page.props.auth?.user &&
+          belongsToGoali &&
           !Capacitor.isNativePlatform() &&
           window.matchMedia("(max-width: 1023px)").matches
         ) {

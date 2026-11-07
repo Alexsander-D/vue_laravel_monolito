@@ -48,19 +48,26 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('welcome');
 
-Route::get('/download/android', function () {
-    $apkPath = public_path('downloads/app-debug.apk');
+Route::middleware([
+    'auth:sanctum',
+    config('jetstream.auth_session'),
+    'verified',
+    \App\Http\Middleware\EnsureUserBelongsToGoaliTeam::class,
+])->group(function () {
+    Route::get('/download/android', function () {
+        $apkPath = public_path('downloads/app-debug.apk');
 
-    abort_unless(is_file($apkPath), 404, 'O aplicativo Android não está disponível para download.');
+        abort_unless(is_file($apkPath), 404, 'O aplicativo Android não está disponível para download.');
 
-    return response()->download($apkPath, 'app-debug.apk', [
-        'Content-Type' => 'application/vnd.android.package-archive',
-    ]);
-})->name('app.download');
+        return response()->download($apkPath, 'app-debug.apk', [
+            'Content-Type' => 'application/vnd.android.package-archive',
+        ]);
+    })->name('app.download');
 
-Route::get('/download', function () {
-    return Inertia::render('App/Download');
-})->name('app.download.page');
+    Route::get('/download', function () {
+        return Inertia::render('App/Download');
+    })->name('app.download.page');
+});
 
 Route::middleware([
     'auth:sanctum',
