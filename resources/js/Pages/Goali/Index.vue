@@ -150,6 +150,21 @@ const mobilePageEnd = computed(() => Math.min(mobilePage.value * mobilePageSize,
 watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: true });
 watch([mobileSearch, () => props.records], () => { mobilePage.value = 1; });
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
+let filterTimeout;
+watch(
+  () => [filters.startDate, filters.endDate, filters.status, filters.tripStatus, filters.solicitation],
+  () => {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(applyFilters, 250);
+  }
+);
+const clearFilters = () => {
+  filters.startDate = "";
+  filters.endDate = "";
+  filters.status = "";
+  filters.tripStatus = "";
+  filters.solicitation = "";
+};
 const startEdit = (record) => {
   if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverEditTrip(record))) {
     return;
@@ -259,7 +274,10 @@ const time = (value) => {
 };
 
 onMounted(() => document.addEventListener("click", handleTableAction));
-onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleTableAction);
+  clearTimeout(filterTimeout);
+});
 </script>
 
 <template>
@@ -285,7 +303,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" /></label>
-        <button class="min-h-11 self-stretch rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 sm:self-end" type="submit">Filtrar</button>
+        <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
       <section class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:grid-cols-3 sm:gap-4 sm:py-4">

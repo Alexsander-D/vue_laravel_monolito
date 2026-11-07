@@ -5,7 +5,7 @@ import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Radio from "@/Components/Radio.vue";
-import { useForm, usePage } from "@inertiajs/vue3";
+import { Link, useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 
 const props = defineProps({
@@ -109,6 +109,15 @@ const submit = () => {
   <BaseLayout title="CORRIDAS">
     <div class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2 sm:pt-2">
       <div class="rounded-xl bg-white p-3 shadow-lg dark:bg-gray-900 sm:p-6">
+        <Link
+          :href="route('goali.index')"
+          class="mb-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800"
+        >
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Voltar ao relatório
+        </Link>
         <header class="mb-4 border-b border-gray-200 pb-4 text-center dark:border-gray-700 sm:mb-6 sm:pb-5">
           <h1 class="text-xl font-bold uppercase text-gray-900 dark:text-white sm:text-2xl">CORRIDAS</h1>
           <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
