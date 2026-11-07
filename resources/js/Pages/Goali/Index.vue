@@ -74,6 +74,19 @@ const tableHeaders = [
   { name: "Cancelada por" },
   { name: "Ações" },
 ];
+const tableColumns = [
+  "travelDate",
+  "status",
+  "tripStatus",
+  "solicitation",
+  "route",
+  "passenger",
+  "driver",
+  "responsible",
+  "amount",
+  "cancelledBy",
+  "buttonActions",
+];
 const tableData = computed(() => props.records.map((record) => ({
   travelDate: `${date(record.travel_date)} - ${time(record.travel_time)}`,
   status: record.status,
@@ -100,8 +113,42 @@ const tableData = computed(() => props.records.map((record) => ({
       : "",
   ].join(""),
 })));
+const mobileSearch = ref("");
+const mobilePage = ref(1);
+const mobilePageSize = 10;
+const mobileFilteredRecords = computed(() => {
+  const search = mobileSearch.value.trim().toLocaleLowerCase("pt-BR");
+  if (!search) {
+    return props.records;
+  }
+
+  return props.records.filter((record) => [
+    record.travel_date,
+    record.travel_time,
+    record.status,
+    record.trip_status,
+    record.solicitation,
+    record.origin,
+    record.destination,
+    record.passenger,
+    record.driver?.name,
+    record.responsible,
+    record.cancelled_by_name,
+    record.cancelled_by_role,
+  ].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR").includes(search));
+});
+const mobilePageCount = computed(() => Math.max(1, Math.ceil(mobileFilteredRecords.value.length / mobilePageSize)));
+const mobilePageRecords = computed(() => {
+  const start = (mobilePage.value - 1) * mobilePageSize;
+  return mobileFilteredRecords.value.slice(start, start + mobilePageSize);
+});
+const mobilePageStart = computed(() => (
+  mobileFilteredRecords.value.length ? (mobilePage.value - 1) * mobilePageSize + 1 : 0
+));
+const mobilePageEnd = computed(() => Math.min(mobilePage.value * mobilePageSize, mobileFilteredRecords.value.length));
 
 watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: true });
+watch([mobileSearch, () => props.records], () => { mobilePage.value = 1; });
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
 const startEdit = (record) => {
   if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverEditTrip(record))) {
@@ -222,7 +269,7 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <div class="grid min-w-0 grid-cols-12 gap-3 sm:gap-4">
           <header class="col-span-12 grid grid-cols-12 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:gap-4 sm:pb-5">
             <div class="col-span-12 text-center">
-              <p class="text-xs font-bold uppercase text-teal-700">GT Dionínio Barbosa</p>
+              <p class="text-xs font-bold uppercase text-teal-700">{{ $page.props.auth.user.current_team.name }}</p>
               <h1 class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Relatório de deslocamentos</h1>
               <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
             </div>
@@ -247,7 +294,122 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
         <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor a receber</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
-      <Datatable class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" managed-rows />
+      <section class="col-span-12 lg:hidden" aria-label="Deslocamentos">
+        <div class="mb-3">
+          <label for="goali-mobile-search" class="sr-only">Buscar deslocamentos</label>
+          <input
+            id="goali-mobile-search"
+            v-model="mobileSearch"
+            type="search"
+            placeholder="Buscar nos resultados..."
+            class="min-h-11 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+          />
+        </div>
+
+        <div v-if="mobilePageRecords.length" class="space-y-3">
+          <article
+            v-for="record in mobilePageRecords"
+            :key="record.id"
+            class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+              <div>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ date(record.travel_date) }} · {{ time(record.travel_time) }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ record.solicitation }}</p>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 dark:bg-teal-900/40 dark:text-teal-200">{{ record.status }}</span>
+                <span
+                  class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                  :class="{
+                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200': record.trip_status === 'Criada',
+                    'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200': record.trip_status === 'Em Andamento',
+                    'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200': record.trip_status === 'Aguardando Analise',
+                    'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200': record.trip_status === 'Finalizada',
+                  }"
+                >{{ record.trip_status }}</span>
+              </div>
+            </div>
+
+            <div class="space-y-3 px-4 py-3">
+              <div>
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Passageiro</p>
+                <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.passenger }}</p>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="col-span-2">
+                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Origem / destino</p>
+                  <p class="mt-0.5 break-words text-sm text-gray-800 dark:text-gray-200">{{ record.origin }} → {{ record.destination }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Motorista</p>
+                  <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.driver?.name || "—" }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valor</p>
+                  <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{ money(record.amount) }}</p>
+                </div>
+                <div class="col-span-2">
+                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Responsável</p>
+                  <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.responsible }}</p>
+                </div>
+                <div v-if="record.cancelled_by_role" class="col-span-2">
+                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cancelada por</p>
+                  <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.cancelled_by_role }}: {{ record.cancelled_by_name }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record)) || !['Finalizada', 'Aguardando Analise'].includes(record.trip_status) || props.isAdmin"
+              class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
+            >
+              <button
+                v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record))"
+                type="button"
+                class="min-h-11 flex-1 rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                @click="startEdit(record)"
+              >{{ props.isDriver ? "Atualizar status" : "Editar" }}</button>
+              <button
+                v-if="!['Finalizada', 'Aguardando Analise'].includes(record.trip_status)"
+                type="button"
+                class="min-h-11 flex-1 rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+                @click="cancelTrip(record)"
+              >Cancelar</button>
+              <button
+                v-if="props.isAdmin"
+                type="button"
+                class="min-h-11 flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                @click="deleteRecord(record)"
+              >Excluir</button>
+            </div>
+          </article>
+        </div>
+
+        <p v-else class="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+          {{ mobileSearch ? "Nenhum deslocamento encontrado para essa busca." : "Nenhum deslocamento encontrado para os filtros selecionados." }}
+        </p>
+
+        <div v-if="mobileFilteredRecords.length" class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-300">
+          <span>Mostrando {{ mobilePageStart }}–{{ mobilePageEnd }} de {{ mobileFilteredRecords.length }}</span>
+          <div v-if="mobilePageCount > 1" class="flex gap-2">
+            <button
+              type="button"
+              class="min-h-11 rounded-md border border-gray-300 px-3 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+              :disabled="mobilePage === 1"
+              @click="mobilePage--"
+            >Anterior</button>
+            <button
+              type="button"
+              class="min-h-11 rounded-md border border-gray-300 px-3 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+              :disabled="mobilePage === mobilePageCount"
+              @click="mobilePage++"
+            >Próxima</button>
+          </div>
+        </div>
+      </section>
+
+      <Datatable class="col-span-12 hidden w-full min-w-0 lg:block" :thead="tableHeaders" :tbody="tableData" :row-columns="tableColumns" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" managed-rows />
         </div>
       </section>
 

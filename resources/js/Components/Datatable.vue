@@ -73,6 +73,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  rowColumns: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const tableKey = ref(0);
@@ -122,7 +126,7 @@ const initializeDataTable = () => {
       ...(props.managedRows
         ? {
             data: props.tbody,
-            columns: Object.keys(props.tbody[0] || {}).map((key) => ({
+            columns: (props.rowColumns.length ? props.rowColumns : Object.keys(props.tbody[0] || {})).map((key) => ({
               data: key,
               render: key.startsWith("button")
                 ? (value) => `<div class="datatable-actions">${value}</div>`

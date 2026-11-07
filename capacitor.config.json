@@ -1,0 +1,9 @@
+{
+  "appId": "com.vex.app",
+  "appName": "GOALI",
+  "webDir": "dist",
+  "server": {
+    "url": "http://13.222.142.210/goali/records",
+    "cleartext": true
+  }
+}
