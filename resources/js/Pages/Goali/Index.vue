@@ -45,6 +45,11 @@ const editTripStatusOptions = computed(() => {
   const nextStatus = nextTripStatus(editingRecord.value.trip_status);
   return nextStatus ? [nextStatus] : [];
 });
+const editDriverOptions = computed(() => (
+  props.isDriver
+    ? props.drivers.filter((driver) => Number(driver.id) === Number(props.currentDriverId))
+    : props.drivers
+));
 const selectedEditDriver = computed({
   get: () => props.drivers.find((driver) => driver.id === Number(editForm.driver_id)) || null,
   set: (driver) => {
@@ -79,8 +84,10 @@ const tableData = computed(() => props.records.map((record) => ({
     ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
     : "—",
   buttonActions: [
-    (props.isAdmin && record.trip_status !== "Finalizada") || (props.isDriver && record.trip_status === "Em Andamento")
-      || (props.isDriver && record.trip_status === "Criada" && Number(record.driver_id) === Number(props.currentDriverId))
+    (props.isAdmin && record.trip_status !== "Finalizada")
+      || (props.isDriver && record.trip_status === "Em Andamento")
+      || (props.isDriver && record.trip_status === "Criada"
+        && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId)))
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
     record.trip_status !== "Finalizada"
@@ -96,7 +103,8 @@ watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: t
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
 const startEdit = (record) => {
   const canDriverUpdate = record.trip_status === "Em Andamento"
-    || (record.trip_status === "Criada" && Number(record.driver_id) === Number(props.currentDriverId));
+    || (record.trip_status === "Criada"
+      && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId)));
   if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverUpdate)) {
     return;
   }
@@ -105,7 +113,7 @@ const startEdit = (record) => {
   if (props.isDriver) {
     editForm.defaults({
       trip_status: record.trip_status === "Criada" ? "Em Andamento" : "Aguardando Analise",
-      driver_id: props.currentDriverId,
+      driver_id: record.driver_id,
     }).reset();
     return;
   }
@@ -219,50 +227,50 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
 
 <template>
   <BaseLayout title="Relatório Goali">
-    <main class="w-full mx-auto pt-1">
-      <section class="rounded-xl bg-white p-4 shadow-lg dark:bg-gray-900 sm:p-6">
-        <div class="grid grid-cols-12 gap-4">
-          <header class="col-span-12 grid grid-cols-12 gap-4 border-b border-gray-200 pb-5 dark:border-gray-700">
+    <main class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2">
+      <section class="rounded-xl bg-white p-2 shadow-lg dark:bg-gray-900 sm:p-4 lg:p-6">
+        <div class="grid min-w-0 grid-cols-12 gap-3 sm:gap-4">
+          <header class="col-span-12 grid grid-cols-12 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:gap-4 sm:pb-5">
             <div class="col-span-12 text-center">
               <p class="text-xs font-bold uppercase text-teal-700">GT Dionínio Barbosa</p>
-              <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Relatório de deslocamentos</h1>
+              <h1 class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Relatório de deslocamentos</h1>
               <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
             </div>
-            <div class="col-span-12 flex flex-wrap justify-end gap-2">
-          <a :href="route('goali.form')" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Novo registro</a>
-          <a :href="reportUrl" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Exportar Excel</a>
+            <div class="col-span-12 flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <a :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Novo registro</a>
+          <a :href="reportUrl" class="inline-flex min-h-11 items-center justify-center rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Exportar Excel</a>
         </div>
       </header>
 
-      <form class="col-span-12 grid grid-cols-1 gap-3 border-b border-gray-200 pb-5 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
         <label class="filter-label">Data inicial<TextInput v-model="filters.startDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Data final<TextInput v-model="filters.endDate" type="date" class="mt-1 block w-full" /></label>
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" /></label>
-        <button class="self-end rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700" type="submit">Filtrar</button>
+        <button class="min-h-11 self-stretch rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 sm:self-end" type="submit">Filtrar</button>
       </form>
 
-      <section class="col-span-12 grid grid-cols-1 gap-4 border-b border-gray-200 pb-5 dark:border-gray-700 sm:grid-cols-3">
-        <div class="border-l-4 border-teal-600 px-4 py-2"><p class="text-sm text-gray-500">Registros no período</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ props.summary.count }}</p></div>
-        <div class="border-l-4 border-amber-500 px-4 py-2"><p class="text-sm text-gray-500">Valor total</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.amount) }}</p></div>
-        <div class="border-l-4 border-green-600 px-4 py-2"><p class="text-sm text-gray-500">Valor a receber</p><p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ money(props.summary.receivable) }}</p></div>
+      <section class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:grid-cols-3 sm:gap-4 sm:py-4">
+        <div class="rounded-md border-l-4 border-teal-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Registros no período</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ props.summary.count }}</p></div>
+        <div class="rounded-md border-l-4 border-amber-500 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor total</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.amount) }}</p></div>
+        <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor a receber</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
       <Datatable class="col-span-12 w-full min-w-0" :thead="tableHeaders" :tbody="tableData" :id="tableId" :order-by="[0, sortOrder]" :row-class="tripRowClass" />
         </div>
       </section>
 
-      <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" data-select2-dropdown-parent @click="handleEditModalClick">
-        <form class="my-6 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900" @click.stop @submit.prevent="saveEdit">
+      <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4" data-select2-dropdown-parent @click="handleEditModalClick">
+        <form class="my-2 max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900 sm:my-6 sm:max-h-[90vh] sm:p-6" @click.stop @submit.prevent="saveEdit">
           <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ props.isDriver ? "Atualizar status da corrida" : "Editar deslocamento" }}</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
           <div v-if="props.isDriver" class="grid grid-cols-1 gap-4">
             <div class="filter-label">Motorista
-              <Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id"
-                placeholder="Seu nome" :allow-empty="false" :select2="true" disabled />
+              <Select v-model="selectedEditDriver" :options="editDriverOptions" label="name" track-by="id"
+                placeholder="Selecione seu nome para aceitar" :allow-empty="false" :select2="true" required />
               <InputError :message="editForm.errors.driver_id" />
               <span v-if="editingRecord && !editingRecord.driver_id" class="font-normal text-gray-500">
-                Ao confirmar, esta corrida será atribuída a você.
+                Selecione seu nome para atribuir esta corrida a você. Ela passará para Em Andamento ao salvar.
               </span>
             </div>
             <div class="filter-label">Próximo status<Select :key="`driver-trip-status-${editingRecord?.id}-${editingRecord?.trip_status}`" v-model="editForm.trip_status" :options="editTripStatusOptions" placeholder="Selecione o status" :allow-empty="false" :select2="true" required /><InputError :message="editForm.errors.trip_status" /></div>
@@ -292,20 +300,23 @@ onBeforeUnmount(() => document.removeEventListener("click", handleTableAction));
 .filter-label { display: flex; flex-direction: column; gap: .4rem; color: #4b5563; font-size: .8rem; font-weight: 600; }
 :deep(#goali-trips-datatable .datatable-actions) {
   display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  min-width: 13rem;
+  flex-wrap: nowrap;
+  gap: .375rem;
+  width: max-content;
+  min-width: max-content;
 }
 :deep(#goali-trips-datatable .goali-action) {
   display: inline-flex;
   min-height: 2.75rem;
-  min-width: 5.75rem;
+  min-width: 4.75rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
   border-radius: .375rem;
-  padding: .5rem .875rem;
-  font-size: .875rem;
+  padding: .5rem .625rem;
+  font-size: .8125rem;
   font-weight: 600;
   line-height: 1.25rem;
   color: white;

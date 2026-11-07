@@ -553,7 +553,7 @@ class GoaliTripTest extends TestCase
 
         $trip = GoaliTrip::where('passenger', 'Corrida sem motorista')->firstOrFail();
         $this->assertNull($trip->driver_id);
-        $this->assertSame('Em Andamento', $trip->trip_status);
+        $this->assertSame('Criada', $trip->trip_status);
 
         $admin->teams()->updateExistingPivot($team->id, ['role' => 'Motorista']);
 
@@ -564,11 +564,17 @@ class GoaliTripTest extends TestCase
                 ->where('records.0.id', $trip->id));
 
         $this->put(route('goali.update', $trip), [
-            'trip_status' => 'Aguardando Analise',
+            'trip_status' => 'Em Andamento',
             'driver_id' => $admin->id,
         ])->assertRedirect();
 
         $this->assertSame($admin->id, $trip->fresh()->driver_id);
+        $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
+
+        $this->put(route('goali.update', $trip), [
+            'trip_status' => 'Aguardando Analise',
+            'driver_id' => $admin->id,
+        ])->assertRedirect();
         $this->assertSame('Aguardando Analise', $trip->fresh()->trip_status);
 
     }

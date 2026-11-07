@@ -45,8 +45,7 @@ const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
 const initialTripStatus = computed(() => (
   props.isAdmin
-    && form.driver_id !== null
-    && Number(form.driver_id) !== Number(props.currentUserId)
+    && (!form.driver_id || Number(form.driver_id) !== Number(props.currentUserId))
     ? "Criada"
     : props.initialTripStatus
 ));
@@ -108,17 +107,17 @@ const submit = () => {
 
 <template>
   <BaseLayout title="CORRIDAS">
-    <div class="w-full mx-auto pt-2">
-      <div class="rounded-xl bg-white p-4 shadow-lg dark:bg-gray-900 sm:p-6">
-        <header class="mb-6 border-b border-gray-200 pb-5 text-center dark:border-gray-700">
-          <h1 class="text-2xl font-bold uppercase text-gray-900 dark:text-white">CORRIDAS</h1>
+    <div class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2 sm:pt-2">
+      <div class="rounded-xl bg-white p-3 shadow-lg dark:bg-gray-900 sm:p-6">
+        <header class="mb-4 border-b border-gray-200 pb-4 text-center dark:border-gray-700 sm:mb-6 sm:pb-5">
+          <h1 class="text-xl font-bold uppercase text-gray-900 dark:text-white sm:text-2xl">CORRIDAS</h1>
           <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
           <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
             Registro de deslocamento do {{ props.responsibleUser || "usuário" }}
           </p>
         </header>
 
-        <form class="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2" @submit.prevent="submit">
+        <form class="grid min-w-0 grid-cols-1 gap-x-4 gap-y-4 sm:gap-x-6 sm:gap-y-5 md:grid-cols-2" @submit.prevent="submit">
 
           <div>
             <label for="responsible"
@@ -129,7 +128,7 @@ const submit = () => {
             <InputError :message="form.errors.responsible" class="mt-2" />
           </div>
 
-          <div class="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-2">
+          <div class="grid grid-cols-2 gap-3 md:col-span-2 md:gap-4">
             <div>
               <label for="travel_start_date"
                 class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data inicial
@@ -227,12 +226,12 @@ const submit = () => {
           </div>
 
           <div
-            class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 md:col-span-2">
-            <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+            class="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-end sm:gap-3 md:col-span-2">
+            <PrimaryButton class="min-h-11 w-full justify-center sm:w-auto" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
               {{ form.processing ? "Enviando..." : "Enviar registro" }}
             </PrimaryButton>
             <button type="reset"
-              class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+              class="min-h-11 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800 sm:w-auto"
               @click="form.reset()">
               Limpar formulário
             </button>

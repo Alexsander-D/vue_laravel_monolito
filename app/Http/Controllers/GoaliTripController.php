@@ -63,10 +63,10 @@ class GoaliTripController extends Controller
         $validated = $this->validatedTrip($request, $user);
         $validated['user_id'] = $user->getAuthIdentifier();
         $validated['responsible'] = $user->name;
-        $assignedToAnotherDriver = $this->isAdmin($user)
-            && !empty($validated['driver_id'])
-            && (int) $validated['driver_id'] !== (int) $user->getAuthIdentifier();
-        $validated['trip_status'] = $assignedToAnotherDriver
+        $adminCreatedForAnotherOrUnassigned = $this->isAdmin($user)
+            && (empty($validated['driver_id'])
+                || (int) $validated['driver_id'] !== (int) $user->getAuthIdentifier());
+        $validated['trip_status'] = $adminCreatedForAnotherOrUnassigned
             ? 'Criada'
             : (($this->isAdmin($user) || $this->isDriver($user)) ? 'Em Andamento' : 'Criada');
 

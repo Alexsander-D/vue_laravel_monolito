@@ -1,6 +1,6 @@
 <template>
   <!-- Tabela -->
-  <div class="w-full min-w-0 bg-inherit rounded-xl border dark:border-gray-700 shadow p-4 mt-8">
+  <div class="w-full min-w-0 bg-inherit rounded-xl border dark:border-gray-700 shadow p-2 mt-4 sm:p-4 sm:mt-8">
     <div class="flex flex-col">
       <div class="overflow-x-auto min-h-auto">
         <div class="min-w-full inline-block align-middle">
