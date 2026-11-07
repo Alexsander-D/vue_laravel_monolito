@@ -28,7 +28,15 @@ const normalizedFilters = (value) => ({
       ? [value.tripStatus]
       : [],
 });
+const getFilterKey = (value) => JSON.stringify([
+  value.startDate || "",
+  value.endDate || "",
+  value.status || "",
+  [...(Array.isArray(value.tripStatus) ? value.tripStatus : [])].sort(),
+  value.solicitation || "",
+]);
 const filters = useForm(normalizedFilters(props.filters));
+let lastAppliedFilterKey = getFilterKey(filters);
 const statusOptions = ["ENTRADA", "SAÍDA"];
 const editingId = ref(null);
 const editForm = useForm({});
@@ -160,9 +168,22 @@ const mobilePageEnd = computed(() => Math.min(mobilePage.value * mobilePageSize,
 watch(() => props.filters, (value) => {
   const normalized = normalizedFilters(value);
   filters.defaults(normalized).reset();
+  lastAppliedFilterKey = getFilterKey(normalized);
 }, { deep: true });
 watch([mobileSearch, () => props.records], () => { mobilePage.value = 1; });
-const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
+const applyFilters = () => {
+  const filterKey = getFilterKey(filters);
+  if (filterKey === lastAppliedFilterKey) {
+    return;
+  }
+
+  lastAppliedFilterKey = filterKey;
+  filters.get(route("goali.index"), {
+    preserveState: true,
+    preserveScroll: true,
+    onError: () => { lastAppliedFilterKey = getFilterKey(props.filters); },
+  });
+};
 let filterTimeout;
 watch(
   () => [

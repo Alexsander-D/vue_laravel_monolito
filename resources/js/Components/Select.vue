@@ -89,6 +89,7 @@ const attrs = useAttrs();
 const localValue = ref(props.modelValue);
 const selectElement = ref(null);
 let select2Instance = null;
+let isSyncingSelect2Value = false;
 
 const optionValue = (option) => (
   option && typeof option === "object"
@@ -119,7 +120,12 @@ function syncSelect2Value(value) {
   const selectedValue = props.multiple
     ? (Array.isArray(value) ? value : []).map((item) => String(item && typeof item === "object" ? optionValue(item) : item))
     : value && typeof value === "object" ? optionValue(value) : value;
-  $(selectElement.value).val(props.multiple ? selectedValue : selectedValue == null ? "" : String(selectedValue)).trigger("change.select2");
+  isSyncingSelect2Value = true;
+  try {
+    $(selectElement.value).val(props.multiple ? selectedValue : selectedValue == null ? "" : String(selectedValue)).trigger("change.select2");
+  } finally {
+    isSyncingSelect2Value = false;
+  }
 }
 
 function initializeSelect2() {
@@ -142,6 +148,10 @@ function initializeSelect2() {
     ...(dropdownParent.length ? { dropdownParent } : modal.length ? { dropdownParent: modal } : {}),
   });
   element.on("change", () => {
+    if (isSyncingSelect2Value) {
+      return;
+    }
+
     const selectedValue = element.val();
     if (props.multiple) {
       const selectedOptions = (Array.isArray(selectedValue) ? selectedValue : [])
