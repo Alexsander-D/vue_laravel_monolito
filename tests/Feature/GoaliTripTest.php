@@ -29,6 +29,7 @@ class GoaliTripTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         $driver->teams()->attach($team->id, ['role' => 'Motorista']);
+        $driver->forceFill(['current_team_id' => $team->id])->save();
         $outsider = User::create([
             'name' => 'Espectador Teste',
             'email' => 'spectator@example.com',
@@ -67,7 +68,7 @@ class GoaliTripTest extends TestCase
             'travel_date' => '2026-10-31',
             'travel_time' => '23:45',
             'status' => 'ENTRADA',
-            'trip_status' => 'Em Andamento',
+            'trip_status' => 'Criada',
             'driver_id' => $driver->id,
             'solicitation' => 'IMB',
             'origin' => 'Origem informada',
@@ -96,7 +97,7 @@ class GoaliTripTest extends TestCase
             'travel_date' => '2026-11-01',
             'travel_time' => '08:30',
             'status' => 'SAÍDA',
-            'trip_status' => 'Em Andamento',
+            'trip_status' => 'Criada',
             'driver_id' => $driver->id,
             'origin' => 'Origem atualizada',
             'passenger' => 'Passageiro atualizado',
@@ -349,6 +350,16 @@ class GoaliTripTest extends TestCase
             'driver_id' => $driver->id,
         ])->assertForbidden();
         $this->assertSame('Criada', $createdTrip->fresh()->trip_status);
+        $this->put(route('goali.update', $createdTrip), [
+            'trip_status' => 'Em Andamento',
+            'driver_id' => $driver->id,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('Em Andamento', $createdTrip->fresh()->trip_status);
+        $this->put(route('goali.update', $createdTrip), [
+            'trip_status' => 'Aguardando Analise',
+            'driver_id' => $driver->id,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('Aguardando Analise', $createdTrip->fresh()->trip_status);
 
         $this->put(route('goali.update', $runningTrip), [
             'trip_status' => 'Finalizada',

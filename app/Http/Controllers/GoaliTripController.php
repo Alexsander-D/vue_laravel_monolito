@@ -35,6 +35,7 @@ class GoaliTripController extends Controller
             'initialTripStatus' => $user && ($this->isAdmin($user) || $this->isDriver($user))
                 ? 'Em Andamento'
                 : 'Criada',
+            'currentUserId' => $user?->id,
             'drivers' => $user ? $this->driversForCurrentTeam($user) : [],
             'initialDriverId' => $user && collect($this->driversForCurrentTeam($user))->contains('id', $user->id)
                 ? $user->id
@@ -62,9 +63,12 @@ class GoaliTripController extends Controller
         $validated = $this->validatedTrip($request, $user);
         $validated['user_id'] = $user->getAuthIdentifier();
         $validated['responsible'] = $user->name;
-        $validated['trip_status'] = ($this->isAdmin($user) || $this->isDriver($user))
-            ? 'Em Andamento'
-            : 'Criada';
+        $assignedToAnotherDriver = $this->isAdmin($user)
+            && !empty($validated['driver_id'])
+            && (int) $validated['driver_id'] !== (int) $user->getAuthIdentifier();
+        $validated['trip_status'] = $assignedToAnotherDriver
+            ? 'Criada'
+            : (($this->isAdmin($user) || $this->isDriver($user)) ? 'Em Andamento' : 'Criada');
 
         DB::transaction(function () use ($validated, $rangeEndDate) {
             $date = CarbonImmutable::parse($validated['travel_date']);
@@ -146,7 +150,7 @@ class GoaliTripController extends Controller
 
         if ($isDriver) {
             $validated = $request->validate([
-                'trip_status' => ['required', Rule::in(['Aguardando Analise'])],
+                'trip_status' => ['required', Rule::in(['Em Andamento', 'Aguardando Analise'])],
                 'driver_id' => ['required', 'integer', Rule::in([$user->id])],
             ]);
 
@@ -155,7 +159,23 @@ class GoaliTripController extends Controller
                     ->lockForUpdate()
                     ->findOrFail($trip->getKey());
 
-                abort_unless($lockedTrip->trip_status === 'Em Andamento', 403);
+                if ($lockedTrip->trip_status === 'Criada') {
+                    abort_unless(
+                        $lockedTrip->driver_id !== null
+                            && (int) $lockedTrip->driver_id === (int) $user->id
+                            && $validated['trip_status'] === 'Em Andamento',
+                        403
+                    );
+
+                    $lockedTrip->update(['trip_status' => 'Em Andamento']);
+                    return;
+                }
+
+                abort_unless(
+                    $lockedTrip->trip_status === 'Em Andamento'
+                        && $validated['trip_status'] === 'Aguardando Analise',
+                    403
+                );
                 abort_unless(
                     $lockedTrip->driver_id === null || (int) $lockedTrip->driver_id === (int) $user->id,
                     403
@@ -163,11 +183,16 @@ class GoaliTripController extends Controller
 
                 $lockedTrip->update([
                     'driver_id' => $user->id,
-                    'trip_status' => $validated['trip_status'],
+                    'trip_status' => 'Aguardando Analise',
                 ]);
             });
 
-            return back()->with('success', 'Corrida confirmada e enviada para análise.');
+            return back()->with(
+                'success',
+                $validated['trip_status'] === 'Em Andamento'
+                    ? 'Corrida aceita com sucesso.'
+                    : 'Corrida confirmada e enviada para análise.'
+            );
         }
 
         $trip = $this->queryForUser($user)->findOrFail($trip->getKey());

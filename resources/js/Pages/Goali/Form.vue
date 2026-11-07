@@ -12,6 +12,7 @@ const props = defineProps({
   solicitations: { type: Array, default: () => [] },
   responsibleUser: { type: String, default: "" },
   initialTripStatus: { type: String, default: "Criada" },
+  currentUserId: { type: Number, default: null },
   drivers: { type: Array, default: () => [] },
   initialDriverId: { type: Number, default: null },
   isAdmin: { type: Boolean, default: false },
@@ -42,6 +43,13 @@ const form = useForm({
 });
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
+const initialTripStatus = computed(() => (
+  props.isAdmin
+  && form.driver_id !== null
+  && Number(form.driver_id) !== Number(props.currentUserId)
+    ? "Criada"
+    : props.initialTripStatus
+));
 const selectedDriver = computed({
   get: () => props.drivers.find((driver) => driver.id === Number(form.driver_id)) || null,
   set: (driver) => {
@@ -160,7 +168,7 @@ const submit = () => {
           <div>
             <label for="initial_trip_status"
               class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Status inicial</label>
-            <TextInput id="initial_trip_status" :model-value="props.initialTripStatus" type="text"
+            <TextInput id="initial_trip_status" :model-value="initialTripStatus" type="text"
               class="mt-1 block w-full" readonly />
           </div>
           <div>

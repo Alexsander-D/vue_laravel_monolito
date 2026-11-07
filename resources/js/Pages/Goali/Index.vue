@@ -36,7 +36,13 @@ const editTripStatusOptions = computed(() => {
   }
 
   if (props.isDriver) {
-    return editingRecord.value.trip_status === "Em Andamento" ? ["Aguardando Analise"] : [];
+    if (editingRecord.value.trip_status === "Criada") {
+      return ["Em Andamento"];
+    }
+
+    return editingRecord.value.trip_status === "Em Andamento"
+      ? ["Aguardando Analise"]
+      : [];
   }
 
   const nextStatus = nextTripStatus(editingRecord.value.trip_status);
@@ -73,6 +79,7 @@ const tableData = computed(() => props.records.map((record) => ({
   amount: money(record.amount),
   buttonActions: [
     (props.isAdmin && record.trip_status !== "Finalizada") || (props.isDriver && record.trip_status === "Em Andamento")
+      || (props.isDriver && record.trip_status === "Criada" && Number(record.driver_id) === Number(props.currentDriverId))
       ? `<button type="button" class="mr-3 font-semibold text-teal-700 hover:underline" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
     record.trip_status === "Aguardando Analise" && (props.isAdmin || (props.isDriver && Number(record.driver_id) === Number(props.currentDriverId)))
@@ -87,14 +94,16 @@ const tableData = computed(() => props.records.map((record) => ({
 watch(() => props.filters, (value) => filters.defaults(value).reset(), { deep: true });
 const applyFilters = () => filters.get(route("goali.index"), { preserveState: true, preserveScroll: true });
 const startEdit = (record) => {
-  if (record.trip_status === "Finalizada" || (props.isDriver && record.trip_status !== "Em Andamento")) {
+  const canDriverUpdate = record.trip_status === "Em Andamento"
+    || (record.trip_status === "Criada" && Number(record.driver_id) === Number(props.currentDriverId));
+  if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverUpdate)) {
     return;
   }
 
   editingId.value = record.id;
   if (props.isDriver) {
     editForm.defaults({
-      trip_status: "Aguardando Analise",
+      trip_status: record.trip_status === "Criada" ? "Em Andamento" : "Aguardando Analise",
       driver_id: props.currentDriverId,
     }).reset();
     return;
