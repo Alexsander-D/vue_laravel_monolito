@@ -2,7 +2,6 @@
 import BaseLayout from "@/Layouts/BaseLayout.vue";
 import { ref, computed } from "vue";
 import { router, useForm, usePage } from "@inertiajs/vue3";
-import { Inertia } from "@inertiajs/inertia";
 import FormSection from "@/Components/FormSection.vue";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
@@ -42,6 +41,13 @@ const editForm = useForm({
 
 const stockRows = computed(() => props.stocks || []);
 const logRows = computed(() => props.movements || []);
+const movementTotal = (movement) => Number(movement.quantity || 0) * Number(movement.price || 0);
+const totalMovementQuantity = computed(() =>
+    filteredLogRows.value.reduce((total, movement) => total + Number(movement.quantity || 0), 0)
+);
+const totalMovementValue = computed(() =>
+    filteredLogRows.value.reduce((total, movement) => total + Math.round(movementTotal(movement) * 100), 0) / 100
+);
 const formatDateInput = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -107,7 +113,7 @@ const submitStock = () => {
         preserveScroll: true,
         onSuccess: () => {
             form.reset("product_name", "quantity", "cost_price", "price");
-            Inertia.reload({ only: ["stocks", "movements"] });
+            router.reload({ only: ["stocks", "movements"] });
             Swal.fire({
                 icon: "success",
                 title: "Produto adicionado!",
@@ -159,7 +165,7 @@ const confirmDeleteStock = (stock) => {
 };
 
 const deleteStock = (stock) => {
-    Inertia.delete(route("stock.destroy", { stock: stock.id }), {
+    router.delete(route("stock.destroy", { stock: stock.id }), {
         preserveScroll: true,
         onSuccess: () => {
             Swal.fire({
@@ -167,6 +173,13 @@ const deleteStock = (stock) => {
                 title: "Produto excluído!",
                 timer: 1800,
                 showConfirmButton: false,
+            });
+        },
+        onError: () => {
+            Swal.fire({
+                icon: "error",
+                title: "Erro ao excluir o produto.",
+                text: "Não foi possível concluir a exclusão. Tente novamente.",
             });
         },
     });
@@ -192,7 +205,7 @@ const submitEditStock = () => {
                     showConfirmButton: false,
                 });
             }
-            Inertia.reload({ only: ["stocks", "movements"] });
+            router.reload({ only: ["stocks", "movements"] });
         },
     });
 };
@@ -456,7 +469,10 @@ const formatDateTime = (value) => {
                                             Quantidade</th>
                                         <th
                                             class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                                            Preço</th>
+                                            Preço unitário</th>
+                                        <th
+                                            class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                                            Total</th>
                                         <th
                                             class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                                             Data</th>
@@ -473,16 +489,33 @@ const formatDateTime = (value) => {
                                             }}</td>
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
                                             formatCurrency(movement.price) }}</td>
+                                        <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">
+                                            {{ movement.quantity }} x {{ formatCurrency(movement.price) }} =
+                                            {{ formatCurrency(movementTotal(movement)) }}
+                                        </td>
                                         <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-200">{{
                                             formatDateTime(movement.created_at) }}</td>
                                     </tr>
                                     <tr v-if="filteredLogRows.length === 0">
-                                        <td colspan="5"
+                                        <td colspan="6"
                                             class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                                             Nenhum
                                             movimento registrado.</td>
                                     </tr>
                                 </tbody>
+                                <tfoot v-if="filteredLogRows.length > 0" class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th colspan="2"
+                                            class="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                            Total</th>
+                                        <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                            {{ totalMovementQuantity }}</th>
+                                        <th></th>
+                                        <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                            {{ formatCurrency(totalMovementValue) }}</th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </section>
