@@ -49,7 +49,7 @@ Route::get('/', function () {
 })->name('welcome');
 
 Route::get('/download/android', function () {
-    $apkPath = base_path('android/app/build/outputs/apk/debug/app-debug.apk');
+    $apkPath = public_path('downloads/app-debug.apk');
 
     abort_unless(is_file($apkPath), 404, 'O aplicativo Android não está disponível para download.');
 
