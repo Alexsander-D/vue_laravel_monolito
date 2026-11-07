@@ -159,7 +159,6 @@ class GoaliTripController extends Controller
         if ($isDriver) {
             $validated = $request->validate([
                 'trip_status' => ['required', Rule::in(['Em Andamento', 'Aguardando Analise'])],
-                'driver_id' => ['required', 'integer', Rule::in([$user->id])],
             ]);
 
             DB::transaction(function () use ($user, $trip, $validated) {

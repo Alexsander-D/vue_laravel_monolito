@@ -426,7 +426,11 @@ class GoaliTripTest extends TestCase
 
         $this->actingAs($driver, 'sanctum')
             ->put(route('goali.update', $createdTrip), ['trip_status' => 'Finalizada'])
-            ->assertSessionHasErrors(['trip_status', 'driver_id']);
+            ->assertSessionHasErrors('trip_status');
+        $this->put(route('goali.update', $createdTrip), [
+            'trip_status' => 'Aguardando Analise',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('Aguardando Analise', $createdTrip->fresh()->trip_status);
 
         $runningTrip = GoaliTrip::create([
             'user_id' => $driver->id,
@@ -456,7 +460,6 @@ class GoaliTripTest extends TestCase
 
         $this->put(route('goali.update', $runningTrip), [
             'trip_status' => 'Aguardando Analise',
-            'driver_id' => $driver->id,
         ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
@@ -464,7 +467,7 @@ class GoaliTripTest extends TestCase
 
         $createdTrip = GoaliTrip::create([
             'user_id' => $driver->id,
-            'driver_id' => $driver->id,
+            'driver_id' => null,
             'travel_date' => now()->toDateString(),
             'travel_time' => '13:00',
             'status' => 'ENTRADA',
@@ -478,23 +481,20 @@ class GoaliTripTest extends TestCase
         ]);
         $this->put(route('goali.update', $createdTrip), [
             'trip_status' => 'Aguardando Analise',
-            'driver_id' => $driver->id,
         ])->assertForbidden();
         $this->assertSame('Criada', $createdTrip->fresh()->trip_status);
         $this->put(route('goali.update', $createdTrip), [
             'trip_status' => 'Em Andamento',
-            'driver_id' => $driver->id,
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Em Andamento', $createdTrip->fresh()->trip_status);
+        $this->assertSame($driver->id, $createdTrip->fresh()->driver_id);
         $this->put(route('goali.update', $createdTrip), [
             'trip_status' => 'Aguardando Analise',
-            'driver_id' => $driver->id,
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Aguardando Analise', $createdTrip->fresh()->trip_status);
 
         $this->put(route('goali.update', $runningTrip), [
             'trip_status' => 'Finalizada',
-            'driver_id' => $driver->id,
         ])->assertSessionHasErrors('trip_status');
         $this->delete(route('goali.destroy', $runningTrip))
             ->assertForbidden();
