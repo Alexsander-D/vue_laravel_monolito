@@ -1,11 +1,34 @@
 <script setup>
-import { onMounted, onUnmounted, ref, watch } from "vue";
-import { Link, router } from "@inertiajs/vue3";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import Dropdown from "@/Components/Dropdown.vue";
 
+const page = usePage();
 const isDarkMode = ref(false);
 const isMenuOpen = ref(true);
 const isButtonHidden = ref(true);
+const currentTeamName = computed(
+  () => page.props.auth?.user?.current_team?.name?.trim() ?? ""
+);
+const normalizedTeamName = computed(() => currentTeamName.value.toUpperCase());
+const logoImage = computed(() => {
+  if (normalizedTeamName.value === "BARBEARIA CARIOCA 2") {
+    return "/images/logomarca2.png";
+  }
+
+  return null;
+});
+const logoText = computed(() => {
+  if (!page.props.auth?.user) {
+    return "";
+  }
+
+  if (normalizedTeamName.value === "GOALI TRANSPORTES") {
+    return "GOALI";
+  }
+
+  return currentTeamName.value;
+});
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value;
@@ -88,13 +111,12 @@ onUnmounted(() => {
       class="absolute left-1/2 flex -translate-x-1/2 items-center justify-start lg:static lg:translate-x-0">
       <Link
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
-        :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')" aria-label="barbearia">
-        <span
-          v-if="$page.props.auth?.user?.current_team?.name?.trim()?.toLocaleUpperCase() === 'GOALI TRANSPORTES'"
-          class="text-lg font-semibold stringColor sm:text-xl">
-          GOALI
+        :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')"
+        :aria-label="logoText || currentTeamName || 'Logomarca'">
+        <span v-if="logoText" class="text-lg font-semibold stringColor sm:text-xl">
+          {{ logoText }}
         </span>
-        <img v-else src="/images/logomarca.png" alt="barbearia" class="h-12 w-24 sm:h-16 sm:w-32" />
+        <img v-else :src="logoImage" :alt="currentTeamName || 'Logomarca'" class="h-12 w-24 sm:h-16 sm:w-32" />
       </Link>
     </div>
     <!-- FIM LOGOMARCA -->
