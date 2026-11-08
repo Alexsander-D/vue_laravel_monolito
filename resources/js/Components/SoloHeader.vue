@@ -126,7 +126,8 @@ onUnmounted(() => {
       hidden: !isMenuOpen,
     }" class="w-full basis-full lg:flex lg:w-auto lg:basis-auto lg:flex-1 lg:items-center lg:justify-center lg:space-x-4 lg:border-0 lg:p-2">
       <div class="flex w-full flex-col items-stretch lg:ml-auto lg:w-auto lg:flex-row lg:items-center">
-        <div v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')" :class="{
+        <template v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')">
+        <div :class="{
           hidden: !isMenuOpen,
           block: isMenuOpen,
         }" class="ms-3 relative py-1">
@@ -146,14 +147,6 @@ onUnmounted(() => {
 
             <template #content>
               <div class="w-60">
-                <Link class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('goali.form')">
-                  Registrar deslocamento
-                </Link>
-                <Link class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('goali.index')">
-                  Relatório de deslocamentos
-                </Link>
                 <Link
                   v-if="$page.props.auth.user.current_team && (Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
                   class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
@@ -193,6 +186,21 @@ onUnmounted(() => {
             </template>
           </Dropdown>
         </div>
+        <div :class="{ hidden: !isMenuOpen, block: isMenuOpen }" class="ms-3 relative py-1">
+          <Link
+            class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium stringColor focus:outline-none"
+            :href="route('goali.form')">
+            Registrar deslocamento
+          </Link>
+        </div>
+        <div :class="{ hidden: !isMenuOpen, block: isMenuOpen }" class="ms-3 relative py-1">
+          <Link
+            class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium stringColor focus:outline-none"
+            :href="route('goali.index')">
+            Relatório de deslocamentos
+          </Link>
+        </div>
+        </template>
 
         <template v-else>
         <!-- CADASTROS DROPDOWN -->

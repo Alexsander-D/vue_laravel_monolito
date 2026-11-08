@@ -303,10 +303,34 @@ class GoaliTripController extends Controller
 
     private function validatedFilters(Request $request): array
     {
+        return [
+            ...$this->validatedDateFilters($request),
+            ...$this->validatedReportFilters($request, $request->user()),
+        ];
+    }
+
+    private function validatedDateFilters(Request $request): array
+    {
         $dateFilterProvided = $request->query->has('startDate') || $request->query->has('endDate');
         $filters = $request->validate([
             'startDate' => ['nullable', 'date'],
             'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
+        ]);
+
+        return array_merge(
+            $dateFilterProvided
+                ? ['startDate' => '', 'endDate' => '']
+                : [
+                    'startDate' => now()->toDateString(),
+                    'endDate' => now()->toDateString(),
+                ],
+            $filters
+        );
+    }
+
+    private function validatedReportFilters(Request $request, User $user): array
+    {
+        $rules = [
             'status' => [
                 'nullable',
                 function ($attribute, $value, $fail) {
@@ -356,7 +380,17 @@ class GoaliTripController extends Controller
                 },
             ],
             'sortOrder' => ['nullable', 'in:asc,desc'],
-        ]);
+        ];
+
+        if ($this->isAdmin($user)) {
+            $rules['driverId'] = [
+                'nullable',
+                'integer',
+                Rule::in(array_column($this->driversForCurrentTeam($user), 'id')),
+            ];
+        }
+
+        $filters = $request->validate($rules);
         foreach (['status', 'tripStatus', 'solicitation'] as $filterName) {
             if (array_key_exists($filterName, $filters)) {
                 $values = is_array($filters[$filterName]) ? $filters[$filterName] : [$filters[$filterName]];
@@ -364,18 +398,11 @@ class GoaliTripController extends Controller
             }
         }
 
-        $dateDefaults = $dateFilterProvided
-            ? ['startDate' => '', 'endDate' => '']
-            : [
-                'startDate' => now()->toDateString(),
-                'endDate' => now()->toDateString(),
-            ];
-
         return array_merge([
-            ...$dateDefaults,
             'status' => [],
             'tripStatus' => '',
             'solicitation' => [],
+            'driverId' => '',
             'sortOrder' => 'desc',
         ], $filters);
     }
@@ -411,6 +438,10 @@ class GoaliTripController extends Controller
                     $query->whereIn('solicitation', $solicitations);
                 }
             })
+            ->when(
+                $this->isAdmin($user) ? ($filters['driverId'] ?? null) : null,
+                fn ($query, $driverId) => $query->where('driver_id', $driverId)
+            )
             ->with('driver:id,name')
             ->orderByRaw("CASE trip_status WHEN 'Criada' THEN 0 WHEN 'Em Andamento' THEN 1 WHEN 'Aguardando Analise' THEN 2 WHEN 'Finalizada' THEN 3 ELSE 4 END")
             ->orderBy('travel_date', $sortOrder)

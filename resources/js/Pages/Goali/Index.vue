@@ -21,7 +21,7 @@ const props = defineProps({
 });
 
 const normalizedFilters = (value) => ({
-  ...value,
+  driverId: value.driverId || null,
   status: Array.isArray(value.status)
     ? value.status
     : value.status
@@ -37,22 +37,42 @@ const normalizedFilters = (value) => ({
     : value.solicitation
       ? [value.solicitation]
       : [],
+  sortOrder: value.sortOrder || "desc",
 });
 const getFilterKey = (value) => JSON.stringify([
   value.startDate || "",
   value.endDate || "",
+  value.driverId || "",
   [...(Array.isArray(value.status) ? value.status : [])].sort(),
   [...(Array.isArray(value.tripStatus) ? value.tripStatus : [])].sort(),
   [...(Array.isArray(value.solicitation) ? value.solicitation : [])].sort(),
 ]);
+const dateFilters = useForm({
+  startDate: props.filters.startDate || "",
+  endDate: props.filters.endDate || "",
+});
+const appliedDateFilters = ref({
+  startDate: props.filters.startDate || "",
+  endDate: props.filters.endDate || "",
+});
 const filters = useForm(normalizedFilters(props.filters));
-let lastAppliedFilterKey = getFilterKey(filters);
+const combinedFilterData = () => ({
+  ...appliedDateFilters.value,
+  ...filters.data(),
+});
+let lastAppliedFilterKey = getFilterKey(combinedFilterData());
 const statusOptions = ["ENTRADA", "SAÍDA"];
 const editingId = ref(null);
 const editForm = useForm({});
-const reportUrl = computed(() => route("goali.export", filters.data()));
+const reportUrl = computed(() => route("goali.export", combinedFilterData()));
 const sortOrder = computed(() => filters.sortOrder || "desc");
 const editingRecord = computed(() => props.records.find((record) => String(record.id) === String(editingId.value)) || null);
+const selectedFilterDriver = computed({
+  get: () => props.drivers.find((driver) => driver.id === Number(filters.driverId)) || null,
+  set: (driver) => {
+    filters.driverId = driver?.id ?? null;
+  },
+});
 const editTripStatusOptions = computed(() => {
   if (!editingRecord.value) {
     return [];
@@ -172,39 +192,48 @@ const mobilePageEnd = computed(() => Math.min(mobilePage.value * mobilePageSize,
 
 watch(() => props.filters, (value) => {
   const normalized = normalizedFilters(value);
-  const responseFilterKey = getFilterKey(normalized);
-
-  if (
-    responseFilterKey !== lastAppliedFilterKey
-    || getFilterKey(filters) !== lastAppliedFilterKey
-  ) {
-    return;
-  }
-
+  const dateValues = {
+    startDate: value.startDate || "",
+    endDate: value.endDate || "",
+  };
+  dateFilters.defaults(dateValues).reset();
+  appliedDateFilters.value = dateValues;
   filters.defaults(normalized).reset();
+  lastAppliedFilterKey = getFilterKey({ ...dateValues, ...normalized });
 }, { deep: true });
 watch([mobileSearch, () => props.records], () => { mobilePage.value = 1; });
-const applyFilters = () => {
-  const filterKey = getFilterKey(filters);
+const applyFilters = (dateRange = appliedDateFilters.value) => {
+  const filterData = { ...dateRange, ...filters.data() };
+  const filterKey = getFilterKey(filterData);
   if (filterKey === lastAppliedFilterKey) {
     return;
   }
 
   lastAppliedFilterKey = filterKey;
-  filters.get(route("goali.index"), {
+  dateFilters.clearErrors();
+  filters.clearErrors();
+  router.get(route("goali.index"), filterData, {
     preserveState: true,
     preserveScroll: true,
-    onError: () => { lastAppliedFilterKey = getFilterKey(props.filters); },
+    onError: (errors) => {
+      dateFilters.setError(errors);
+      filters.setError(errors);
+      lastAppliedFilterKey = getFilterKey(props.filters);
+    },
   });
 };
+const applyDateFilters = () => {
+  appliedDateFilters.value = { ...dateFilters.data() };
+  applyFilters(appliedDateFilters.value);
+};
+const applyOtherFilters = () => applyFilters();
 let filterTimeout;
 watch(
   () => [
-    filters.startDate,
-    filters.endDate,
     JSON.stringify(filters.status),
     JSON.stringify(filters.tripStatus),
     JSON.stringify(filters.solicitation),
+    filters.driverId,
   ],
   () => {
     clearTimeout(filterTimeout);
@@ -215,6 +244,12 @@ const clearFilters = () => {
   filters.status = [];
   filters.tripStatus = [];
   filters.solicitation = [];
+  filters.driverId = null;
+};
+const clearDateFilters = () => {
+  dateFilters.startDate = "";
+  dateFilters.endDate = "";
+  applyDateFilters();
 };
 const startEdit = (record) => {
   if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverEditTrip(record))) {
@@ -302,7 +337,7 @@ const cancelTrip = async (record) => {
 };
 const nextTripStatus = (status) => ({
   Criada: "Em Andamento",
-  "Em Andamento": "Finalizada",
+  "Em Andamento": "Aguardando Analise",
   "Aguardando Analise": "Finalizada",
 }[status] || "");
 const tripRowClass = (row) => ({
@@ -351,13 +386,19 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyFilters">
-        <label class="filter-label">Data inicial<TextInput v-model="filters.startDate" type="date" class="mt-1 block w-full" /></label>
-        <label class="filter-label">Data final<TextInput v-model="filters.endDate" type="date" class="mt-1 block w-full" /></label>
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyOtherFilters">
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" multiple /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" multiple /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" multiple /></label>
+        <label v-if="props.isAdmin" class="filter-label">Motorista<Select v-model="selectedFilterDriver" :options="props.drivers" label="name" track-by="id" placeholder="Todos" /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
+      </form>
+
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 py-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-4" @submit.prevent="applyDateFilters">
+        <label class="filter-label">Data inicial<TextInput v-model="dateFilters.startDate" type="date" class="mt-1 block w-full" /></label>
+        <label class="filter-label">Data final<TextInput v-model="dateFilters.endDate" type="date" class="mt-1 block w-full" /><InputError :message="dateFilters.errors.endDate || dateFilters.errors.startDate" /></label>
+        <button class="min-h-11 self-stretch rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 sm:self-end" type="submit">Aplicar período</button>
+        <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearDateFilters">Limpar período</button>
       </form>
 
       <section class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:grid-cols-3 sm:gap-4 sm:py-4">

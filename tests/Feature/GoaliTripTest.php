@@ -288,6 +288,101 @@ class GoaliTripTest extends TestCase
                 ->where('filters.sortOrder', 'desc'));
     }
 
+    public function test_only_admins_can_filter_goali_trips_by_driver(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Filtro Motorista',
+            'email' => 'admin-driver-filter@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $team = $this->attachToGoaliTeam($admin, 'Admin');
+
+        $driver = User::create([
+            'name' => 'Motorista Filtro',
+            'email' => 'driver-filter@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->teams()->attach($team->id, ['role' => 'Motorista']);
+        $driver->forceFill([
+            'email_verified_at' => now(),
+            'current_team_id' => $team->id,
+        ])->save();
+
+        $createTrip = fn (?int $driverId, string $passenger) => GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => $driverId,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Finalizada',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => $passenger,
+            'responsible' => $admin->name,
+            'amount' => '10.00',
+        ]);
+        $createTrip($driver->id, 'Corrida do motorista');
+        $createTrip($admin->id, 'Corrida do administrador');
+        $createTrip(null, 'Corrida sem motorista');
+
+        $this->actingAs($admin)
+            ->get(route('goali.index', ['driverId' => $driver->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('isAdmin', true)
+                ->where('filters.driverId', (string) $driver->id)
+                ->where('summary.count', 1)
+                ->where('records.0.passenger', 'Corrida do motorista'));
+
+    }
+
+    public function test_non_admin_cannot_apply_the_driver_filter(): void
+    {
+        $driver = User::create([
+            'name' => 'Motorista sem filtro',
+            'email' => 'driver-without-filter@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($driver, 'Motorista');
+
+        $otherDriver = User::create([
+            'name' => 'Outro motorista',
+            'email' => 'other-driver-filter@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $team = $driver->currentTeam;
+        $team->users()->attach($otherDriver->id, ['role' => 'Motorista']);
+
+        $createTrip = fn (?int $driverId, string $passenger) => GoaliTrip::create([
+            'user_id' => $driver->id,
+            'driver_id' => $driverId,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Finalizada',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => $passenger,
+            'responsible' => $driver->name,
+            'amount' => '10.00',
+        ]);
+        $createTrip($driver->id, 'Corrida própria');
+        $createTrip($otherDriver->id, 'Corrida de outro motorista');
+        $createTrip(null, 'Corrida sem motorista');
+
+        $this->actingAs($driver)
+            ->get(route('goali.index', ['driverId' => $otherDriver->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('isAdmin', false)
+                ->where('filters.driverId', '')
+                ->where('summary.count', 2));
+    }
+
     public function test_trip_value_totals_exclude_unassigned_trips(): void
     {
         $admin = User::create([
