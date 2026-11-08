@@ -374,17 +374,16 @@ onBeforeUnmount(() => {
       </header>
 
       <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyOtherFilters">
-        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" multiple @select2-close="applyOtherFilters" /></label>
-        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" multiple @select2-close="applyOtherFilters" /></label>
-        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" multiple @select2-close="applyOtherFilters" /></label>
+        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
+        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
+        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" multiple @select2-close="applyOtherFilters" /></label>
         <label v-if="props.isAdmin" class="filter-label">Motorista<Select v-model="selectedFilterDriver" :options="props.drivers" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 py-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-4" @submit.prevent="applyDateFilters">
-        <label class="filter-label">Data inicial<TextInput v-model="dateFilters.startDate" type="date" class="mt-1 block w-full" /></label>
-        <label class="filter-label">Data final<TextInput v-model="dateFilters.endDate" type="date" class="mt-1 block w-full" /><InputError :message="dateFilters.errors.endDate || dateFilters.errors.startDate" /></label>
-        <button class="min-h-11 self-stretch rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 sm:self-end" type="submit">Aplicar período</button>
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 py-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-3" @submit.prevent="applyDateFilters">
+        <label class="filter-label">Data inicial<TextInput v-model="dateFilters.startDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /></label>
+        <label class="filter-label">Data final<TextInput v-model="dateFilters.endDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /><InputError :message="dateFilters.errors.endDate || dateFilters.errors.startDate" /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearDateFilters">Limpar período</button>
       </form>
 

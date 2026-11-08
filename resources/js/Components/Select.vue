@@ -28,6 +28,7 @@
     :allow-empty="allowEmpty"
     :required="required"
     :disabled="disabled"
+    @close="emit('select2-close')"
     @update:modelValue="updateModelValue"
   />
 </template>
