@@ -84,7 +84,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "selected"]);
+const emit = defineEmits(["update:modelValue", "selected", "select2-close"]);
 const attrs = useAttrs();
 const localValue = ref(props.modelValue);
 const selectElement = ref(null);
@@ -170,6 +170,7 @@ function initializeSelect2() {
     emit("update:modelValue", value);
     emit("selected", value);
   });
+  element.on("select2:close", () => emit("select2-close"));
   select2Instance = element;
   syncSelect2Value(props.modelValue);
 }
@@ -179,7 +180,7 @@ function destroySelect2() {
     return;
   }
 
-  select2Instance.off("change").select2("destroy");
+  select2Instance.off("change select2:close").select2("destroy");
   select2Instance = null;
 }
 

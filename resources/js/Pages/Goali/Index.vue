@@ -227,24 +227,12 @@ const applyDateFilters = () => {
   applyFilters(appliedDateFilters.value);
 };
 const applyOtherFilters = () => applyFilters();
-let filterTimeout;
-watch(
-  () => [
-    JSON.stringify(filters.status),
-    JSON.stringify(filters.tripStatus),
-    JSON.stringify(filters.solicitation),
-    filters.driverId,
-  ],
-  () => {
-    clearTimeout(filterTimeout);
-    filterTimeout = setTimeout(applyFilters, 250);
-  }
-);
 const clearFilters = () => {
   filters.status = [];
   filters.tripStatus = [];
   filters.solicitation = [];
   filters.driverId = null;
+  applyOtherFilters();
 };
 const clearDateFilters = () => {
   dateFilters.startDate = "";
@@ -365,7 +353,6 @@ const time = (value) => {
 onMounted(() => document.addEventListener("click", handleTableAction));
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleTableAction);
-  clearTimeout(filterTimeout);
 });
 </script>
 
@@ -387,10 +374,10 @@ onBeforeUnmount(() => {
       </header>
 
       <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyOtherFilters">
-        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" multiple /></label>
-        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" multiple /></label>
-        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" multiple /></label>
-        <label v-if="props.isAdmin" class="filter-label">Motorista<Select v-model="selectedFilterDriver" :options="props.drivers" label="name" track-by="id" placeholder="Todos" /></label>
+        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" :select2="true" multiple @select2-close="applyOtherFilters" /></label>
+        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" :select2="true" multiple @select2-close="applyOtherFilters" /></label>
+        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" :select2="true" multiple @select2-close="applyOtherFilters" /></label>
+        <label v-if="props.isAdmin" class="filter-label">Motorista<Select v-model="selectedFilterDriver" :options="props.drivers" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
@@ -423,9 +410,23 @@ onBeforeUnmount(() => {
           <article
             v-for="record in mobilePageRecords"
             :key="record.id"
-            class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            class="overflow-hidden rounded-lg border-l-8 shadow-md"
+            :class="{
+              'border-gray-500 border-y border-r bg-gray-50 dark:border-gray-400 dark:bg-gray-800': record.trip_status === 'Criada',
+              'border-blue-700 border-y border-r bg-blue-50 dark:border-blue-400 dark:bg-blue-950/50': record.trip_status === 'Em Andamento',
+              'border-amber-600 border-y border-r bg-amber-50 dark:border-amber-400 dark:bg-amber-950/50': record.trip_status === 'Aguardando Analise',
+              'border-green-700 border-y border-r bg-green-50 dark:border-green-400 dark:bg-green-950/50': record.trip_status === 'Finalizada',
+            }"
           >
-            <div class="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+            <div
+              class="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3"
+              :class="{
+                'border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800': record.trip_status === 'Criada',
+                'border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900/60': record.trip_status === 'Em Andamento',
+                'border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900/60': record.trip_status === 'Aguardando Analise',
+                'border-green-200 bg-green-100 dark:border-green-800 dark:bg-green-900/60': record.trip_status === 'Finalizada',
+              }"
+            >
               <div>
                 <p class="font-semibold text-gray-900 dark:text-white">{{ date(record.travel_date) }} · {{ time(record.travel_time) }}</p>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ record.solicitation }}</p>
@@ -435,10 +436,10 @@ onBeforeUnmount(() => {
                 <span
                   class="rounded-full px-2.5 py-1 text-xs font-semibold"
                   :class="{
-                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200': record.trip_status === 'Criada',
-                    'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200': record.trip_status === 'Em Andamento',
-                    'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200': record.trip_status === 'Aguardando Analise',
-                    'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200': record.trip_status === 'Finalizada',
+                    'bg-gray-700 text-white dark:bg-gray-600': record.trip_status === 'Criada',
+                    'bg-blue-700 text-white dark:bg-blue-600': record.trip_status === 'Em Andamento',
+                    'bg-amber-700 text-white dark:bg-amber-600': record.trip_status === 'Aguardando Analise',
+                    'bg-green-700 text-white dark:bg-green-600': record.trip_status === 'Finalizada',
                   }"
                 >{{ record.trip_status }}</span>
               </div>
