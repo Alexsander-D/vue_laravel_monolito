@@ -22,6 +22,7 @@
     :options="options"
     :label="label"
     :track-by="trackBy"
+    :custom-label="getOptionLabel"
     :placeholder="placeholder"
     :multiple="multiple"
     :close-on-select="!multiple"
@@ -97,9 +98,12 @@ const optionValue = (option) => (
     ? option[props.trackBy] ?? option.value ?? option[props.label]
     : option
 );
-const optionLabel = (option) => (
-  option && typeof option === "object" ? option[props.label] ?? "" : option
+const getOptionLabel = (option, label = props.label) => (
+  option && typeof option === "object"
+    ? option[label] ?? ""
+    : option == null ? "" : String(option)
 );
+const optionLabel = getOptionLabel;
 const selectedOptionValue = computed(() => {
   if (props.multiple) {
     return (Array.isArray(props.modelValue) ? props.modelValue : [])
