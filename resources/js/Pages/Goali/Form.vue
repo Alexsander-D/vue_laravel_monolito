@@ -2,6 +2,7 @@
 import BaseLayout from "@/Layouts/BaseLayout.vue";
 import Select from "@/Components/Select.vue";
 import TextInput from "@/Components/TextInput.vue";
+import TextArea from "@/Components/TextArea.vue";
 import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Radio from "@/Components/Radio.vue";
@@ -221,8 +222,7 @@ const submit = () => {
             <label for="passenger"
               class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Passageiro
               <span>*</span></label>
-            <TextInput id="passenger" v-model="form.passenger" type="text" class="mt-1 block w-full" maxlength="255"
-              required />
+            <TextArea id="passenger" v-model="form.passenger" class="mt-1 block w-full" maxlength="255" required />
             <InputError :message="form.errors.passenger" class="mt-2" />
           </div>
           <div>

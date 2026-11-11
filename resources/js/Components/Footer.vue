@@ -1,11 +1,18 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
+import { usePage } from "@inertiajs/vue3";
 
 const currentDateTime = ref("");
+const page = usePage();
+const isGoaliTeam = page.props.auth?.user?.current_team?.name?.trim()?.toLocaleUpperCase() === "GOALI TRANSPORTES";
 
 let interval;
 
 onMounted(() => {
+  if (isGoaliTeam) {
+    return;
+  }
+
   const updateClock = () => {
     const now = new Date();
 
@@ -29,10 +36,10 @@ onUnmounted(() => {
     <!-- Grid -->
     <div class="text-center">
       <div class="mt-2">
-        <!-- <p class="text-gray-700 dark:text-neutral-400">
-          {{ currentPhrase }}
-        </p> -->
-        <p class="text-gray-700 dark:text-neutral-400">
+        <p v-if="isGoaliTeam" class="text-gray-700 dark:text-neutral-400">
+          Porque eu sei que MEU REDENTOR vive, e por fim se levantará sobre a terra&quot; Jó 19:25
+        </p>
+        <p v-else class="text-gray-700 dark:text-neutral-400">
           {{ currentDateTime }}
         </p>
       </div>

@@ -34,7 +34,7 @@ const serviceCatalog = [
   { name: "Corte Social", price: 35, icon: "✂️" },
   { name: "Corte Degradê", price: 40, icon: "💈" },
   { name: "Corte Navalhado", price: 45, icon: "🪒" },
-  { name: "Barba", price: 20, icon: "🧔" },
+  { name: "Barba", price: 25, icon: "🧔" },
   { name: "Bigode", price: 10, icon: "👨‍🦰" },
   { name: "Pezinho", price: 10, icon: "📏" },
   { name: "Sobrancelha", price: 10, icon: "🔍" },

@@ -3,6 +3,7 @@ import BaseLayout from "@/Layouts/BaseLayout.vue";
 import Select from "@/Components/Select.vue";
 import Datatable from "@/Components/Datatable.vue";
 import TextInput from "@/Components/TextInput.vue";
+import TextArea from "@/Components/TextArea.vue";
 import InputError from "@/Components/InputError.vue";
 import { router, useForm } from "@inertiajs/vue3";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
@@ -151,7 +152,7 @@ const tableData = computed(() => props.records.map((record) => ({
       && !["Finalizada", "Aguardando Analise"].includes(record.trip_status)
       ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
       : "",
-    (props.isAdmin && record.trip_status !== "Finalizada")
+    props.isAdmin
       ? `<button type="button" class="goali-action goali-action--delete" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
       : "",
   ].join(""),
@@ -368,7 +369,7 @@ onBeforeUnmount(() => {
               <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
             </div>
             <div class="col-span-12 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <a :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Novo registro</a>
+          <a :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Criar Corrida</a>
           <a :href="reportUrl" class="inline-flex min-h-11 items-center justify-center rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Exportar Excel</a>
         </div>
       </header>
@@ -474,7 +475,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record)) || (record.trip_status !== 'Criada' && record.driver_id !== null && !['Finalizada', 'Aguardando Analise'].includes(record.trip_status))"
+              v-if="props.isAdmin || (props.isDriver && canDriverEditTrip(record)) || (record.trip_status !== 'Criada' && record.driver_id !== null && !['Finalizada', 'Aguardando Analise'].includes(record.trip_status))"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
@@ -490,7 +491,7 @@ onBeforeUnmount(() => {
                 @click="cancelTrip(record)"
               >Cancelar</button>
               <button
-                v-if="props.isAdmin && record.trip_status !== 'Finalizada'"
+                v-if="props.isAdmin"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
                 @click="deleteRecord(record)"
@@ -563,7 +564,7 @@ onBeforeUnmount(() => {
             <div class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></div>
             <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
-            <label class="filter-label">Passageiro<TextInput v-model="editForm.passenger" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>
+            <label class="filter-label">Passageiro<TextArea v-model="editForm.passenger" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.passenger" /></label>
             <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" :readonly="props.isDriver" required /><InputError :message="editForm.errors.responsible" /></label>
             <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
           </div>

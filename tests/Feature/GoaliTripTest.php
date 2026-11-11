@@ -127,6 +127,39 @@ class GoaliTripTest extends TestCase
         $this->assertDatabaseMissing('goali_trips', ['id' => $trip->id]);
     }
 
+    public function test_admin_can_delete_trips_in_any_status(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Goali',
+            'email' => 'delete-any-status@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($admin, 'Admin');
+
+        foreach (['Criada', 'Em Andamento', 'Aguardando Analise', 'Finalizada'] as $status) {
+            $trip = GoaliTrip::create([
+                'user_id' => $admin->id,
+                'driver_id' => $admin->id,
+                'travel_date' => now()->toDateString(),
+                'travel_time' => '12:00',
+                'status' => 'ENTRADA',
+                'trip_status' => $status,
+                'solicitation' => 'IMB',
+                'origin' => 'Origem',
+                'destination' => 'Destino',
+                'passenger' => "Corrida {$status}",
+                'responsible' => $admin->name,
+                'amount' => '10.00',
+            ]);
+
+            $this->actingAs($admin)
+                ->delete(route('goali.destroy', $trip))
+                ->assertRedirect();
+            $this->assertDatabaseMissing('goali_trips', ['id' => $trip->id]);
+        }
+    }
+
     public function test_it_creates_one_trip_per_day_across_month_boundaries(): void
     {
         $user = User::create([
@@ -466,8 +499,8 @@ class GoaliTripTest extends TestCase
             ->get(route('goali.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('filters.startDate', now()->toDateString())
-                ->where('filters.endDate', now()->toDateString())
+                ->where('filters.startDate', now()->startOfMonth()->toDateString())
+                ->where('filters.endDate', now()->endOfMonth()->toDateString())
                 ->where('records', fn ($records) => collect($records)->pluck('id')->all() === [
                     $createdTrip->id,
                     $inProgressTrip->id,

@@ -321,8 +321,8 @@ class GoaliTripController extends Controller
             $dateFilterProvided
                 ? ['startDate' => '', 'endDate' => '']
                 : [
-                    'startDate' => now()->toDateString(),
-                    'endDate' => now()->toDateString(),
+                    'startDate' => now()->startOfMonth()->toDateString(),
+                    'endDate' => now()->endOfMonth()->toDateString(),
                 ],
             $filters
         );
