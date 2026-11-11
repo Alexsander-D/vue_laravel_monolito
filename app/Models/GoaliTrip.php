@@ -19,6 +19,7 @@ class GoaliTrip extends Model
         'status',
         'trip_status',
         'solicitation',
+        'trip_code',
         'origin',
         'destination',
         'passenger',

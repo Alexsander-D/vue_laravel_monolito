@@ -256,7 +256,7 @@ class GoaliTripController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Relatório Goali');
-        $headers = ['Data', 'Horário', 'Tipo', 'Status da corrida', 'Solicitação', 'Origem', 'Destino', 'Passageiro', 'Motorista', 'Responsável', 'Valor (R$)', 'Cancelada por'];
+        $headers = ['Data', 'Horário', 'Tipo', 'Status da corrida', 'Solicitação', 'Código da Viagem', 'Origem', 'Destino', 'Passageiro', 'Motorista', 'Responsável', 'Valor (R$)', 'Cancelada por'];
 
         foreach ($headers as $index => $header) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1) . '1', $header);
@@ -269,6 +269,7 @@ class GoaliTripController extends Controller
                 $record->status,
                 $record->trip_status,
                 $record->solicitation,
+                $record->trip_code ?? '',
                 $record->origin,
                 $record->destination,
                 $record->passenger,
@@ -489,6 +490,7 @@ class GoaliTripController extends Controller
                     : [$user->id]),
             ],
             'solicitation' => ['required', 'in:' . implode(',', self::SOLICITATIONS)],
+            'trip_code' => ['nullable', 'string', 'max:255'],
             'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
             'passenger' => ['required', 'string', 'max:255'],

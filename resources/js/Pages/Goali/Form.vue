@@ -35,6 +35,7 @@ const form = useForm({
   travel_time: initialDateTime.time,
   status: "",
   solicitation: "",
+  trip_code: "",
   driver_id: props.initialDriverId,
   origin: "",
   destination: "",
@@ -88,6 +89,7 @@ const submit = () => {
       form.reset(
         "status",
         "solicitation",
+        "trip_code",
         "driver_id",
         "origin",
         "destination",
@@ -202,6 +204,12 @@ const submit = () => {
             </label>
           </div>
 
+          <div>
+            <label for="trip_code"
+              class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Código da Viagem</label>
+            <TextInput id="trip_code" v-model="form.trip_code" type="text" class="mt-1 block w-full" maxlength="255" />
+            <InputError :message="form.errors.trip_code" class="mt-2" />
+          </div>
           <div>
             <label for="origin"
               class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Origem

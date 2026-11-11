@@ -108,6 +108,7 @@ const tableHeaders = [
   { name: "Tipo" },
   { name: "Status corrida" },
   { name: "Solicitação" },
+  { name: "Código da Viagem" },
   { name: "Origem / Destino" },
   { name: "Passageiro" },
   { name: "Motorista" },
@@ -121,6 +122,7 @@ const tableColumns = [
   "status",
   "tripStatus",
   "solicitation",
+  "tripCode",
   "route",
   "passenger",
   "driver",
@@ -134,6 +136,7 @@ const tableData = computed(() => props.records.map((record) => ({
   status: record.status,
   tripStatus: record.trip_status,
   solicitation: record.solicitation,
+  tripCode: record.trip_code || "—",
   route: `${record.origin} → ${record.destination}`,
   passenger: record.passenger,
   driver: record.driver?.name || "—",
@@ -172,6 +175,7 @@ const mobileFilteredRecords = computed(() => {
     record.status,
     record.trip_status,
     record.solicitation,
+    record.trip_code,
     record.origin,
     record.destination,
     record.passenger,
@@ -259,6 +263,7 @@ const startEdit = (record) => {
     status: record.status,
     trip_status: "",
     solicitation: record.solicitation,
+    trip_code: record.trip_code || "",
     driver_id: record.driver_id,
     origin: record.origin,
     destination: record.destination,
@@ -446,6 +451,10 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="space-y-3 px-4 py-3">
+              <div v-if="record.trip_code">
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Código da Viagem</p>
+                <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.trip_code }}</p>
+              </div>
               <div>
                 <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Passageiro</p>
                 <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.passenger }}</p>
@@ -562,6 +571,7 @@ onBeforeUnmount(() => {
             <div class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" required /><InputError :message="editForm.errors.status" /></div>
             <div class="filter-label">Motorista<Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="true" /><InputError :message="editForm.errors.driver_id" /></div>
             <div class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></div>
+            <label class="filter-label">Código da Viagem<TextInput v-model="editForm.trip_code" type="text" class="mt-1 block w-full" maxlength="255" /><InputError :message="editForm.errors.trip_code" /></label>
             <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
             <label class="filter-label">Passageiro<TextArea v-model="editForm.passenger" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.passenger" /></label>
