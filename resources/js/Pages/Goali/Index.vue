@@ -141,7 +141,7 @@ const tableData = computed(() => props.records.map((record) => ({
   passenger: record.passenger,
   driver: record.driver?.name || "—",
   responsible: record.responsible,
-  amount: money(record.amount),
+  amount: Number(record.amount || 0),
   cancelledBy: record.cancelled_by_role
     ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
     : "—",
@@ -342,6 +342,9 @@ const tripRowClass = (row) => ({
   "goali-trip--finished": row.tripStatus === "Finalizada",
 });
 const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const tableColumnRenderers = {
+  amount: (value, type) => (type === "display" ? money(value) : Number(value || 0)),
+};
 const date = (value) => {
   const datePart = String(value || "").slice(0, 10);
   const [year, month, day] = datePart.split("-");
@@ -533,7 +536,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <Datatable class="col-span-12 hidden w-full min-w-0 lg:block" :thead="tableHeaders" :tbody="tableData" :row-columns="tableColumns" :id="tableId" :order-by="[]" :row-class="tripRowClass" managed-rows />
+      <Datatable class="col-span-12 hidden w-full min-w-0 lg:block" :thead="tableHeaders" :tbody="tableData" :row-columns="tableColumns" :column-renderers="tableColumnRenderers" :id="tableId" :order-by="[]" :row-class="tripRowClass" managed-rows />
         </div>
       </section>
 

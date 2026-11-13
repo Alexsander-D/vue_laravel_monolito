@@ -77,6 +77,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  columnRenderers: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 const tableKey = ref(0);
@@ -130,7 +134,7 @@ const initializeDataTable = () => {
               data: key,
               render: key.startsWith("button")
                 ? (value) => `<div class="datatable-actions">${value}</div>`
-                : undefined,
+                : props.columnRenderers[key],
             })),
             createdRow: (row, body) => {
               const classes = props.rowClass?.(body) || {};
@@ -148,6 +152,9 @@ const initializeDataTable = () => {
         {
           extend: "excelHtml5",
           text: "Baixar Excel",
+          exportOptions: {
+            orthogonal: "export",
+          },
         },
       ],
       language: {
