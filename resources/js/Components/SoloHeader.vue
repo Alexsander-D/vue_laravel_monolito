@@ -95,9 +95,8 @@ onUnmounted(() => {
     <div v-if="$page.props.auth?.user" class="flex items-center justify-start">
       <button :class="{
         hidden: isButtonHidden,
-      }" class="rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 lg:hidden"
-        @click="toggleMenu" aria-label="Toggle menu" aria-controls="solo-header-menu"
-        :aria-expanded="isMenuOpen">
+      }" class="rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gray-400 lg:hidden" @click="toggleMenu"
+        aria-label="Toggle menu" aria-controls="solo-header-menu" :aria-expanded="isMenuOpen">
         <svg class="w-6 h-6 text-black dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
           viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
@@ -124,516 +123,521 @@ onUnmounted(() => {
     <nav v-if="$page.props.auth?.user" id="solo-header-menu" :class="{
       'flex flex-col border-t border-gray-200 py-2 dark:border-gray-700': isMenuOpen,
       hidden: !isMenuOpen,
-    }" class="w-full basis-full lg:flex lg:w-auto lg:basis-auto lg:flex-1 lg:items-center lg:justify-center lg:space-x-4 lg:border-0 lg:p-2">
+    }"
+      class="w-full basis-full lg:flex lg:w-auto lg:basis-auto lg:flex-1 lg:items-center lg:justify-center lg:space-x-4 lg:border-0 lg:p-2">
       <div class="flex w-full flex-col items-stretch lg:ml-auto lg:w-auto lg:flex-row lg:items-center">
-        <template v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')">
-        <div :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  GOALI TRANSPORTES
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
+        <template
+          v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')">
+          <div :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }" class="ms-3 relative py-1">
+            <div :class="{ hidden: !isMenuOpen, block: isMenuOpen }" class="ms-3 relative py-1">
+              <Link
+                class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium stringColor focus:outline-none"
+                :href="route('goali.index')">
+                Relatório de corridas
+              </Link>
+            </div>
 
-            <template #content>
-              <div class="w-60">
-                <Link
-                  v-if="$page.props.auth.user.current_team && (Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('teams.show', $page.props.auth.user.current_team)">
-                  Gerir equipe
-                </Link>
-                <Link
-                  v-if="Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-permissoes')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
-                  Gerir Permissões
-                </Link>
-                <div v-if="$page.props.auth.user.all_teams.length > 1" class="group relative">
-                  <button
-                    type="button"
-                    class="themeColor w-full justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none">
-                    Mudar de equipe
-                    <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                      stroke="currentColor" stroke-width="2">
-                      <path d="M6 9l6 6 6-6" />
+            <Dropdown align="right" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
+                  <button type="button"
+                    class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                    GOALI TRANSPORTES
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
                     </svg>
                   </button>
-                  <div class="absolute hidden group-hover:block right-0 top-full pt-1 w-60 bg-white shadow-lg rounded z-50">
-                    <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
-                      <form @submit.prevent="switchToTeam(team)">
-                        <button
-                          type="submit"
-                          :class="team.id == $page.props.auth.user.current_team_id ? 'secondaryColor' : 'themeColor'"
-                          class="w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
-                          {{ team.name }}
-                        </button>
-                      </form>
-                    </template>
+                </span>
+              </template>
+
+              <template #content>
+                <div class="w-60">
+                  <Link
+                    v-if="$page.props.auth.user.current_team && (Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('teams.show', $page.props.auth.user.current_team)">
+                    Gerir equipe
+                  </Link>
+                  <Link
+                    v-if="Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-permissoes')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
+                    Gerir Permissões
+                  </Link>
+                  <div v-if="$page.props.auth.user.all_teams.length > 1" class="group relative">
+                    <button type="button"
+                      class="themeColor w-full justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none">
+                      Mudar de equipe
+                      <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                    <div
+                      class="absolute hidden group-hover:block right-0 top-full pt-1 w-60 bg-white shadow-lg rounded z-50">
+                      <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
+                        <form @submit.prevent="switchToTeam(team)">
+                          <button type="submit"
+                            :class="team.id == $page.props.auth.user.current_team_id ? 'secondaryColor' : 'themeColor'"
+                            class="w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
+                            {{ team.name }}
+                          </button>
+                        </form>
+                      </template>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </template>
-          </Dropdown>
-        </div>
-        <div :class="{ hidden: !isMenuOpen, block: isMenuOpen }" class="ms-3 relative py-1">
-          <Link
-            class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium stringColor focus:outline-none"
-            :href="route('goali.form')">
-            Registrar deslocamento
-          </Link>
-        </div>
-        <div :class="{ hidden: !isMenuOpen, block: isMenuOpen }" class="ms-3 relative py-1">
-          <Link
-            class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium stringColor focus:outline-none"
-            :href="route('goali.index')">
-            Relatório de deslocamentos
-          </Link>
-        </div>
+              </template>
+            </Dropdown>
+          </div>
         </template>
 
         <template v-else>
-        <!-- CADASTROS DROPDOWN -->
-        <div v-if="
-          ['cadastrar-falhas', 'cadastrar-produtos'].some((term) =>
-            $page.props.userPermissions.includes(term)
-          )
-        " :class="{
+          <!-- CADASTROS DROPDOWN -->
+          <div v-if="
+            ['cadastrar-falhas', 'cadastrar-produtos'].some((term) =>
+              $page.props.userPermissions.includes(term)
+            )
+          " :class="{
           hidden: !isMenuOpen,
           block: isMenuOpen,
         }" class="ms-3 relative py-1">
-          <Dropdown align="bottom" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  Cadastros
-
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('cadastrar-falhas')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('failures.index')">
-                  Defeitos e Soluções
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('cadastrar-produtos')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('products.index')">
-                  Produtos
-                </Link>
-              </div>
-            </template>
-          </Dropdown>
-        </div>
-        <!-- FIM CADASTROS DROPDOWN -->
-
-        <!-- CADASTROS DROPDOWN -->
-        <div v-if="$page.props.auth.user.current_team?.name?.includes('SAC')" :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <Dropdown align="bottom" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  Fila
-
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('separar-rastreio')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('separated-tracking.index')">
-                  Separar rastreio
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('coletar-rastreio')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('collect-tracking.index')">
-                  Coletar rastreio
-                </Link>
-
-                <Link v-if="
-                  ['separar-rastreio', 'coletar-rastreio'].some((term) =>
-                    $page.props.userPermissions.includes(term)
-                  )
-                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('collect-tracking.show')">
-                  Relatório
-                </Link>
-              </div>
-            </template>
-          </Dropdown>
-        </div>
-        <!-- FIM CADASTROS DROPDOWN -->
-
-        <!-- MATERIAIS TRIAGEMDROPDOWN -->
-        <div v-if="
-          $page.props.auth.user.current_team?.name?.includes('TRIAGEM') &&
-          $page.props.userPermissions.includes('gerir-materiais')
-        " :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  Materiais
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <div class="w-60">
-                <Link
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('viewMaterial.index')">
-                  Visualizar Materiais
-                </Link>
-              </div>
-            </template>
-          </Dropdown>
-        </div>
-
-        <!-- FIM MATERIAIS TRIAGEM DROPDOWN -->
-
-        <!-- RELATÓRIOS TRIAGEM DROPDOWN -->
-        <div v-if="
-          $page.props.auth.user.current_team?.name?.includes('TRIAGEM') &&
-          $page.props.userPermissions.includes('relatorios-triagem')
-        " :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  Relatórios
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <div class="w-60">
-                <Link
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('positioning.index')">
-                  Posicionamento
-                </Link>
-              </div>
-            </template>
-          </Dropdown>
-        </div>
-        <!-- FIM RELATÓRIOS TRIAGEM DROPDOWN -->
-
-        <!-- ATENDIMENTO EXTERNO DROPDOWN -->
-        <div v-if="$page.props.auth.user.current_team?.name?.includes('TRIAGEM')" :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <!-- Teams Dropdown -->
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  Atendimento Externo
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('gerir-clientes')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('viewCustomers.show')">
-                  Clientes
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('cadastrar-atendimento')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('screening.index')">
-                  Criar Atendimento
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('gerir-triagens')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('ViewScreening.index')">
-                  Triagens
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('gerir-includes')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('include.index')">
-                  Includes
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('gerir-laudos')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('techLog.index')">
-                  Laudos
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('gerir-agenda')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('calendar.index')">
-                  Agenda
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('gerir-historico')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('screeningTimeline.index')">
-                  Histórico
-                </Link>
-              </div>
-            </template>
-          </Dropdown>
-        </div>
-        <!-- FIM ATENDIMENTO EXTERNO DROPDOWN -->
-
-        <!-- BARBERSHOP -->
-        <div :class="{
-          hidden: !isMenuOpen,
-        }" class="ms-3 relative flex justify-center py-1 lg:justify-start">
-          <!-- Teams Dropdown -->
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <Link
-                class="stringColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                :href="route('attendance.report')">
-                RELATÓRIO
-              </Link>
-            </template>
-          </Dropdown>
-        </div>
-        <!-- FIM BARBERSHOP -->
-
-        <!-- ESTOQUE LINK -->
-        <div :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <Link
-            class="stringColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-            :href="route('stock.index')">
-            ESTOQUE
-          </Link>
-        </div>
-        <!-- FIM ESTOQUE LINK -->
-
-        <!-- PRODUÇÃO DIÁRIA DROPDOWN -->
-        <div v-if="
-          ['RMA', 'SAC'].some((term) =>
-            $page.props.auth.user.current_team?.name?.includes(term)
-          )
-        " :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <!-- Teams Dropdown -->
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button" class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
-                  Apontamentos
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <div class="w-60">
-                <Link v-if="$page.props.userPermissions.includes('realizar-entrada')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('entry.index')">
-                  Realizar Entrada
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('atribuir-fila')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('set-queue.index')">
-                  Aguardando Atribuição
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('realizar-laudo')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('queue.index')">
-                  Realizar Laudo
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('realizar-analise')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('analyzes.index')">
-                  Realizar Análise
-                </Link>
-
-                <Link v-if="
-                  $page.props.userPermissions.includes('realizar-laudo') &&
-                  !$page.props.userPermissions.includes('transferir-produto-admin')
-                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('product_transfer.index')">
-                  Transferir Produto
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('transferir-produto-admin')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('product_transfer_admin.index')">
-                  Transferir Produto
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('embalagem')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('product_output.index')">
-                  Realizar Embalagem
-                </Link>
-
-                <Link v-if="
-                  $page.props.userPermissions.includes(
-                    'visualizar-relatorio-individual'
-                  )
-                " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('individual_report.index')">
-                  Relatório Individual
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('visualizar-relatorio')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('report.index')">
-                  Relatório Geral
-                </Link>
-
-                <Link v-if="$page.props.userPermissions.includes('realizar-analise')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('analyzes_report.index')">
-                  Relatório de Análises
-                </Link>
-              </div>
-            </template>
-          </Dropdown>
-        </div>
-        <!-- FIM PRODUÇÃO DIÁRIA DROPDOWN -->
-
-        <!-- EQUIPE DROPDOWN -->
-        <div :class="{
-          hidden: !isMenuOpen,
-          block: isMenuOpen,
-        }" class="ms-3 relative py-1">
-          <Dropdown align="right" width="60">
-            <template #trigger>
-              <span class="inline-flex rounded-md whitespace-nowrap">
-                <button type="button"
-                  class="stringColor inline-flex items-center px-3 py-2 text-sm font-medium focus:outline-none">
-                  {{ $page.props.auth.user.current_team?.name ?? 'Sem equipe' }}
-                  <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </span>
-            </template>
-
-            <template #content>
-              <div class="w-60">
-                <Link v-if="$page.props.auth.user.current_team && ($page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('teams.show', $page.props.auth.user.current_team)">
-                  Gerir equipe
-                </Link>
-
-                <Link v-if="$page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-permissoes')"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
-                  Gerir Permissões
-                </Link>
-
-                <Link v-if="$page.props.auth.user.id === 1 && $page.props.jetstream.canCreateTeams"
-                  class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                  :href="route('teams.create')">
-                  Criar nova equipe
-                </Link>
-                <div v-if="
-                  $page.props.auth.user.all_teams.length > 1
-                " class="group relative">
+            <Dropdown align="bottom" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
                   <button type="button"
-                    class="themeColor w-full justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none">
-                    Mudar de equipe
-                    <svg class="shrink-0 size-4 transition-transform group-hover:rotate-90"
-                      xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      stroke-width="2">
-                      <path d="M6 9l6 6 6-6" />
+                    class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                    Cadastros
+
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
                     </svg>
                   </button>
+                </span>
+              </template>
 
-                  <!-- Submenu dropdown -->
-                  <div class="absolute hidden group-hover:block right-0 top-full pt-1 w-60 bg-white shadow-lg rounded z-50">
-                    <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
-                      <form @submit.prevent="switchToTeam(team)">
-                        <button v-if="team.id == $page.props.auth.user.current_team_id" type="submit"
-                          class="secondaryColor w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
-                          {{ team.name }}
-                        </button>
-                        <button v-else type="submit"
-                          class="themeColor w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
-                          {{ team.name }}
-                        </button>
-                      </form>
-                    </template>
+              <template #content>
+                <div class="w-60">
+                  <Link v-if="$page.props.userPermissions.includes('cadastrar-falhas')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('failures.index')">
+                    Defeitos e Soluções
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('cadastrar-produtos')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('products.index')">
+                    Produtos
+                  </Link>
+                </div>
+              </template>
+            </Dropdown>
+          </div>
+          <!-- FIM CADASTROS DROPDOWN -->
+
+          <!-- CADASTROS DROPDOWN -->
+          <div v-if="$page.props.auth.user.current_team?.name?.includes('SAC')" :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }" class="ms-3 relative py-1">
+            <Dropdown align="bottom" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
+                  <button type="button"
+                    class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                    Fila
+
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </span>
+              </template>
+
+              <template #content>
+                <div class="w-60">
+                  <Link v-if="$page.props.userPermissions.includes('separar-rastreio')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('separated-tracking.index')">
+                    Separar rastreio
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('coletar-rastreio')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('collect-tracking.index')">
+                    Coletar rastreio
+                  </Link>
+
+                  <Link v-if="
+                    ['separar-rastreio', 'coletar-rastreio'].some((term) =>
+                      $page.props.userPermissions.includes(term)
+                    )
+                  " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('collect-tracking.show')">
+                    Relatório
+                  </Link>
+                </div>
+              </template>
+            </Dropdown>
+          </div>
+          <!-- FIM CADASTROS DROPDOWN -->
+
+          <!-- MATERIAIS TRIAGEMDROPDOWN -->
+          <div v-if="
+            $page.props.auth.user.current_team?.name?.includes('TRIAGEM') &&
+            $page.props.userPermissions.includes('gerir-materiais')
+          " :class="{
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
+            <Dropdown align="right" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
+                  <button type="button"
+                    class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                    Materiais
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </span>
+              </template>
+
+              <template #content>
+                <div class="w-60">
+                  <Link
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('viewMaterial.index')">
+                    Visualizar Materiais
+                  </Link>
+                </div>
+              </template>
+            </Dropdown>
+          </div>
+
+          <!-- FIM MATERIAIS TRIAGEM DROPDOWN -->
+
+          <!-- RELATÓRIOS TRIAGEM DROPDOWN -->
+          <div v-if="
+            $page.props.auth.user.current_team?.name?.includes('TRIAGEM') &&
+            $page.props.userPermissions.includes('relatorios-triagem')
+          " :class="{
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
+            <Dropdown align="right" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
+                  <button type="button"
+                    class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                    Relatórios
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </span>
+              </template>
+
+              <template #content>
+                <div class="w-60">
+                  <Link
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('positioning.index')">
+                    Posicionamento
+                  </Link>
+                </div>
+              </template>
+            </Dropdown>
+          </div>
+          <!-- FIM RELATÓRIOS TRIAGEM DROPDOWN -->
+
+          <!-- ATENDIMENTO EXTERNO DROPDOWN -->
+          <div v-if="$page.props.auth.user.current_team?.name?.includes('TRIAGEM')" :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }" class="ms-3 relative py-1">
+            <!-- Teams Dropdown -->
+            <Dropdown align="right" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
+                  <button type="button"
+                    class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                    Atendimento Externo
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </span>
+              </template>
+
+              <template #content>
+                <div class="w-60">
+                  <Link v-if="$page.props.userPermissions.includes('gerir-clientes')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('viewCustomers.show')">
+                    Clientes
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('cadastrar-atendimento')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('screening.index')">
+                    Criar Atendimento
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('gerir-triagens')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('ViewScreening.index')">
+                    Triagens
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('gerir-includes')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('include.index')">
+                    Includes
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('gerir-laudos')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('techLog.index')">
+                    Laudos
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('gerir-agenda')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('calendar.index')">
+                    Agenda
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('gerir-historico')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('screeningTimeline.index')">
+                    Histórico
+                  </Link>
+                </div>
+              </template>
+            </Dropdown>
+          </div>
+          <!-- FIM ATENDIMENTO EXTERNO DROPDOWN -->
+
+          <!-- BARBERSHOP -->
+          <div :class="{
+            hidden: !isMenuOpen,
+          }" class="ms-3 relative flex justify-center py-1 lg:justify-start">
+            <!-- Teams Dropdown -->
+            <Dropdown align="right" width="60">
+              <template #trigger>
+                <Link
+                  class="stringColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                  :href="route('attendance.report')">
+                  RELATÓRIO
+                </Link>
+              </template>
+            </Dropdown>
+          </div>
+          <!-- FIM BARBERSHOP -->
+
+          <!-- ESTOQUE LINK -->
+          <div :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }" class="ms-3 relative py-1">
+            <Link
+              class="stringColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+              :href="route('stock.index')">
+              ESTOQUE
+            </Link>
+          </div>
+          <!-- FIM ESTOQUE LINK -->
+
+          <!-- PRODUÇÃO DIÁRIA DROPDOWN -->
+          <div v-if="
+            ['RMA', 'SAC'].some((term) =>
+              $page.props.auth.user.current_team?.name?.includes(term)
+            )
+          " :class="{
+          hidden: !isMenuOpen,
+          block: isMenuOpen,
+        }" class="ms-3 relative py-1">
+            <!-- Teams Dropdown -->
+            <Dropdown align="right" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
+                  <button type="button"
+                    class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none">
+                    Apontamentos
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </span>
+              </template>
+
+              <template #content>
+                <div class="w-60">
+                  <Link v-if="$page.props.userPermissions.includes('realizar-entrada')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('entry.index')">
+                    Realizar Entrada
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('atribuir-fila')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('set-queue.index')">
+                    Aguardando Atribuição
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('realizar-laudo')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('queue.index')">
+                    Realizar Laudo
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('realizar-analise')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('analyzes.index')">
+                    Realizar Análise
+                  </Link>
+
+                  <Link v-if="
+                    $page.props.userPermissions.includes('realizar-laudo') &&
+                    !$page.props.userPermissions.includes('transferir-produto-admin')
+                  " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('product_transfer.index')">
+                    Transferir Produto
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('transferir-produto-admin')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('product_transfer_admin.index')">
+                    Transferir Produto
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('embalagem')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('product_output.index')">
+                    Realizar Embalagem
+                  </Link>
+
+                  <Link v-if="
+                    $page.props.userPermissions.includes(
+                      'visualizar-relatorio-individual'
+                    )
+                  " class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('individual_report.index')">
+                    Relatório Individual
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('visualizar-relatorio')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('report.index')">
+                    Relatório Geral
+                  </Link>
+
+                  <Link v-if="$page.props.userPermissions.includes('realizar-analise')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('analyzes_report.index')">
+                    Relatório de Análises
+                  </Link>
+                </div>
+              </template>
+            </Dropdown>
+          </div>
+          <!-- FIM PRODUÇÃO DIÁRIA DROPDOWN -->
+
+          <!-- EQUIPE DROPDOWN -->
+          <div :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }" class="ms-3 relative py-1">
+            <Dropdown align="right" width="60">
+              <template #trigger>
+                <span class="inline-flex rounded-md whitespace-nowrap">
+                  <button type="button"
+                    class="stringColor inline-flex items-center px-3 py-2 text-sm font-medium focus:outline-none">
+                    {{ $page.props.auth.user.current_team?.name ?? 'Sem equipe' }}
+                    <svg class="flex-shrink-0 ms-1 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </span>
+              </template>
+
+              <template #content>
+                <div class="w-60">
+                  <Link
+                    v-if="$page.props.auth.user.current_team && ($page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('teams.show', $page.props.auth.user.current_team)">
+                    Gerir equipe
+                  </Link>
+
+                  <Link
+                    v-if="$page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-permissoes')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
+                    Gerir Permissões
+                  </Link>
+
+                  <Link v-if="$page.props.auth.user.id === 1 && $page.props.jetstream.canCreateTeams"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('teams.create')">
+                    Criar nova equipe
+                  </Link>
+                  <div v-if="
+                    $page.props.auth.user.all_teams.length > 1
+                  " class="group relative">
+                    <button type="button"
+                      class="themeColor w-full justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none">
+                      Mudar de equipe
+                      <svg class="shrink-0 size-4 transition-transform group-hover:rotate-90"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    <!-- Submenu dropdown -->
+                    <div
+                      class="absolute hidden group-hover:block right-0 top-full pt-1 w-60 bg-white shadow-lg rounded z-50">
+                      <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
+                        <form @submit.prevent="switchToTeam(team)">
+                          <button v-if="team.id == $page.props.auth.user.current_team_id" type="submit"
+                            class="secondaryColor w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
+                            {{ team.name }}
+                          </button>
+                          <button v-else type="submit"
+                            class="themeColor w-full flex items-center justify-center gap-x-3.5 py-2 px-3 rounded-lg text-sm font-medium focus:outline-none">
+                            {{ team.name }}
+                          </button>
+                        </form>
+                      </template>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <!-- Submenu container -->
-            </template>
-          </Dropdown>
-        </div>
-        <!-- FIM EQUIPE DROPDOWN -->
+                <!-- Submenu container -->
+              </template>
+            </Dropdown>
+          </div>
+          <!-- FIM EQUIPE DROPDOWN -->
         </template>
 
         <!-- PERFIL DROPDOWN -->
@@ -694,11 +698,15 @@ onUnmounted(() => {
         <!-- FIM PERFIL DROPDOWN -->
       </div>
     </nav>
-    <nav v-else class="flex w-full basis-full flex-col items-stretch justify-end gap-2 py-2 sm:flex-row sm:items-center sm:gap-3 sm:px-4 lg:w-auto lg:basis-auto">
-      <Link class="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800" :href="route('goali.form')">
+    <nav v-else
+      class="flex w-full basis-full flex-col items-stretch justify-end gap-2 py-2 sm:flex-row sm:items-center sm:gap-3 sm:px-4 lg:w-auto lg:basis-auto">
+      <Link
+        class="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
+        :href="route('goali.form')">
         Formulário de deslocamento
       </Link>
-      <Link class="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800" :href="route('login')">
+      <Link class="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800"
+        :href="route('login')">
         Entrar
       </Link>
     </nav>

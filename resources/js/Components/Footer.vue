@@ -37,7 +37,7 @@ onUnmounted(() => {
     <div class="text-center">
       <div class="mt-2">
         <p v-if="isGoaliTeam" class="text-gray-700 dark:text-neutral-400">
-          Porque eu sei que MEU REDENTOR vive, e por fim se levantará sobre a terra&quot; Jó 19:25
+          "Porque eu sei que meu redentor vive, e por fim se levantará sobre a terra" -Jó 19:25
         </p>
         <p v-else class="text-gray-700 dark:text-neutral-400">
           {{ currentDateTime }}

@@ -36,6 +36,9 @@ class GoaliTripTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         $outsider->teams()->attach($team->id, ['role' => 'Espectador']);
+        $firstDateTime = now()->addDay()->setTime(23, 45);
+        $secondDateTime = now()->addDays(2)->setTime(9, 0);
+        $updatedDate = now()->addDays(3)->toDateString();
 
         $this->actingAs($user)
             ->get(route('goali.form'))
@@ -51,7 +54,7 @@ class GoaliTripTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('goali.store'), [
-                'travel_datetime' => '2026-10-31T23:45',
+                'travel_datetime' => $firstDateTime->format('Y-m-d\TH:i'),
                 'status' => 'ENTRADA',
                 'solicitation' => 'IMB',
                 'trip_code' => 'GOALI-2026-001',
@@ -66,7 +69,7 @@ class GoaliTripTest extends TestCase
 
         $this->assertDatabaseHas('goali_trips', [
             'user_id' => $user->id,
-            'travel_date' => '2026-10-31',
+            'travel_date' => $firstDateTime->toDateString(),
             'travel_time' => '23:45',
             'status' => 'ENTRADA',
             'trip_status' => 'Criada',
@@ -82,7 +85,7 @@ class GoaliTripTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('goali.store'), [
-                'travel_datetime' => '2026-11-02T09:00',
+                'travel_datetime' => $secondDateTime->format('Y-m-d\TH:i'),
                 'status' => 'ENTRADA',
                 'solicitation' => 'IMB',
                 'driver_id' => $user->id,
@@ -101,7 +104,7 @@ class GoaliTripTest extends TestCase
 
         $trip = GoaliTrip::where('passenger', 'Passageiro Teste')->firstOrFail();
         $this->put(route('goali.update', $trip), [
-            'travel_date' => '2026-11-01',
+            'travel_date' => $updatedDate,
             'travel_time' => '08:30',
             'status' => 'SAÍDA',
             'solicitation' => 'IMB',
@@ -116,7 +119,7 @@ class GoaliTripTest extends TestCase
 
         $this->assertDatabaseHas('goali_trips', [
             'id' => $trip->id,
-            'travel_date' => '2026-11-01',
+            'travel_date' => $updatedDate,
             'travel_time' => '08:30',
             'status' => 'SAÍDA',
             'trip_status' => 'Criada',
@@ -173,11 +176,23 @@ class GoaliTripTest extends TestCase
         ]);
         $user->forceFill(['email_verified_at' => now()])->save();
         $this->attachToGoaliTeam($user, 'Admin');
+        $firstRangeStart = now()->startOfMonth()->addMonths(2)->endOfMonth()->subDay();
+        $firstRangeDates = collect(range(0, 3))
+            ->map(fn (int $offset) => $firstRangeStart->copy()->addDays($offset)->toDateString())
+            ->all();
+        $thirtyDayMonth = now()->startOfMonth()->addMonth();
+        while ($thirtyDayMonth->daysInMonth !== 30) {
+            $thirtyDayMonth->addMonth();
+        }
+        $secondRangeStart = $thirtyDayMonth->copy()->day(30);
+        $secondRangeDates = collect(range(0, 2))
+            ->map(fn (int $offset) => $secondRangeStart->copy()->addDays($offset)->toDateString())
+            ->all();
 
         $this->actingAs($user)
             ->post(route('goali.store'), [
-                'travel_start_date' => '2026-10-30',
-                'travel_end_date' => '2026-11-02',
+                'travel_start_date' => $firstRangeDates[0],
+                'travel_end_date' => $firstRangeDates[3],
                 'travel_time' => '08:45',
                 'status' => 'ENTRADA',
                 'solicitation' => 'IMB',
@@ -191,7 +206,7 @@ class GoaliTripTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseCount('goali_trips', 4);
-        foreach (['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'] as $date) {
+        foreach ($firstRangeDates as $date) {
             $this->assertDatabaseHas('goali_trips', [
                 'user_id' => $user->id,
                 'travel_date' => $date,
@@ -208,8 +223,8 @@ class GoaliTripTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('goali.store'), [
-                'travel_start_date' => '2026-04-30',
-                'travel_end_date' => '2026-05-02',
+                'travel_start_date' => $secondRangeDates[0],
+                'travel_end_date' => $secondRangeDates[2],
                 'travel_time' => '09:15',
                 'status' => 'SAÍDA',
                 'solicitation' => 'IMB',
@@ -223,7 +238,7 @@ class GoaliTripTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseCount('goali_trips', 7);
-        foreach (['2026-04-30', '2026-05-01', '2026-05-02'] as $date) {
+        foreach ($secondRangeDates as $date) {
             $this->assertDatabaseHas('goali_trips', [
                 'user_id' => $user->id,
                 'travel_date' => $date,
@@ -243,12 +258,14 @@ class GoaliTripTest extends TestCase
         ]);
         $user->forceFill(['email_verified_at' => now()])->save();
         $this->attachToGoaliTeam($user, 'Admin');
+        $startDate = now()->addDays(2)->toDateString();
+        $endDate = now()->addDay()->toDateString();
 
         $this->actingAs($user)
             ->from('/goali/form')
             ->post(route('goali.store'), [
-                'travel_start_date' => '2026-11-02',
-                'travel_end_date' => '2026-10-30',
+                'travel_start_date' => $startDate,
+                'travel_end_date' => $endDate,
                 'travel_time' => '08:45',
                 'status' => 'ENTRADA',
                 'solicitation' => 'IMB',
@@ -261,6 +278,48 @@ class GoaliTripTest extends TestCase
             ])
             ->assertRedirect('/goali/form')
             ->assertSessionHasErrors('travel_end_date');
+
+        $this->assertDatabaseCount('goali_trips', 0);
+    }
+
+    public function test_it_rejects_creating_trips_in_past_dates(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Data Passada',
+            'email' => 'past-trip-admin@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($admin, 'Admin');
+
+        $payload = [
+            'status' => 'ENTRADA',
+            'solicitation' => 'IMB',
+            'driver_id' => $admin->id,
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida em data passada',
+            'responsible' => $admin->name,
+            'amount' => '50.00',
+            'travel_time' => '09:00',
+        ];
+
+        $this->actingAs($admin)
+            ->from('/goali/form')
+            ->post(route('goali.store'), [
+                ...$payload,
+                'travel_date' => now()->subDay()->toDateString(),
+            ])
+            ->assertRedirect('/goali/form')
+            ->assertSessionHasErrors('travel_date');
+
+        $this->post(route('goali.store'), [
+            ...$payload,
+            'travel_start_date' => now()->subDay()->toDateString(),
+            'travel_end_date' => now()->toDateString(),
+        ])
+            ->assertRedirect('/goali/form')
+            ->assertSessionHasErrors('travel_start_date');
 
         $this->assertDatabaseCount('goali_trips', 0);
     }

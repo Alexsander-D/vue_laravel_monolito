@@ -51,7 +51,7 @@ class GoaliTripController extends Controller
 
         if ($request->exists('travel_start_date') || $request->exists('travel_end_date')) {
             $dateRange = $request->validate([
-                'travel_start_date' => ['required', 'date_format:Y-m-d'],
+                'travel_start_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
                 'travel_end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:travel_start_date'],
                 'travel_time' => ['required', 'date_format:H:i'],
             ]);
@@ -60,7 +60,7 @@ class GoaliTripController extends Controller
             $request->merge(['travel_date' => $dateRange['travel_start_date']]);
         }
 
-        $validated = $this->validatedTrip($request, $user);
+        $validated = $this->validatedTrip($request, $user, true);
         $validated['user_id'] = $user->getAuthIdentifier();
         $validated['responsible'] = $user->name;
         $adminCreatedForAnotherOrUnassigned = $this->isAdmin($user)
@@ -499,7 +499,7 @@ class GoaliTripController extends Controller
         ];
     }
 
-    private function validatedTrip(Request $request, User $user): array
+    private function validatedTrip(Request $request, User $user, bool $disallowPastDate = false): array
     {
         if ($request->exists('travel_datetime')) {
             $request->validate([
@@ -513,7 +513,12 @@ class GoaliTripController extends Controller
             ]);
         }
 
-        return $request->validate($this->rules($user));
+        $rules = $this->rules($user);
+        if ($disallowPastDate) {
+            $rules['travel_date'][] = 'after_or_equal:today';
+        }
+
+        return $request->validate($rules);
     }
 
     private function driversForCurrentTeam(User $user): array

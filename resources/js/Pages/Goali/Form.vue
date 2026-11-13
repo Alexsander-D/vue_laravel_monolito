@@ -146,7 +146,7 @@ const submit = () => {
                 class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data inicial
                 <span>*</span></label>
               <TextInput id="travel_start_date" v-model="form.travel_start_date" type="date"
-                class="mt-1 block w-full" required />
+                class="mt-1 block w-full" :min="currentDateTime().date" required />
               <InputError :message="form.errors.travel_start_date" class="mt-2" />
             </div>
             <div>
@@ -154,7 +154,9 @@ const submit = () => {
                 class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data final
                 <span>*</span></label>
               <TextInput id="travel_end_date" v-model="form.travel_end_date" type="date"
-                class="mt-1 block w-full" :min="form.travel_start_date" required />
+                class="mt-1 block w-full"
+                :min="form.travel_start_date > currentDateTime().date ? form.travel_start_date : currentDateTime().date"
+                required />
               <InputError :message="form.errors.travel_end_date" class="mt-2" />
             </div>
           </div>
