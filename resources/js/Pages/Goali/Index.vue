@@ -103,21 +103,21 @@ const canDriverEditTrip = (record) => (
   && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId))
 );
 const tableId = "goali-trips-datatable";
-const tableHeaders = [
-  { name: "Data / Hora" },
+const tableHeaders = computed(() => [
+  { name: "Data" },
   { name: "Tipo" },
-  { name: "Status corrida" },
+  { name: "Status" },
   { name: "Solicitação" },
   { name: "Código da Viagem" },
   { name: "Origem / Destino" },
   { name: "Passageiro" },
   { name: "Motorista" },
-  { name: "Responsável" },
+  ...(props.isAdmin ? [{ name: "Responsável" }] : []),
   { name: "Valor" },
-  { name: "Cancelada por" },
+  ...(props.isAdmin ? [{ name: "Cancelada por" }] : []),
   { name: "Ações" },
-];
-const tableColumns = [
+]);
+const tableColumns = computed(() => [
   "travelDate",
   "status",
   "tripStatus",
@@ -126,11 +126,11 @@ const tableColumns = [
   "route",
   "passenger",
   "driver",
-  "responsible",
+  ...(props.isAdmin ? ["responsible"] : []),
   "amount",
-  "cancelledBy",
+  ...(props.isAdmin ? ["cancelledBy"] : []),
   "buttonActions",
-];
+]);
 const tableData = computed(() => props.records.map((record) => ({
   travelDate: `${date(record.travel_date)} - ${time(record.travel_time)}`,
   status: record.status,
@@ -476,11 +476,11 @@ onBeforeUnmount(() => {
                   <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valor</p>
                   <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{ money(record.amount) }}</p>
                 </div>
-                <div class="col-span-2">
+                <div v-if="props.isAdmin" class="col-span-2">
                   <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Responsável</p>
                   <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.responsible }}</p>
                 </div>
-                <div v-if="record.cancelled_by_role" class="col-span-2">
+                <div v-if="props.isAdmin && record.cancelled_by_role" class="col-span-2">
                   <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cancelada por</p>
                   <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.cancelled_by_role }}: {{ record.cancelled_by_name }}</p>
                 </div>
