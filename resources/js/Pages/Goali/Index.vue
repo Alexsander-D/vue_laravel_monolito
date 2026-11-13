@@ -292,12 +292,13 @@ const deleteRecord = async (record) => {
   if (result.isConfirmed) router.delete(route("goali.destroy", record.id), { preserveScroll: true });
 };
 const handleTableAction = (event) => {
-  const button = event.target.closest(`#${tableId} button[data-goali-action]`);
+  const target = event.target instanceof Element ? event.target : null;
+  const button = target?.closest(`#${tableId} button[data-goali-action]`);
   if (!button) {
     return;
   }
 
-  const record = props.records.find((item) => item.id === Number(button.dataset.recordId));
+  const record = props.records.find((item) => String(item.id) === button.dataset.recordId);
   if (!record) {
     return;
   }

@@ -39,8 +39,8 @@ const serviceCatalog = [
   { name: "Pezinho", price: 10, icon: "📏" },
   { name: "Sobrancelha", price: 10, icon: "🔍" },
   { name: "Pigmentação", price: 30, icon: "🎨" },
-  { name: "Luzes", price: 100, icon: "💡" },
-  { name: "Nevou", price: 120, icon: "❄️" },
+  { name: "Luzes", price: 110, icon: "💡" },
+  { name: "Nevou", price: 150, icon: "❄️" },
 ];
 const parseServiceEntries = (value) => {
   if (!value) {
