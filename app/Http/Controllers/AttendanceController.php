@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\AttendanceService;
+use App\Models\AttendanceServicePrice;
 use App\Models\Spatie\User;
 use App\Notifications\DailyAttendanceReportNotification;
 use Illuminate\Http\Request;
@@ -20,8 +21,7 @@ class AttendanceController extends Controller
     {
         $validated = Validator::make($request->all(), [
             'services' => ['required', 'array', 'min:1'],
-            'services.*.name' => ['required', 'string'],
-            'services.*.price' => ['required', 'numeric'],
+            'services.*.name' => ['required', 'string', 'exists:attendance_service_prices,name'],
             'payment_method' => ['required', 'string', 'in:Dinheiro,Cartão,Pix'],
             'barbers' => ['required', 'array', 'min:1'],
             'barbers.*' => ['string', 'in:' . implode(',', self::BARBERS)],
@@ -32,9 +32,8 @@ class AttendanceController extends Controller
 
         try {
             DB::transaction(function () use ($validated) {
-
-                $total = collect($validated['services'])
-                    ->sum('price');
+                $services = $this->applyCurrentServicePrices($validated['services']);
+                $total = collect($services)->sum('price');
 
                 $attendance = Attendance::create([
                     'user_id' => Auth::id(),
@@ -43,8 +42,7 @@ class AttendanceController extends Controller
                     'barbers' => $validated['barbers'],
                 ]);
 
-                foreach ($validated['services'] as $service) {
-
+                foreach ($services as $service) {
                     AttendanceService::create([
                         'attendance_id' => $attendance->id,
                         'service_name' => $service['name'],
@@ -122,6 +120,7 @@ class AttendanceController extends Controller
 
         return Inertia::render('Attendance/Report', [
             'records' => $records,
+            'serviceCatalog' => AttendanceServicePrice::catalog(),
             'date' => [
                 'startDate' => $startDate,
                 'endDate' => $endDate,
@@ -188,6 +187,38 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function servicePrices(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        return Inertia::render('Attendance/ServicePrices', [
+            'services' => AttendanceServicePrice::query()
+                ->orderBy('sort_order')
+                ->get(['id', 'name', 'price', 'icon']),
+        ]);
+    }
+
+    public function updateServicePrices(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $validated = Validator::make($request->all(), [
+            'services' => ['required', 'array', 'min:1'],
+            'services.*.id' => ['required', 'integer', 'distinct', 'exists:attendance_service_prices,id'],
+            'services.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+        ])->validate();
+
+        DB::transaction(function () use ($validated) {
+            foreach ($validated['services'] as $service) {
+                AttendanceServicePrice::query()
+                    ->whereKey($service['id'])
+                    ->update(['price' => $service['price']]);
+            }
+        });
+
+        return back()->with('success', 'Preços dos serviços atualizados com sucesso.');
+    }
+
     public function update(Request $request, Attendance $attendance)
     {
         $validated = Validator::make($request->all(), [
@@ -195,8 +226,7 @@ class AttendanceController extends Controller
             'barbers' => ['nullable', 'array', 'min:1'],
             'barbers.*' => ['string', 'in:' . implode(',', self::BARBERS)],
             'services' => ['nullable', 'array'],
-            'services.*.name' => ['required_with:services', 'string', 'min:1'],
-            'services.*.price' => ['required_with:services', 'numeric', 'min:0'],
+            'services.*.name' => ['required_with:services', 'string', 'exists:attendance_service_prices,name'],
         ])->validate();
 
         if (! empty($validated['payment_method'])) {
@@ -212,14 +242,7 @@ class AttendanceController extends Controller
         }
 
         if (array_key_exists('services', $validated)) {
-            $services = collect($validated['services'])
-                ->map(fn ($service) => [
-                    'name' => trim((string) $service['name']),
-                    'price' => (float) ($service['price'] ?? 0),
-                ])
-                ->filter(fn ($service) => $service['name'] !== '')
-                ->values()
-                ->all();
+            $services = $this->applyCurrentServicePrices($validated['services']);
 
             $attendance->services()->delete();
 
@@ -243,5 +266,27 @@ class AttendanceController extends Controller
         $attendance->delete();
 
         return redirect()->back();
+    }
+
+    private function applyCurrentServicePrices(array $services): array
+    {
+        $pricesByName = AttendanceServicePrice::query()
+            ->whereIn('name', array_column($services, 'name'))
+            ->pluck('price', 'name');
+
+        return collect($services)
+            ->map(fn ($service) => [
+                'name' => $service['name'],
+                'price' => (float) $pricesByName->get($service['name']),
+            ])
+            ->all();
+    }
+
+    private function ensureAdmin(Request $request): void
+    {
+        abort_unless(
+            strcasecmp(trim((string) $request->user()->getRoleByUser()), 'Admin') === 0,
+            403
+        );
     }
 }

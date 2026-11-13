@@ -41,6 +41,7 @@ use App\Http\Controllers\Internal\ProductTransferControllerAdmin;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\GoaliTripController;
+use App\Models\AttendanceServicePrice;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -95,7 +96,10 @@ Route::middleware([
                 return Inertia::render('Errors/UnassignedTeam');
             }
 
-            return Inertia::render('Dashboard');
+            return Inertia::render('Dashboard', [
+                'isAdmin' => strcasecmp(trim((string) $user->getRoleByUser()), 'Admin') === 0,
+                'services' => AttendanceServicePrice::catalog(),
+            ]);
         })->name('dashboard');
 
         Route::get('/goali/form', [GoaliTripController::class, 'form'])->name('goali.form');
@@ -114,6 +118,16 @@ Route::middleware([
             '/attendance/report',
             [AttendanceController::class, 'report']
         )->name('attendance.report');
+
+        Route::get(
+            '/attendance/service-prices',
+            [AttendanceController::class, 'servicePrices']
+        )->name('attendance.service-prices.index');
+
+        Route::put(
+            '/attendance/service-prices',
+            [AttendanceController::class, 'updateServicePrices']
+        )->name('attendance.service-prices.update');
 
         Route::post(
             '/attendance/send-productivity-report',

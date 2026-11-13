@@ -8,81 +8,16 @@ import { ref, defineProps, computed } from "vue";
 // Recebe as props padrão do Inertia (usuário autenticado)
 const props = defineProps({
   auth: Object,
+  isAdmin: { type: Boolean, default: false },
+  services: { type: Array, required: true },
 });
 
-// Define os cards dinamicamente
-const features = [
-  {
-    title: "Corte Social",
-    string_value: "R$ 35,00",
-    value: 35,
-    icon: "✂️", // Tesoura para cortes clássicos
-    link: "#",
-  },
-  {
-    title: "Corte Degradê",
-    string_value: "R$ 40,00",
-    value: 40,
-    icon: "💈", // Paleta de cores para estilo moderno
-    link: "#",
-  },
-  {
-    title: "Corte Navalhado",
-    string_value: "R$ 45,00",
-    value: 45,
-    icon: "🪒", // Navalha para cortes detalhados
-    link: "#",
-  },
-  {
-    title: "Barba",
-    string_value: "R$ 20,00",
-    value: 20,
-    icon: "🧔", // Rosto com barba
-    link: "#",
-  },
-  {
-    title: "Bigode",
-    string_value: "R$ 10,00",
-    value: 10,
-    icon: "👨‍🦰", // Rosto com bigode
-    link: "#",
-  },
-  {
-    title: "Pezinho",
-    string_value: "R$ 10,00",
-    value: 10,
-    icon: "📏", // Régua para cortes precisos
-    link: "#",
-  },
-  {
-    title: "Sobrancelha",
-    string_value: "R$ 10,00",
-    value: 10,
-    icon: "🔍", // Olho para design de sobrancelhas
-    link: "#",
-  },
-  {
-    title: "Pigmentação",
-    string_value: "R$ 30,00",
-    value: 30,
-    icon: "🎨", // Paleta de cores para pigmentação
-    link: "#",
-  },
-  {
-    title: "Luzes",
-    string_value: "R$ 100,00",
-    value: 100,
-    icon: "💡", // Lâmpada para iluminar o cabelo
-    link: "#",
-  },
-  {
-    title: "Nevou",
-    string_value: "R$ 120,00",
-    value: 120,
-    icon: "❄️", // Floco de neve para o efeito "nevou"
-    link: "#",
-  },
-];
+const features = computed(() => props.services.map(({ name, price, icon }) => ({
+  title: name,
+  value: Number(price),
+  icon,
+  link: "#",
+})));
 
 const paymentMethods = ["Dinheiro", "Cartão", "Pix"];
 const barbers = ["Kaique", "Ryan"];
@@ -262,6 +197,12 @@ const isSelected = (service) => {
 <template>
   <BaseLayout title="Atendimento">
     <div class="w-full mx-auto pt-1">
+      <div v-if="props.isAdmin" class="mb-3 flex justify-end">
+        <Link
+          :href="route('attendance.service-prices.index')"
+          class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+        >Gerenciar preços</Link>
+      </div>
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
         <div class="text-center mb-8">
           <h1 class="text-3xl font-bold text-yellow-500">
