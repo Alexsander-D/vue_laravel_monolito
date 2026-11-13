@@ -46,10 +46,11 @@ const form = useForm({
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
 const initialTripStatus = computed(() => (
-  props.isAdmin
-    && (!form.driver_id || Number(form.driver_id) !== Number(props.currentUserId))
+  props.isAdmin && form.driver_id && Number(form.driver_id) !== Number(props.currentUserId)
     ? "Criada"
-    : props.initialTripStatus
+    : props.isAdmin
+      ? "Em Andamento"
+      : props.initialTripStatus
 ));
 const selectedDriver = computed({
   get: () => props.drivers.find((driver) => driver.id === Number(form.driver_id)) || null,

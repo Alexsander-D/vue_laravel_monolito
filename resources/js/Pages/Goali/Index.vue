@@ -85,7 +85,7 @@ const editTripStatusOptions = computed(() => {
     }
 
     return editingRecord.value.trip_status === "Em Andamento"
-      ? ["Aguardando Analise"]
+      ? ["Aguardando Aprovação"]
       : [];
   }
 
@@ -146,13 +146,13 @@ const tableData = computed(() => props.records.map((record) => ({
     ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
     : "—",
   buttonActions: [
-    (props.isAdmin && record.trip_status !== "Finalizada")
+    (props.isAdmin && record.trip_status !== "Pago")
       || (props.isDriver && canDriverEditTrip(record))
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
     record.trip_status !== "Criada"
       && record.driver_id !== null
-      && !["Finalizada", "Aguardando Analise"].includes(record.trip_status)
+      && !["Pago", "Aguardando Aprovação"].includes(record.trip_status)
       ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
       : "",
     props.isAdmin
@@ -245,14 +245,14 @@ const clearDateFilters = () => {
   applyDateFilters();
 };
 const startEdit = (record) => {
-  if (record.trip_status === "Finalizada" || (props.isDriver && !canDriverEditTrip(record))) {
+  if (record.trip_status === "Pago" || (props.isDriver && !canDriverEditTrip(record))) {
     return;
   }
 
   editingId.value = record.id;
   if (props.isDriver) {
     editForm.defaults({
-      trip_status: record.trip_status === "Criada" ? "Em Andamento" : "Aguardando Analise",
+      trip_status: record.trip_status === "Criada" ? "Em Andamento" : "Aguardando Aprovação",
     }).reset();
     return;
   }
@@ -332,14 +332,14 @@ const cancelTrip = async (record) => {
 };
 const nextTripStatus = (status) => ({
   Criada: "Em Andamento",
-  "Em Andamento": "Aguardando Analise",
-  "Aguardando Analise": "Finalizada",
+  "Em Andamento": "Aguardando Aprovação",
+  "Aguardando Aprovação": "Pago",
 }[status] || "");
 const tripRowClass = (row) => ({
   "goali-trip--created": row.tripStatus === "Criada",
   "goali-trip--in-progress": row.tripStatus === "Em Andamento",
-  "goali-trip--awaiting": row.tripStatus === "Aguardando Analise",
-  "goali-trip--finished": row.tripStatus === "Finalizada",
+  "goali-trip--awaiting": row.tripStatus === "Aguardando Aprovação",
+  "goali-trip--finished": row.tripStatus === "Pago",
 });
 const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const tableColumnRenderers = {
@@ -400,7 +400,7 @@ onBeforeUnmount(() => {
       <section class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:grid-cols-3 sm:gap-4 sm:py-4">
         <div class="rounded-md border-l-4 border-teal-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Registros no período</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ props.summary.count }}</p></div>
         <div class="rounded-md border-l-4 border-amber-500 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor total</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.amount) }}</p></div>
-        <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor a receber</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.receivable) }}</p></div>
+        <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor pago</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.receivable) }}</p></div>
       </section>
 
       <section class="col-span-12 lg:hidden" aria-label="Deslocamentos">
@@ -423,8 +423,8 @@ onBeforeUnmount(() => {
             :class="{
               'border-gray-500 border-y border-r bg-gray-50 dark:border-gray-400 dark:bg-gray-800': record.trip_status === 'Criada',
               'border-blue-700 border-y border-r bg-blue-50 dark:border-blue-400 dark:bg-blue-950/50': record.trip_status === 'Em Andamento',
-              'border-amber-600 border-y border-r bg-amber-50 dark:border-amber-400 dark:bg-amber-950/50': record.trip_status === 'Aguardando Analise',
-              'border-green-700 border-y border-r bg-green-50 dark:border-green-400 dark:bg-green-950/50': record.trip_status === 'Finalizada',
+              'border-amber-600 border-y border-r bg-amber-50 dark:border-amber-400 dark:bg-amber-950/50': record.trip_status === 'Aguardando Aprovação',
+              'border-green-700 border-y border-r bg-green-50 dark:border-green-400 dark:bg-green-950/50': record.trip_status === 'Pago',
             }"
           >
             <div
@@ -432,8 +432,8 @@ onBeforeUnmount(() => {
               :class="{
                 'border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800': record.trip_status === 'Criada',
                 'border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900/60': record.trip_status === 'Em Andamento',
-                'border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900/60': record.trip_status === 'Aguardando Analise',
-                'border-green-200 bg-green-100 dark:border-green-800 dark:bg-green-900/60': record.trip_status === 'Finalizada',
+                'border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900/60': record.trip_status === 'Aguardando Aprovação',
+                'border-green-200 bg-green-100 dark:border-green-800 dark:bg-green-900/60': record.trip_status === 'Pago',
               }"
             >
               <div>
@@ -447,8 +447,8 @@ onBeforeUnmount(() => {
                   :class="{
                     'bg-gray-700 text-white dark:bg-gray-600': record.trip_status === 'Criada',
                     'bg-blue-700 text-white dark:bg-blue-600': record.trip_status === 'Em Andamento',
-                    'bg-amber-700 text-white dark:bg-amber-600': record.trip_status === 'Aguardando Analise',
-                    'bg-green-700 text-white dark:bg-green-600': record.trip_status === 'Finalizada',
+                    'bg-amber-700 text-white dark:bg-amber-600': record.trip_status === 'Aguardando Aprovação',
+                    'bg-green-700 text-white dark:bg-green-600': record.trip_status === 'Pago',
                   }"
                 >{{ record.trip_status }}</span>
               </div>
@@ -488,17 +488,17 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="props.isAdmin || (props.isDriver && canDriverEditTrip(record)) || (record.trip_status !== 'Criada' && record.driver_id !== null && !['Finalizada', 'Aguardando Analise'].includes(record.trip_status))"
+              v-if="props.isAdmin || (props.isDriver && canDriverEditTrip(record)) || (record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
-                v-if="(props.isAdmin && record.trip_status !== 'Finalizada') || (props.isDriver && canDriverEditTrip(record))"
+                v-if="(props.isAdmin && record.trip_status !== 'Pago') || (props.isDriver && canDriverEditTrip(record))"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 @click="startEdit(record)"
               >{{ props.isDriver ? "Atualizar status" : "Editar" }}</button>
               <button
-                v-if="record.trip_status !== 'Criada' && record.driver_id !== null && !['Finalizada', 'Aguardando Analise'].includes(record.trip_status)"
+                v-if="record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
                 @click="cancelTrip(record)"

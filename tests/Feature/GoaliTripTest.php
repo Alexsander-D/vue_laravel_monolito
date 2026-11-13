@@ -144,7 +144,7 @@ class GoaliTripTest extends TestCase
         $admin->forceFill(['email_verified_at' => now()])->save();
         $this->attachToGoaliTeam($admin, 'Admin');
 
-        foreach (['Criada', 'Em Andamento', 'Aguardando Analise', 'Finalizada'] as $status) {
+        foreach (['Criada', 'Em Andamento', 'Aguardando Aprovação', 'Pago'] as $status) {
             $trip = GoaliTrip::create([
                 'user_id' => $admin->id,
                 'driver_id' => $admin->id,
@@ -339,7 +339,7 @@ class GoaliTripTest extends TestCase
             'travel_date' => now()->toDateString(),
             'travel_time' => $time,
             'status' => $status,
-            'trip_status' => $status === 'ENTRADA' ? 'Finalizada' : 'Em Andamento',
+            'trip_status' => $status === 'ENTRADA' ? 'Pago' : 'Em Andamento',
             'solicitation' => 'IMB',
             'origin' => 'Origem',
             'destination' => 'Destino',
@@ -355,7 +355,7 @@ class GoaliTripTest extends TestCase
         $this->actingAs($user)
             ->get(route('goali.index', [
                 'status' => 'ENTRADA',
-                'tripStatus' => 'Finalizada',
+                'tripStatus' => 'Pago',
                 'sortOrder' => 'asc',
             ]))
             ->assertOk()
@@ -370,7 +370,7 @@ class GoaliTripTest extends TestCase
 
         $this->get(route('goali.index', [
             'status' => 'ENTRADA',
-            'tripStatus' => 'Finalizada',
+            'tripStatus' => 'Pago',
             'sortOrder' => 'desc',
         ]))
             ->assertOk()
@@ -411,7 +411,7 @@ class GoaliTripTest extends TestCase
             'travel_date' => now()->toDateString(),
             'travel_time' => '12:00',
             'status' => 'ENTRADA',
-            'trip_status' => 'Finalizada',
+            'trip_status' => 'Pago',
             'solicitation' => 'IMB',
             'origin' => 'Origem',
             'destination' => 'Destino',
@@ -458,7 +458,7 @@ class GoaliTripTest extends TestCase
             'travel_date' => now()->toDateString(),
             'travel_time' => '12:00',
             'status' => 'ENTRADA',
-            'trip_status' => 'Finalizada',
+            'trip_status' => 'Pago',
             'solicitation' => 'IMB',
             'origin' => 'Origem',
             'destination' => 'Destino',
@@ -495,7 +495,7 @@ class GoaliTripTest extends TestCase
             'travel_date' => now()->toDateString(),
             'travel_time' => '12:00',
             'status' => 'ENTRADA',
-            'trip_status' => 'Finalizada',
+            'trip_status' => 'Pago',
             'solicitation' => 'IMB',
             'origin' => 'Origem atribuída',
             'destination' => 'Destino',
@@ -553,8 +553,8 @@ class GoaliTripTest extends TestCase
             'amount' => '10.00',
         ]);
 
-        $finishedTrip = $createTrip('Finalizada', '08:00', 'LOGVALE', 'SAÍDA');
-        $awaitingTrip = $createTrip('Aguardando Analise', '09:00', 'FRANGO DOURADO', 'ENTRADA');
+        $finishedTrip = $createTrip('Pago', '08:00', 'LOGVALE', 'SAÍDA');
+        $awaitingTrip = $createTrip('Aguardando Aprovação', '09:00', 'FRANGO DOURADO', 'ENTRADA');
         $inProgressTrip = $createTrip('Em Andamento', '10:00', 'OSESP', 'SAÍDA');
         $createdTrip = $createTrip('Criada', '11:00', 'IMB', 'ENTRADA');
 
@@ -573,13 +573,13 @@ class GoaliTripTest extends TestCase
 
         $this->get(route('goali.index', [
             'status' => ['ENTRADA', 'SAÍDA'],
-            'tripStatus' => ['Criada', 'Em Andamento', 'Aguardando Analise'],
+            'tripStatus' => ['Criada', 'Em Andamento', 'Aguardando Aprovação'],
             'solicitation' => ['IMB', 'OSESP', 'FRANGO DOURADO'],
         ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.status', ['ENTRADA', 'SAÍDA'])
-                ->where('filters.tripStatus', ['Criada', 'Em Andamento', 'Aguardando Analise'])
+                ->where('filters.tripStatus', ['Criada', 'Em Andamento', 'Aguardando Aprovação'])
                 ->where('filters.solicitation', ['IMB', 'OSESP', 'FRANGO DOURADO'])
                 ->where('records', fn ($records) => collect($records)->pluck('id')->all() === [
                     $createdTrip->id,
@@ -588,7 +588,7 @@ class GoaliTripTest extends TestCase
                 ]));
     }
 
-    public function test_non_admin_trip_starts_created_and_driver_sends_running_trips_for_analysis(): void
+    public function test_driver_trip_starts_in_progress_and_sends_running_trips_for_approval(): void
     {
         $driver = User::create([
             'name' => 'Motorista Goali',
@@ -616,12 +616,12 @@ class GoaliTripTest extends TestCase
         $this->assertSame('Em Andamento', $createdTrip->trip_status);
 
         $this->actingAs($driver, 'sanctum')
-            ->put(route('goali.update', $createdTrip), ['trip_status' => 'Finalizada'])
+            ->put(route('goali.update', $createdTrip), ['trip_status' => 'Pago'])
             ->assertSessionHasErrors('trip_status');
         $this->put(route('goali.update', $createdTrip), [
-            'trip_status' => 'Aguardando Analise',
+            'trip_status' => 'Aguardando Aprovação',
         ])->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertSame('Aguardando Analise', $createdTrip->fresh()->trip_status);
+        $this->assertSame('Aguardando Aprovação', $createdTrip->fresh()->trip_status);
 
         $runningTrip = GoaliTrip::create([
             'user_id' => $driver->id,
@@ -650,11 +650,11 @@ class GoaliTripTest extends TestCase
                 ->where('isDriver', true));
 
         $this->put(route('goali.update', $runningTrip), [
-            'trip_status' => 'Aguardando Analise',
+            'trip_status' => 'Aguardando Aprovação',
         ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
-        $this->assertSame('Aguardando Analise', $runningTrip->fresh()->trip_status);
+        $this->assertSame('Aguardando Aprovação', $runningTrip->fresh()->trip_status);
 
         $createdTrip = GoaliTrip::create([
             'user_id' => $driver->id,
@@ -671,7 +671,7 @@ class GoaliTripTest extends TestCase
             'amount' => '40.00',
         ]);
         $this->put(route('goali.update', $createdTrip), [
-            'trip_status' => 'Aguardando Analise',
+            'trip_status' => 'Aguardando Aprovação',
         ])->assertForbidden();
         $this->assertSame('Criada', $createdTrip->fresh()->trip_status);
         $this->put(route('goali.update', $createdTrip), [
@@ -680,12 +680,12 @@ class GoaliTripTest extends TestCase
         $this->assertSame('Em Andamento', $createdTrip->fresh()->trip_status);
         $this->assertSame($driver->id, $createdTrip->fresh()->driver_id);
         $this->put(route('goali.update', $createdTrip), [
-            'trip_status' => 'Aguardando Analise',
+            'trip_status' => 'Aguardando Aprovação',
         ])->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertSame('Aguardando Analise', $createdTrip->fresh()->trip_status);
+        $this->assertSame('Aguardando Aprovação', $createdTrip->fresh()->trip_status);
 
         $this->put(route('goali.update', $runningTrip), [
-            'trip_status' => 'Finalizada',
+            'trip_status' => 'Pago',
         ])->assertSessionHasErrors('trip_status');
         $this->delete(route('goali.destroy', $runningTrip))
             ->assertForbidden();
@@ -697,16 +697,16 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('summary.receivable', 0));
 
         $this
-            ->put(route('goali.update', $runningTrip), $this->tripUpdatePayload($runningTrip, 'Finalizada'))
+            ->put(route('goali.update', $runningTrip), $this->tripUpdatePayload($runningTrip, 'Pago'))
             ->assertRedirect();
-        $this->assertSame('Finalizada', $runningTrip->fresh()->trip_status);
+        $this->assertSame('Pago', $runningTrip->fresh()->trip_status);
 
         $this
             ->get(route('goali.index'))
             ->assertInertia(fn (Assert $page) => $page->where('summary.receivable', 75));
     }
 
-    public function test_admin_can_finalize_an_in_progress_trip(): void
+    public function test_admin_can_mark_an_in_progress_trip_as_paid(): void
     {
         $admin = User::create([
             'name' => 'Admin Goali',
@@ -740,15 +740,15 @@ class GoaliTripTest extends TestCase
             ->assertRedirect();
         $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
 
-        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Finalizada'))
+        $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Pago'))
             ->assertRedirect();
-        $this->assertSame('Finalizada', $trip->fresh()->trip_status);
+        $this->assertSame('Pago', $trip->fresh()->trip_status);
 
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip))
             ->assertForbidden();
     }
 
-    public function test_admin_can_cancel_an_analysis_trip_back_to_the_unassigned_queue(): void
+    public function test_admin_can_cancel_an_approval_trip_back_to_the_unassigned_queue(): void
     {
         $admin = User::create([
             'name' => 'Admin Cancelamento',
@@ -770,7 +770,7 @@ class GoaliTripTest extends TestCase
             'travel_date' => now()->toDateString(),
             'travel_time' => '12:00',
             'status' => 'ENTRADA',
-            'trip_status' => 'Aguardando Analise',
+            'trip_status' => 'Aguardando Aprovação',
             'solicitation' => 'IMB',
             'origin' => 'Origem',
             'destination' => 'Destino',
@@ -861,7 +861,7 @@ class GoaliTripTest extends TestCase
         $this->assertSame($driver->name, $trip->fresh()->cancelled_by_name);
     }
 
-    public function test_admin_can_create_an_unassigned_trip_for_a_driver_to_claim(): void
+    public function test_admin_can_create_an_unassigned_trip_that_starts_in_progress(): void
     {
         $admin = User::create([
             'name' => 'Admin Goali',
@@ -889,7 +889,7 @@ class GoaliTripTest extends TestCase
 
         $trip = GoaliTrip::where('passenger', 'Corrida sem motorista')->firstOrFail();
         $this->assertNull($trip->driver_id);
-        $this->assertSame('Criada', $trip->trip_status);
+        $this->assertSame('Em Andamento', $trip->trip_status);
 
         $admin->teams()->updateExistingPivot($team->id, ['role' => 'Motorista']);
 
@@ -900,18 +900,12 @@ class GoaliTripTest extends TestCase
                 ->where('records.0.id', $trip->id));
 
         $this->put(route('goali.update', $trip), [
-            'trip_status' => 'Em Andamento',
+            'trip_status' => 'Aguardando Aprovação',
             'driver_id' => $admin->id,
         ])->assertRedirect();
 
         $this->assertSame($admin->id, $trip->fresh()->driver_id);
-        $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
-
-        $this->put(route('goali.update', $trip), [
-            'trip_status' => 'Aguardando Analise',
-            'driver_id' => $admin->id,
-        ])->assertRedirect();
-        $this->assertSame('Aguardando Analise', $trip->fresh()->trip_status);
+        $this->assertSame('Aguardando Aprovação', $trip->fresh()->trip_status);
 
     }
 
