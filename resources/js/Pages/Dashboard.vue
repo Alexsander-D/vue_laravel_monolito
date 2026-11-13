@@ -197,13 +197,13 @@ const isSelected = (service) => {
 <template>
   <BaseLayout title="Atendimento">
     <div class="w-full mx-auto pt-1">
-      <div v-if="props.isAdmin" class="mb-3 flex justify-end">
-        <Link
-          :href="route('attendance.service-prices.index')"
-          class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
-        >Gerenciar preços</Link>
-      </div>
       <div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
+        <div v-if="props.isAdmin" class="mb-3 flex justify-end">
+          <Link
+            :href="route('attendance.service-prices.index')"
+            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+          >Gerenciar preços</Link>
+        </div>
         <div class="text-center mb-8">
           <h1 class="text-3xl font-bold text-yellow-500">
             Selecione os serviços realizados.
