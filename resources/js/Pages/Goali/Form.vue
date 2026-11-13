@@ -60,6 +60,7 @@ const selectedDriver = computed({
 });
 const createWithoutDriver = ref(false);
 const previousDriverId = ref(props.initialDriverId);
+const enableTripCode = ref(false);
 
 const toggleWithoutDriver = (event) => {
   if (event.target.checked) {
@@ -69,6 +70,12 @@ const toggleWithoutDriver = (event) => {
   }
 
   form.driver_id = previousDriverId.value;
+};
+
+const toggleTripCode = () => {
+  if (!enableTripCode.value) {
+    form.trip_code = "";
+  }
 };
 
 const formatAmount = () => {
@@ -98,6 +105,7 @@ const submit = () => {
         "amount"
       );
       createWithoutDriver.value = false;
+      enableTripCode.value = false;
       previousDriverId.value = props.initialDriverId;
       form.driver_id = props.initialDriverId;
       const dateTime = currentDateTime();
@@ -210,7 +218,12 @@ const submit = () => {
           <div>
             <label for="trip_code"
               class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Código da Viagem</label>
-            <TextInput id="trip_code" v-model="form.trip_code" type="text" class="mt-1 block w-full" maxlength="255" />
+            <label for="enable_trip_code" class="mt-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input id="enable_trip_code" v-model="enableTripCode" type="checkbox" class="rounded border-gray-300 text-teal-700" @change="toggleTripCode" />
+              Habilitar código da viagem
+            </label>
+            <TextInput id="trip_code" v-model="form.trip_code" type="text" class="mt-1 block w-full" maxlength="255"
+              :disabled="!enableTripCode" />
             <InputError :message="form.errors.trip_code" class="mt-2" />
           </div>
           <div>
