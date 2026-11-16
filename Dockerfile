@@ -41,4 +41,4 @@ RUN echo '* * * * * www-data cd /var/www/html && php artisan schedule:run >> /de
     && chmod 0644 /etc/cron.d/laravel-schedule
 
 
-CMD ["sh", "-c", "mkdir -p storage/app/public/profile-photos bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache && chmod -R ug+rwX storage bootstrap/cache && php artisan storage:link --force || true; cron && php-fpm"]
+CMD ["sh", "-c", "cron && php-fpm"]
