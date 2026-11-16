@@ -71,24 +71,14 @@ const selectedCompany = computed({
     form.solicitation = company?.name ?? "";
   },
 });
-const availablePassengers = computed(() => {
-  if (!form.company_id) {
-    return [];
-  }
-
-  return props.passengers.filter(
-    (passenger) => Number(passenger.company_id) === Number(form.company_id),
-  );
-});
+const availablePassengers = computed(() => props.passengers.filter((passenger) => Number(passenger.company_id) === Number(form.company_id)));
 const selectedPassengers = computed({
   get: () => availablePassengers.value.filter((passenger) => form.passenger_ids.includes(Number(passenger.id))),
   set: (passengers) => {
     form.passenger_ids = (Array.isArray(passengers) ? passengers : []).map((passenger) => Number(passenger.id));
   },
 });
-const hasCompanyPassengers = computed(
-  () => Boolean(form.company_id) && availablePassengers.value.length > 0,
-);
+const hasCompanyPassengers = computed(() => availablePassengers.value.length > 0);
 const useRegisteredCompany = ref(props.companies.length > 0);
 watch(() => form.company_id, (companyId) => {
   const company = props.companies.find((item) => Number(item.id) === Number(companyId));
@@ -106,6 +96,7 @@ const createWithoutDriver = ref(false);
 const previousDriverId = ref(props.initialDriverId);
 const enableTripCode = ref(false);
 
+<<<<<<< HEAD
 const toggleCompanyMode = (event = null) => {
   if (event?.target) {
     useRegisteredCompany.value = Boolean(event.target.checked);
@@ -114,6 +105,9 @@ const toggleCompanyMode = (event = null) => {
   // Ao sair do cadastro, a solicitação e o passageiro passam a ser informados
   // manualmente. Sem empresa selecionada, o seletor de passageiros nunca deve
   // aparecer.
+=======
+const toggleCompanyMode = () => {
+>>>>>>> parent of 8b4f2fc (hotfix)
   form.company_id = null;
   form.passenger_ids = [];
   form.passenger = "";
