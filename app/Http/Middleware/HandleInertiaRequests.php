@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
@@ -16,6 +18,24 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /**
+     * Normalize redirects after state-changing Inertia requests.
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        $response = parent::handle($request, $next);
+
+        if (
+            $request->header('X-Inertia') &&
+            $response->getStatusCode() === 302 &&
+            in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)
+        ) {
+            $response->setStatusCode(303);
+        }
+
+        return $response;
+    }
 
     /**
      * Determine the current asset version.
