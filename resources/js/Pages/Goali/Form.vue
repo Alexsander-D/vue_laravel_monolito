@@ -176,7 +176,7 @@ const submit = () => {
           <header
             class="mb-4 border-b border-cyan-100 bg-cyan-50/70 px-4 py-5 text-center dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:mb-6 sm:pb-5">
             <Link :href="route('goali.index')"
-              class="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800">
+              class="mb-4 flex w-fit min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800">
               <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
