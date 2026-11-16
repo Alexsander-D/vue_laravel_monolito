@@ -96,7 +96,6 @@ const createWithoutDriver = ref(false);
 const previousDriverId = ref(props.initialDriverId);
 const enableTripCode = ref(false);
 
-<<<<<<< HEAD
 const toggleCompanyMode = (event = null) => {
   if (event?.target) {
     useRegisteredCompany.value = Boolean(event.target.checked);
@@ -105,9 +104,6 @@ const toggleCompanyMode = (event = null) => {
   // Ao sair do cadastro, a solicitação e o passageiro passam a ser informados
   // manualmente. Sem empresa selecionada, o seletor de passageiros nunca deve
   // aparecer.
-=======
-const toggleCompanyMode = () => {
->>>>>>> parent of 8b4f2fc (hotfix)
   form.company_id = null;
   form.passenger_ids = [];
   form.passenger = "";
@@ -183,30 +179,6 @@ const submit = () => {
       <section
         class="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-lg dark:border-cyan-900/50 dark:bg-gray-900">
         <div class="p-5 sm:p-6">
-<<<<<<< HEAD
-=======
-        <Link
-          :href="route('goali.index')"
-          class="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800"
-        >
-          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Voltar ao relatório
-        </Link>
-        <div v-if="props.canManageDirectory" class="mb-4 flex flex-wrap gap-2">
-          <Link :href="route('goali.companies.index')" class="inline-flex min-h-11 items-center rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Criar empresa</Link>
-          <Link :href="route('goali.passengers.index')" class="inline-flex min-h-11 items-center rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Criar passageiro</Link>
-        </div>
-        <header class="mb-4 border-b border-cyan-100 bg-cyan-50/70 px-4 py-5 text-center dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:mb-6 sm:pb-5">
-          <h1 class="text-xl font-bold uppercase text-gray-900 dark:text-white sm:text-2xl">CRIAR NOVA CORRIDA</h1>
-          <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-cyan-600" aria-hidden="true"></div>
-          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
-            Registro de deslocamento do {{ props.responsibleUser || "usuário" }}
-          </p>
-        </header>
->>>>>>> parent of f121d90 (release)
-
           <header
             class="mb-4 border-b border-cyan-100 bg-cyan-50/70 px-4 py-5 text-center dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:mb-6 sm:pb-5">
             <Link :href="route('goali.index')"
