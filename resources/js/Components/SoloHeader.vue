@@ -176,25 +176,13 @@ onUnmounted(() => {
                     v-if="$page.props.userPermissions?.includes('goali-visualizar-corridas')"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('goali.index')">
-                    Relatório
+                    Relatório de corridas
                   </Link>
                   <Link
                     v-if="$page.props.userPermissions?.includes('goali-criar-corridas')"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('goali.form')">
                     Criar corrida
-                  </Link>
-                  <Link
-                    v-if="canManageGoaliDirectory"
-                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                    :href="route('goali.companies.index')">
-                    Empresas
-                  </Link>
-                  <Link
-                    v-if="canManageGoaliDirectory"
-                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                    :href="route('goali.passengers.index')">
-                    Passageiros
                   </Link>
                   <Link
                     v-if="$page.props.auth.user.current_team && isCurrentTeamAdmin"
@@ -207,6 +195,18 @@ onUnmounted(() => {
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
                     Gerir Permissões
+                  </Link>
+                  <Link
+                    v-if="canManageGoaliDirectory"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('goali.companies.index')">
+                    Empresas
+                  </Link>
+                  <Link
+                    v-if="canManageGoaliDirectory"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('goali.passengers.index')">
+                    Passageiros
                   </Link>
                   <div v-if="$page.props.auth.user.all_teams.length > 1" class="group relative">
                     <button type="button"
@@ -622,12 +622,6 @@ onUnmounted(() => {
 
               <template #content>
                 <div class="w-full sm:w-60">
-                  <Link
-                    v-if="$page.props.userPermissions?.includes('visualizar-monitoramento') || $page.props.auth.user.current_team?.name?.trim()?.toLocaleUpperCase() === 'MONITORAMENTO DO SISTEMA'"
-                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
-                    :href="route('monitoring.index')">
-                    Monitoramento do sistema
-                  </Link>
                   <Link
                     v-if="$page.props.auth.user.current_team && isCurrentTeamAdmin"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"

@@ -71,24 +71,14 @@ const selectedCompany = computed({
     form.solicitation = company?.name ?? "";
   },
 });
-const availablePassengers = computed(() => {
-  if (!form.company_id) {
-    return [];
-  }
-
-  return props.passengers.filter(
-    (passenger) => Number(passenger.company_id) === Number(form.company_id),
-  );
-});
+const availablePassengers = computed(() => props.passengers.filter((passenger) => Number(passenger.company_id) === Number(form.company_id)));
 const selectedPassengers = computed({
   get: () => availablePassengers.value.filter((passenger) => form.passenger_ids.includes(Number(passenger.id))),
   set: (passengers) => {
     form.passenger_ids = (Array.isArray(passengers) ? passengers : []).map((passenger) => Number(passenger.id));
   },
 });
-const hasCompanyPassengers = computed(
-  () => Boolean(form.company_id) && availablePassengers.value.length > 0,
-);
+const hasCompanyPassengers = computed(() => availablePassengers.value.length > 0);
 const useRegisteredCompany = ref(props.companies.length > 0);
 watch(() => form.company_id, (companyId) => {
   const company = props.companies.find((item) => Number(item.id) === Number(companyId));
@@ -189,7 +179,6 @@ const submit = () => {
       <section
         class="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-lg dark:border-cyan-900/50 dark:bg-gray-900">
         <div class="p-5 sm:p-6">
-
           <header
             class="mb-4 border-b border-cyan-100 bg-cyan-50/70 px-4 py-5 text-center dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:mb-6 sm:pb-5">
             <Link :href="route('goali.index')"

@@ -12,7 +12,7 @@ class AdminTeamsSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::where('email', env('MAIL_USERNAME'))->first() ?? User::find(1);
+        $user = User::where('email', env('MAIL_USERNAME'))->first();
         
         $teams = [
             'SAC',
@@ -109,27 +109,6 @@ class AdminTeamsSeeder extends Seeder
                     }
                 }
             }
-        }
-
-        $monitoringTeam = Team::firstOrCreate(
-            ['name' => 'MONITORAMENTO DO SISTEMA'],
-            ['personal_team' => true, 'user_id' => $user->id]
-        );
-        $user->teams()->syncWithoutDetaching([$monitoringTeam->id => ['role' => 'Admin']]);
-
-        $monitoringPermission = Permission::firstOrCreate([
-            'name' => 'visualizar-monitoramento',
-            'team_id' => $monitoringTeam->id,
-        ]);
-        $monitoringRole = Role::firstOrCreate([
-            'name' => 'Admin',
-            'team_id' => $monitoringTeam->id,
-        ]);
-        $monitoringRole->permissions()->syncWithoutDetaching([$monitoringPermission->id]);
-
-        $systemUser = User::find(1);
-        if ($systemUser) {
-            $systemUser->teams()->syncWithoutDetaching([$monitoringTeam->id => ['role' => 'Admin']]);
         }
     }
 }
