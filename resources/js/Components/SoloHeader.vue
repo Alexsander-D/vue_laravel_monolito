@@ -7,10 +7,24 @@ const page = usePage();
 const isDarkMode = ref(false);
 const isMenuOpen = ref(true);
 const isButtonHidden = ref(true);
+const currentTeam = computed(() => {
+  const user = page.props.auth?.user;
+
+  return user?.current_team ?? user?.all_teams?.find(
+    (team) => Number(team.id) === Number(user?.current_team_id)
+  );
+});
 const currentTeamName = computed(
-  () => page.props.auth?.user?.current_team?.name?.trim() ?? ""
+  () => currentTeam.value?.name?.trim() ?? ""
 );
-const normalizedTeamName = computed(() => currentTeamName.value.toUpperCase());
+const normalizedTeamName = computed(() =>
+  currentTeamName.value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase()
+);
 const isCurrentTeamAdmin = computed(
   () => String(page.props.userRole ?? "").trim().toLowerCase() === "admin"
 );
@@ -52,7 +66,9 @@ const switchTheme = () => {
 };
 
 const logout = () => {
-  router.post(route("logout"));
+  router.post(route("logout"), {
+    onFinish: () => window.location.assign(route("login")),
+  });
 };
 
 const switchToTeam = (team) => {

@@ -46,6 +46,7 @@ use App\Http\Controllers\GoaliPassengerController;
 use App\Http\Controllers\MonitoringController;
 use App\Models\AttendanceServicePrice;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -85,9 +86,15 @@ Route::middleware([
             // A equipe atual pode ter ficado apontando para a equipe da barbearia
             // depois de um usuário ser vinculado à Goali. Resolva a entrada pelo
             // vínculo da equipe antes de renderizar qualquer dashboard.
-            $goaliTeam = $user->teams()
-                ->whereRaw('UPPER(TRIM(teams.name)) = ?', ['GOALI TRANSPORTES'])
-                ->first();
+            $normalizeTeamName = static fn (?string $name): string => Str::of((string) $name)
+                ->ascii()
+                ->upper()
+                ->replaceMatches('/\s+/', ' ')
+                ->trim()
+                ->value();
+
+            $goaliTeam = $user->teams
+                ->first(fn (Team $team): bool => $normalizeTeamName($team->name) === 'GOALI TRANSPORTES');
 
             if ($goaliTeam) {
                 if ((int) $user->current_team_id !== (int) $goaliTeam->id) {
