@@ -23,6 +23,7 @@ class EnsureEmailIsVerified
             'verification.notice',
             'verification.send',
             'verification.verify',
+            'logout',
         ];
 
         if (

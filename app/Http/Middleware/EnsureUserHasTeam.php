@@ -36,10 +36,8 @@ class EnsureUserHasTeam
                 }
 
                 if ($userTeam) {
-                    $user->current_team_id = $userTeam->id;
-                    $user->save();
-
-                    return back();
+                    $user->forceFill(['current_team_id' => $userTeam->id])->save();
+                    $user->setRelation('currentTeam', $userTeam);
                 }
             }
 
