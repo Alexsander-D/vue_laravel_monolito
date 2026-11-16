@@ -1,25 +1,10 @@
 <script setup>
 import { Head } from "@inertiajs/vue3";
-import { onMounted, ref } from "vue";
-import { Capacitor } from "@capacitor/core";
-
-const isAndroid = ref(false);
-const isNativeApp = ref(false);
-const downloadUrl = route("app.download");
-
-onMounted(() => {
-  isAndroid.value = /android/i.test(navigator.userAgent);
-  isNativeApp.value = Capacitor.isNativePlatform();
-
-  if (isAndroid.value && !isNativeApp.value) {
-    window.location.assign(downloadUrl);
-  }
-});
 </script>
 
 <template>
 
-  <Head title="Baixar aplicativo Android" />
+  <Head title="Baixar aplicativo GOALI" />
 
   <main class="flex min-h-screen items-center justify-center bg-gray-100 px-4 py-10 dark:bg-gray-950">
     <section class="w-full max-w-lg rounded-2xl bg-white p-6 text-center shadow-lg dark:bg-gray-900 sm:p-10">
@@ -40,29 +25,15 @@ onMounted(() => {
         </svg>
       </div>
 
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-        Aplicativo Android
-      </h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Aplicativo GOALI</h1>
       <p class="mt-3 text-gray-600 dark:text-gray-300">
-        <template v-if="isAndroid && !isNativeApp">
-          Seu download está começando. Quando terminar, abra o arquivo APK para instalar o aplicativo.
-        </template>
-        <template v-else-if="isNativeApp">
-          Toque no botão para baixar o APK. Ao terminar, abra a notificação para iniciar a instalação.
-        </template>
-        <template v-else>
-          Acesse esta página em um dispositivo Android para iniciar o download automaticamente.
-        </template>
+        Baixe o aplicativo para Android pelo botão abaixo.
       </p>
 
-      <a :href="downloadUrl"
+      <a :href="route('app.download')"
         class="mt-7 inline-flex w-full items-center justify-center rounded-lg bg-teal-700 px-5 py-3 font-semibold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900">
-        Baixar APK
+        Baixar aplicativo Android
       </a>
-
-      <p class="mt-5 text-sm text-gray-500 dark:text-gray-400">
-        O Android pode solicitar autorização para instalar aplicativos baixados pelo navegador.
-      </p>
     </section>
   </main>
 </template>

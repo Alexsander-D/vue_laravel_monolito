@@ -132,7 +132,7 @@ onUnmounted(() => {
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
         :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')"
         :aria-label="logoText || currentTeamName || 'Logomarca'">
-        <img v-if="logoImage" :src="logoImage" :alt="currentTeamName || 'Logomarca'" class="h-12 w-28 object-contain sm:h-16 sm:w-36" />
+        <img v-if="logoImage" :src="logoImage" :alt="currentTeamName || 'Logomarca'" class="h-12 w-28 bg-transparent object-contain sm:h-16 sm:w-36" />
         <span v-else-if="logoText" class="text-lg font-semibold stringColor sm:text-xl">
           {{ logoText }}
         </span>
@@ -148,6 +148,16 @@ onUnmounted(() => {
       <div class="flex w-full flex-col items-stretch lg:ml-auto lg:w-auto lg:flex-row lg:items-center">
         <template
           v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')">
+          <div :class="{
+            hidden: !isMenuOpen,
+            block: isMenuOpen,
+          }" class="ms-3 relative py-1">
+            <Link
+              class="inline-flex items-center px-3 py-2 stringColor text-sm focus:outline-none"
+              :href="route('app.download.page')">
+              Aplicativo
+            </Link>
+          </div>
           <div :class="{
             hidden: !isMenuOpen,
             block: isMenuOpen,

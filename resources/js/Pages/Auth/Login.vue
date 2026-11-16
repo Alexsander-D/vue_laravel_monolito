@@ -6,7 +6,6 @@ import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
 import Button from "@/Components/Button.vue";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/vue/24/outline";
-import { Capacitor } from "@capacitor/core";
 import { defineProps, ref } from "vue";
 
 const props = defineProps({
@@ -27,19 +26,6 @@ const submit = () => {
       remember: form.remember ? "on" : "",
     }))
     .post(route("login"), {
-      onSuccess: (page) => {
-        const belongsToGoali = page.props.auth?.user?.all_teams?.some(
-          (team) => team.name?.trim()?.toLocaleUpperCase() === "GOALI TRANSPORTES"
-        );
-
-        if (
-          belongsToGoali &&
-          !Capacitor.isNativePlatform() &&
-          window.matchMedia("(max-width: 1023px)").matches
-        ) {
-          window.location.assign(route("app.download.page"));
-        }
-      },
       onFinish: () => form.reset("password"),
     });
 };

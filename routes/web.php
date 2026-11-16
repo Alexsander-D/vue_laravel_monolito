@@ -58,7 +58,6 @@ Route::middleware([
     'verified',
     \App\Http\Middleware\EnsureUserBelongsToGoaliTeam::class,
 ])->group(function () {
-    /*
     Route::get('/download/android', function () {
         $apkPath = public_path('downloads/app-debug.apk');
 
@@ -68,7 +67,6 @@ Route::middleware([
             'Content-Type' => 'application/vnd.android.package-archive',
         ]);
     })->name('app.download');
-    */
 
     Route::get('/download', function () {
         return Inertia::render('App/Download');

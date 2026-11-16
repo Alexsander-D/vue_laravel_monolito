@@ -26,15 +26,24 @@ class AppDownloadTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('App/Download'));
     }
 
+    public function test_apk_download_is_available_to_verified_goali_team_members(): void
+    {
+        $user = $this->createUser('apk-member@example.com');
+        $goaliTeam = $this->createTeam($user, 'GOALI TRANSPORTES');
+        $user->teams()->attach($goaliTeam->id, ['role' => 'Motorista']);
+        $user->forceFill(['current_team_id' => $goaliTeam->id])->save();
+
+        $this->actingAs($user, 'sanctum')
+            ->get(route('app.download'))
+            ->assertOk()
+            ->assertDownload('app-debug.apk');
+    }
+
     public function test_apk_download_rejects_users_outside_the_goali_team(): void
     {
         $outsider = $this->createUser('apk-outsider@example.com');
 
-        $this->actingAs($outsider)
-            ->get(route('app.download.page'))
-            ->assertForbidden();
-
-        $this->actingAs($outsider)
+        $this->actingAs($outsider, 'sanctum')
             ->get(route('app.download'))
             ->assertForbidden();
     }
@@ -43,6 +52,8 @@ class AppDownloadTest extends TestCase
     {
         $this->get(route('app.download.page'))
             ->assertRedirect(route('login'));
+        $this->get(route('app.download'))
+            ->assertRedirect(route('login'));
 
         $user = $this->createUser('unverified-goali@example.com', verified: false);
         $team = $this->createTeam($user, 'GOALI TRANSPORTES');
@@ -50,6 +61,9 @@ class AppDownloadTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('app.download.page'))
+            ->assertRedirect(route('verification.notice'));
+        $this->actingAs($user)
+            ->get(route('app.download'))
             ->assertRedirect(route('verification.notice'));
     }
 
