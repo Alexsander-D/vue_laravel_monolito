@@ -1,16 +1,15 @@
 <script setup>
 import Footer from "@/Components/Footer.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import { ref } from "vue";
-import axios from "axios";
 
 const verificationLinkSent = ref(false);
 
 async function logout() {
   try {
-    await axios.post(route("logout"));
-
-    window.location.href = route("login");
+    router.post(route("logout"), {}, {
+      onFinish: () => window.location.assign(route("login")),
+    });
   } catch (error) {
     console.error("Erro ao realizar logout:", error);
   }
@@ -20,9 +19,13 @@ async function verificationLink() {
   try {
     verificationLinkSent.value = true;
 
-    await axios.post(route("verification.send"));
-    
-    await logout();
+    router.post(route("verification.send"), {}, {
+      preserveScroll: true,
+      onSuccess: logout,
+      onError: () => {
+        verificationLinkSent.value = false;
+      },
+    });
   } catch (error) {
     console.error("Erro ao enviar e-mail de verificação:", error);
   }
