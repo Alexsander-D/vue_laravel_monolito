@@ -5,3 +5,8 @@
 .env
 public/hot
 .phpunit.result.cache
+
+certbot/
+public/.well-known/
+*.backup
+*.backup-ssl
