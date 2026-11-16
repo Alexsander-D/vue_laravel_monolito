@@ -124,6 +124,21 @@ class GoaliTripController extends Controller
             ->first();
         $records = $query->get();
 
+        $records->each(function (GoaliTrip $record): void {
+            if (! $record->driver) {
+                return;
+            }
+
+            $record->driver->append('profile_photo_url');
+
+            if ($record->driver->profile_photo_path) {
+                $record->driver->setAttribute(
+                    'profile_photo_url',
+                    '/storage/' . ltrim($record->driver->profile_photo_path, '/'),
+                );
+            }
+        });
+
         return Inertia::render('Goali/Index', [
             'records' => $records,
             'summary' => [

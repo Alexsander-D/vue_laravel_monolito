@@ -18,6 +18,10 @@ const canManageGoaliDirectory = computed(
   () => ["admin", "administrativo"].includes(String(page.props.userRole ?? "").trim().toLowerCase())
 );
 const logoImage = computed(() => {
+  if (normalizedTeamName.value === "GOALI TRANSPORTES") {
+    return "/images/goali_foreground.png";
+  }
+
   if (normalizedTeamName.value === "BARBEARIA CARIOCA 2") {
     return "/images/logomarca2.png";
   }
@@ -27,10 +31,6 @@ const logoImage = computed(() => {
 const logoText = computed(() => {
   if (!page.props.auth?.user) {
     return "";
-  }
-
-  if (normalizedTeamName.value === "GOALI TRANSPORTES") {
-    return "GOALI";
   }
 
   return currentTeamName.value;
@@ -118,10 +118,10 @@ onUnmounted(() => {
         class="flex-none rounded-md text-xl inline-block font-semibold focus:outline-none focus:opacity-80 flex items-center"
         :href="$page.props.auth?.user ? route('dashboard') : route('goali.form')"
         :aria-label="logoText || currentTeamName || 'Logomarca'">
-        <span v-if="logoText" class="text-lg font-semibold stringColor sm:text-xl">
+        <img v-if="logoImage" :src="logoImage" :alt="currentTeamName || 'Logomarca'" class="h-12 w-28 object-contain sm:h-16 sm:w-36" />
+        <span v-else-if="logoText" class="text-lg font-semibold stringColor sm:text-xl">
           {{ logoText }}
         </span>
-        <img v-else :src="logoImage" :alt="currentTeamName || 'Logomarca'" class="h-12 w-24 sm:h-16 sm:w-32" />
       </Link>
     </div>
     <!-- FIM LOGOMARCA -->

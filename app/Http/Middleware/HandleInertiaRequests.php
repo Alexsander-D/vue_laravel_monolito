@@ -33,6 +33,13 @@ class HandleInertiaRequests extends Middleware
     {
         $user = Auth::user();
 
+        if ($user?->profile_photo_path) {
+            $user->setAttribute(
+                'profile_photo_url',
+                '/storage/' . ltrim($user->profile_photo_path, '/'),
+            );
+        }
+
         return [
             ...parent::share($request),
 

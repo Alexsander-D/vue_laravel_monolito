@@ -26,7 +26,7 @@ const remove = async (passenger) => { const result = await Swal.fire({ title: "E
 
 <template>
   <BaseLayout title="GOALI · PASSAGEIROS">
-    <main class="mx-auto w-full max-w-7xl px-3 py-5 sm:px-6 lg:px-8">
+    <main class="col-span-12 w-full px-3 py-5 sm:px-6 lg:px-8">
       <section class="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-lg dark:border-cyan-900/50 dark:bg-gray-900">
         <header class="flex flex-col gap-4 border-b border-cyan-100 bg-cyan-50/70 px-5 py-5 dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:flex-row sm:items-center sm:justify-between"><div><p class="text-sm font-semibold uppercase tracking-widest text-cyan-700 dark:text-cyan-300">GOALI Transportes</p><h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Passageiros</h1><p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Mantenha os passageiros vinculados à empresa correta.</p></div><button type="button" class="min-h-11 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-cyan-800" @click="openCreate">Novo passageiro</button></header>
         <p v-if="successMessage" class="mx-5 mt-4 rounded-lg bg-cyan-50 px-4 py-3 text-sm font-medium text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-200">{{ successMessage }}</p>

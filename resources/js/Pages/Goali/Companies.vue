@@ -62,7 +62,7 @@ const remove = async (company) => {
 
 <template>
   <BaseLayout title="GOALI · EMPRESAS">
-    <main class="mx-auto w-full max-w-7xl px-3 py-5 sm:px-6 lg:px-8">
+    <main class="col-span-12 w-full px-3 py-5 sm:px-6 lg:px-8">
       <section class="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-lg dark:border-cyan-900/50 dark:bg-gray-900">
         <header class="flex flex-col gap-4 border-b border-cyan-100 bg-cyan-50/70 px-5 py-5 dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:flex-row sm:items-center sm:justify-between">
           <div><p class="text-sm font-semibold uppercase tracking-widest text-cyan-700 dark:text-cyan-300">GOALI Transportes</p><h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Empresas</h1><p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Cadastre empresas e seus endereços padrão de partida.</p></div>
