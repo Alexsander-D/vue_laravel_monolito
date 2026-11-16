@@ -1,7 +1,3 @@
 node_modules
 vendor
 public/storage
-certbot/
-.env
-.env.*
-.git

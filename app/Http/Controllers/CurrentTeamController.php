@@ -17,7 +17,7 @@ class CurrentTeamController extends Controller
 
         abort_unless($user->belongsToTeam($team), 403, 'Você não pertence a esta equipe.');
 
-        // O usuário recebe o accessor profile_photo_url no middleware do Inertia.
+        // profile_photo_url é anexado pelo accessor do Jetstream no modelo User.
         // Usar save() aqui tentaria gravar esse atributo anexado na tabela users.
         User::query()
             ->whereKey($user->getKey())

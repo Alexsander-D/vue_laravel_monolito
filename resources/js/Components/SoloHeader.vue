@@ -66,9 +66,7 @@ const switchTheme = () => {
 };
 
 const logout = () => {
-  router.post(route("logout"), {
-    onFinish: () => window.location.assign(route("login")),
-  });
+  router.post(route("logout"));
 };
 
 const switchToTeam = (team) => {

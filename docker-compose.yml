@@ -33,5 +33,5 @@ services:
 
 networks:
   laravel-net:
-    name: vue_laravel_monolito_laravel-net
-    external: true
+    name: goali-network
+    driver: bridge

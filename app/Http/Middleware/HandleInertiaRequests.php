@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
 use Tighten\Ziggy\Ziggy;
@@ -53,15 +52,6 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = Auth::user();
-
-        if ($user?->profile_photo_path && Storage::disk('public')->exists($user->profile_photo_path)) {
-            $user->setAttribute(
-                'profile_photo_url',
-                '/storage/' . ltrim($user->profile_photo_path, '/'),
-            );
-        } elseif ($user) {
-            $user->setAttribute('profile_photo_url', null);
-        }
 
         return [
             ...parent::share($request),
