@@ -26,7 +26,7 @@ class GoaliPassengerController extends Controller
             'companies' => GoaliCompany::query()
                 ->where('team_id', $user->current_team_id)
                 ->orderBy('name')
-                ->get(['id', 'name']),
+                ->get(['id', 'name', 'phone']),
         ]);
     }
 
