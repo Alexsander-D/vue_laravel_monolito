@@ -220,7 +220,6 @@ watch(() => props.modelValue, syncSelect2Value, { deep: true });
 
 function updateModelValue(value) {
   const modelValue = props.multiple ? (Array.isArray(value) ? value : []) : value;
-  localValue.value = modelValue;
   emit("update:modelValue", modelValue);
   emit("selected", modelValue);
 }
