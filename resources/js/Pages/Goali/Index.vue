@@ -415,10 +415,10 @@ onBeforeUnmount(() => {
 
 <template>
   <BaseLayout title="RELATORIO DE CORRIDAS">
-    <main class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2">
-      <section class="rounded-xl bg-white p-2 shadow-lg dark:bg-gray-900 sm:p-4 lg:p-6">
+    <main class="col-span-12 w-full px-3 py-5 sm:px-6 lg:px-8">
+      <section class="overflow-hidden rounded-2xl border border-cyan-100 bg-white p-2 shadow-lg dark:border-cyan-900/50 dark:bg-gray-900 sm:p-4 lg:p-6">
         <div class="grid min-w-0 grid-cols-12 gap-3 sm:gap-4">
-          <header class="col-span-12 grid grid-cols-12 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:gap-4 sm:pb-5">
+          <header class="col-span-12 grid grid-cols-12 gap-3 border-b border-cyan-100 bg-cyan-50/70 px-3 pb-4 pt-3 dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:gap-4 sm:px-5 sm:pb-5 sm:pt-5">
             <div class="col-span-12 text-center">
               <p class="text-xs font-bold uppercase text-cyan-700">{{ $page.props.auth.user.current_team.name }}</p>
               <h1 class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Relatório de deslocamentos</h1>
@@ -430,7 +430,7 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-5" @submit.prevent="applyOtherFilters">
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-5" @submit.prevent="applyOtherFilters">
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" multiple @select2-close="applyOtherFilters" /></label>
@@ -438,7 +438,7 @@ onBeforeUnmount(() => {
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 py-4 dark:border-gray-700 sm:grid-cols-2 xl:grid-cols-3" @submit.prevent="applyDateFilters">
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 py-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-3" @submit.prevent="applyDateFilters">
         <label class="filter-label">Data inicial<TextInput v-model="dateFilters.startDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /></label>
         <label class="filter-label">Data final<TextInput v-model="dateFilters.endDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /><InputError :message="dateFilters.errors.endDate || dateFilters.errors.startDate" /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearDateFilters">Limpar período</button>

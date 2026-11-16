@@ -153,18 +153,19 @@ const submit = () => {
 
 <template>
   <BaseLayout title="CRIAR NOVA CORRIDA">
-    <div class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2 sm:pt-2">
-      <div class="rounded-xl bg-white p-3 shadow-lg dark:bg-gray-900 sm:p-6">
+    <main class="col-span-12 w-full px-3 py-5 sm:px-6 lg:px-8">
+      <section class="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-lg dark:border-cyan-900/50 dark:bg-gray-900">
+        <div class="p-5 sm:p-6">
         <Link
           :href="route('goali.index')"
-          class="mb-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800"
+          class="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800"
         >
           <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           Voltar ao relatório
         </Link>
-        <header class="mb-4 border-b border-gray-200 pb-4 text-center dark:border-gray-700 sm:mb-6 sm:pb-5">
+        <header class="mb-4 border-b border-cyan-100 bg-cyan-50/70 px-4 py-5 text-center dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:mb-6 sm:pb-5">
           <h1 class="text-xl font-bold uppercase text-gray-900 dark:text-white sm:text-2xl">CRIAR NOVA CORRIDA</h1>
           <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-cyan-600" aria-hidden="true"></div>
           <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
@@ -231,8 +232,11 @@ const submit = () => {
             <label for="solicitation"
               class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Solicitação / Empresa
               <span>*</span></label>
-            <Select id="company_id" v-model="selectedCompany" :options="props.companies"
+            <Select v-if="props.companies.length" id="company_id" v-model="selectedCompany" :options="props.companies"
               label="name" track-by="id" class="mt-1 block w-full" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required />
+            <TextInput v-else id="solicitation" v-model="form.solicitation" type="text" class="mt-1 block w-full"
+              maxlength="150" placeholder="Informe o nome da empresa" required />
+            <p v-if="!props.companies.length" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Nenhuma empresa cadastrada. Informe o nome manualmente.</p>
             <InputError :message="form.errors.solicitation" class="mt-2" />
             <InputError :message="form.errors.company_id" class="mt-2" />
           </div>
@@ -312,7 +316,8 @@ const submit = () => {
             </p>
           </div>
         </form>
-      </div>
-    </div>
+        </div>
+      </section>
+    </main>
   </BaseLayout>
 </template>
