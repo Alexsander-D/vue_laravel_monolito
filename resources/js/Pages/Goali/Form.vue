@@ -119,7 +119,7 @@ const submit = () => {
 </script>
 
 <template>
-  <BaseLayout title="CORRIDAS">
+  <BaseLayout title="CRIAR NOVA CORRIDA">
     <div class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2 sm:pt-2">
       <div class="rounded-xl bg-white p-3 shadow-lg dark:bg-gray-900 sm:p-6">
         <Link
@@ -132,7 +132,7 @@ const submit = () => {
           Voltar ao relatório
         </Link>
         <header class="mb-4 border-b border-gray-200 pb-4 text-center dark:border-gray-700 sm:mb-6 sm:pb-5">
-          <h1 class="text-xl font-bold uppercase text-gray-900 dark:text-white sm:text-2xl">CORRIDAS</h1>
+          <h1 class="text-xl font-bold uppercase text-gray-900 dark:text-white sm:text-2xl">CRIAR NOVA CORRIDA</h1>
           <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
           <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
             Registro de deslocamento do {{ props.responsibleUser || "usuário" }}

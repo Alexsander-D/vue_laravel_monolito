@@ -18,8 +18,11 @@ const props = defineProps({
   tripStatuses: { type: Array, default: () => [] },
   summary: { type: Object, required: true },
   isDriver: { type: Boolean, default: false },
+  isAdministrative: { type: Boolean, default: false },
   currentDriverId: { type: Number, default: null },
+  canCreateTrips: { type: Boolean, default: false },
   canCancelTrips: { type: Boolean, default: false },
+  canDeleteTrips: { type: Boolean, default: false },
 });
 
 const normalizedFilters = (value) => ({
@@ -103,6 +106,9 @@ const canDriverEditTrip = (record) => (
   (record.trip_status === "Em Andamento" || record.trip_status === "Criada")
   && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId))
 );
+const canAdministrativeEditTrip = (record) => (
+  props.isAdministrative && record.trip_status !== "Pago"
+);
 const tableId = "goali-trips-datatable";
 const tableHeaders = computed(() => [
   { name: "Data" },
@@ -140,24 +146,28 @@ const tableData = computed(() => props.records.map((record) => ({
   tripCode: record.trip_code || "—",
   route: `${record.origin} → ${record.destination}`,
   passenger: record.passenger,
-  driver: record.driver?.name || "—",
+  driver: {
+    name: record.driver?.name || "—",
+    photoUrl: record.driver?.profile_photo_url || "",
+  },
   responsible: record.responsible,
   amount: Number(record.amount || 0),
   cancelledBy: record.cancelled_by_role
     ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
     : "—",
   buttonActions: [
-    (props.isAdmin && record.trip_status !== "Pago")
-      || (props.isDriver && canDriverEditTrip(record))
+    (props.isAdmin || canAdministrativeEditTrip(record)) && record.trip_status !== "Pago"
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
-      : "",
+      : (props.isDriver && canDriverEditTrip(record)
+        ? `<button type="button" class="goali-action goali-action--status" data-goali-action="status" data-record-id="${Number(record.id)}">${nextTripStatus(record.trip_status) || "Atualizar status"}</button>`
+        : ""),
     props.canCancelTrips
       && record.trip_status !== "Criada"
       && record.driver_id !== null
       && !["Pago", "Aguardando Aprovação"].includes(record.trip_status)
       ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
       : "",
-    props.isAdmin
+    props.canDeleteTrips
       ? `<button type="button" class="goali-action goali-action--delete" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
       : "",
   ].join(""),
@@ -263,7 +273,7 @@ const startEdit = (record) => {
     travel_date: record.travel_date,
     travel_time: String(record.travel_time).slice(0, 5),
     status: record.status,
-    trip_status: "",
+    trip_status: props.isAdministrative ? nextTripStatus(record.trip_status) : "",
     solicitation: record.solicitation,
     trip_code: record.trip_code || "",
     driver_id: record.driver_id,
@@ -274,9 +284,37 @@ const startEdit = (record) => {
     responsible: record.responsible,
   }).reset();
 };
+const advanceTripStatus = async (record) => {
+  if (!props.isDriver || !canDriverEditTrip(record)) {
+    return;
+  }
+
+  const nextStatus = nextTripStatus(record.trip_status);
+  if (!nextStatus || nextStatus === "Pago") {
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: "Atualizar status da corrida?",
+    text: `A corrida será alterada para ${nextStatus}.`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: `Confirmar ${nextStatus}`,
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#0f766e",
+  });
+
+  if (result.isConfirmed) {
+    router.put(route("goali.update", record.id), { trip_status: nextStatus }, { preserveScroll: true });
+  }
+};
 const saveEdit = () => {
   if (props.isAdmin && !editForm.solicitation) {
     editForm.setError("solicitation", "Selecione uma empresa.");
+    return;
+  }
+  if (props.isAdministrative && !editForm.trip_status) {
+    editForm.setError("trip_status", "Selecione o próximo status.");
     return;
   }
   editForm.put(route("goali.update", editingId.value), { preserveScroll: true, onSuccess: () => { editingId.value = null; } });
@@ -307,6 +345,8 @@ const handleTableAction = (event) => {
 
   if (button.dataset.goaliAction === "edit") {
     startEdit(record);
+  } else if (button.dataset.goaliAction === "status") {
+    advanceTripStatus(record);
   } else if (button.dataset.goaliAction === "delete") {
     deleteRecord(record);
   } else if (button.dataset.goaliAction === "cancel") {
@@ -344,7 +384,28 @@ const tripRowClass = (row) => ({
   "goali-trip--finished": row.tripStatus === "Pago",
 });
 const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#039;",
+}[character]));
 const tableColumnRenderers = {
+  driver: (value, type) => {
+    const name = escapeHtml(value?.name || "—");
+    const photoUrl = escapeHtml(value?.photoUrl || "");
+
+    if (type !== "display") {
+      return name;
+    }
+
+    const photo = photoUrl
+      ? `<img src="${photoUrl}" alt="" class="h-8 w-8 rounded-full object-cover" loading="lazy">`
+      : "";
+
+    return `<span class="inline-flex items-center gap-2 whitespace-nowrap">${photo}<span>${name}</span></span>`;
+  },
   amount: (value, type) => (type === "display" ? money(value) : Number(value || 0)),
 };
 const date = (value) => {
@@ -369,7 +430,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <BaseLayout title="Relatório de corridas">
+  <BaseLayout title="RELATORIO DE CORRIDAS">
     <main class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2">
       <section class="rounded-xl bg-white p-2 shadow-lg dark:bg-gray-900 sm:p-4 lg:p-6">
         <div class="grid min-w-0 grid-cols-12 gap-3 sm:gap-4">
@@ -380,7 +441,7 @@ onBeforeUnmount(() => {
               <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
             </div>
             <div class="col-span-12 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <a :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Criar Corrida</a>
+          <a v-if="props.canCreateTrips" :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Criar Corrida</a>
           <a :href="reportUrl" class="inline-flex min-h-11 items-center justify-center rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Exportar Excel</a>
         </div>
       </header>
@@ -472,7 +533,16 @@ onBeforeUnmount(() => {
                 </div>
                 <div>
                   <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Motorista</p>
-                  <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.driver?.name || "—" }}</p>
+                  <div class="mt-0.5 flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200">
+                    <img
+                      v-if="record.driver?.profile_photo_url"
+                      :src="record.driver.profile_photo_url"
+                      :alt="record.driver.name"
+                      class="h-7 w-7 rounded-full object-cover"
+                      loading="lazy"
+                    />
+                    <span>{{ record.driver?.name || "—" }}</span>
+                  </div>
                 </div>
                 <div>
                   <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valor</p>
@@ -490,15 +560,21 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="props.isAdmin || (props.isDriver && canDriverEditTrip(record)) || (props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
+              v-if="props.isAdmin || canAdministrativeEditTrip(record) || (props.isDriver && canDriverEditTrip(record)) || props.canDeleteTrips || (props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
-                v-if="(props.isAdmin && record.trip_status !== 'Pago') || (props.isDriver && canDriverEditTrip(record))"
+                v-if="(props.isAdmin || canAdministrativeEditTrip(record)) && record.trip_status !== 'Pago'"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 @click="startEdit(record)"
-              >{{ props.isDriver ? "Atualizar status" : "Editar" }}</button>
+              >Editar</button>
+              <button
+                v-if="props.isDriver && canDriverEditTrip(record)"
+                type="button"
+                class="min-h-11 flex-1 rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                @click="advanceTripStatus(record)"
+              >{{ nextTripStatus(record.trip_status) }}</button>
               <button
                 v-if="props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
                 type="button"
@@ -506,7 +582,7 @@ onBeforeUnmount(() => {
                 @click="cancelTrip(record)"
               >Cancelar</button>
               <button
-                v-if="props.isAdmin"
+                v-if="props.canDeleteTrips"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
                 @click="deleteRecord(record)"
@@ -544,8 +620,8 @@ onBeforeUnmount(() => {
 
       <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4" @click.self="editingId = null">
         <form class="my-2 max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900 sm:my-6 sm:max-h-[90vh] sm:p-6" data-select2-dropdown-parent @click.stop @submit.prevent="saveEdit">
-          <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ props.isDriver ? "Atualizar status da corrida" : "Editar deslocamento" }}</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
-          <div v-if="props.isDriver" class="grid grid-cols-1 gap-4">
+          <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">Editar deslocamento</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
+          <div v-if="props.isAdmin || props.isAdministrative" class="grid grid-cols-1 gap-4">
             <label class="filter-label">Próximo status
               <select
                 v-model="editForm.trip_status"
@@ -559,7 +635,7 @@ onBeforeUnmount(() => {
               <InputError :message="editForm.errors.trip_status" />
             </label>
           </div>
-          <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div v-if="props.isAdmin" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label class="filter-label sm:col-span-2">Andamento
               <select
                 v-model="editForm.trip_status"
@@ -585,7 +661,7 @@ onBeforeUnmount(() => {
             <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
           </div>
           <p v-if="editForm.hasErrors" class="mt-3 text-sm text-red-700">Verifique os campos informados.</p>
-          <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : props.isDriver ? "Atualizar status" : "Salvar alterações" }}</button></div>
+          <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : props.isAdministrative ? "Atualizar status" : "Salvar alterações" }}</button></div>
         </form>
       </div>
     </main>

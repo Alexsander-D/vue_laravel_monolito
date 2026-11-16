@@ -18,7 +18,7 @@ class EnsureUserHasTeam
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check() && !$request->is('dashboard')) {
+        if (Auth::check()) {
             $user = Auth::user();
 
             if (!$user->currentTeam) {
@@ -42,8 +42,39 @@ class EnsureUserHasTeam
                     return back();
                 }
             }
+
+            if ($this->isUnassignedTeam($user->currentTeam) && ! $this->canAccessWithoutAssignedTeam($request)) {
+                return redirect()->route('dashboard');
+            }
         }
 
         return $next($request);
+    }
+
+    private function canAccessWithoutAssignedTeam(Request $request): bool
+    {
+        return $request->routeIs([
+            'dashboard',
+            'logout',
+            'current-team.update',
+        ]);
+    }
+
+    private function isUnassignedTeam(?Team $team): bool
+    {
+        if (! $team) {
+            return false;
+        }
+
+        $name = strtoupper(trim((string) $team->name));
+        $name = strtr($name, [
+            'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ' => 'A',
+            'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ' => 'A',
+            'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ' => 'I',
+            'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ' => 'O',
+        ]);
+
+        return str_contains($name, 'EQUIPE')
+            && str_contains($name, 'ATRIBU');
     }
 }

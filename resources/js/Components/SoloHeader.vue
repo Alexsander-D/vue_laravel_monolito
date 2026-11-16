@@ -11,6 +11,9 @@ const currentTeamName = computed(
   () => page.props.auth?.user?.current_team?.name?.trim() ?? ""
 );
 const normalizedTeamName = computed(() => currentTeamName.value.toUpperCase());
+const isCurrentTeamAdmin = computed(
+  () => String(page.props.userRole ?? "").trim().toLowerCase() === "admin"
+);
 const logoImage = computed(() => {
   if (normalizedTeamName.value === "BARBEARIA CARIOCA 2") {
     return "/images/logomarca2.png";
@@ -132,13 +135,6 @@ onUnmounted(() => {
             hidden: !isMenuOpen,
             block: isMenuOpen,
           }" class="ms-3 relative py-1">
-            <div :class="{ hidden: !isMenuOpen, block: isMenuOpen }" class="ms-3 relative py-1">
-              <Link
-                class="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium stringColor focus:outline-none"
-                :href="route('goali.index')">
-                Relatório de corridas
-              </Link>
-            </div>
 
             <Dropdown align="right" width="60">
               <template #trigger>
@@ -158,13 +154,13 @@ onUnmounted(() => {
               <template #content>
                 <div class="w-60">
                   <Link
-                    v-if="$page.props.auth.user.current_team && (Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
+                    v-if="$page.props.auth.user.current_team && isCurrentTeamAdmin"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('teams.show', $page.props.auth.user.current_team)">
                     Gerir equipe
                   </Link>
                   <Link
-                    v-if="Number($page.props.auth.user.id) === 1 || $page.props.userPermissions.includes('gerir-permissoes')"
+                    v-if="isCurrentTeamAdmin"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
                     Gerir Permissões
@@ -584,14 +580,14 @@ onUnmounted(() => {
               <template #content>
                 <div class="w-60">
                   <Link
-                    v-if="$page.props.auth.user.current_team && ($page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-equipe'))"
+                    v-if="$page.props.auth.user.current_team && isCurrentTeamAdmin"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('teams.show', $page.props.auth.user.current_team)">
                     Gerir equipe
                   </Link>
 
                   <Link
-                    v-if="$page.props.auth.user.id === 1 || $page.props.userPermissions.includes('gerir-permissoes')"
+                    v-if="isCurrentTeamAdmin"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
                     Gerir Permissões
