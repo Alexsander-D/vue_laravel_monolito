@@ -10,6 +10,9 @@ class GoaliTrip extends Model
 {
     protected $fillable = [
         'user_id',
+        'company_id',
+        'passenger_id',
+        'passenger_ids',
         'driver_id',
         'cancelled_by_name',
         'cancelled_by_role',
@@ -31,10 +34,21 @@ class GoaliTrip extends Model
         'travel_date' => 'date:Y-m-d',
         'cancelled_at' => 'datetime',
         'amount' => 'decimal:2',
+        'passenger_ids' => 'array',
     ];
 
     public function driver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'driver_id');
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(GoaliCompany::class, 'company_id');
+    }
+
+    public function passengerRecord(): BelongsTo
+    {
+        return $this->belongsTo(GoaliPassenger::class, 'passenger_id');
     }
 }

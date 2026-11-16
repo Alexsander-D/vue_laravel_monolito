@@ -41,6 +41,8 @@ use App\Http\Controllers\Internal\ProductTransferControllerAdmin;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\GoaliTripController;
+use App\Http\Controllers\GoaliCompanyController;
+use App\Http\Controllers\GoaliPassengerController;
 use App\Models\AttendanceServicePrice;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -108,6 +110,14 @@ Route::middleware([
         Route::get('/goali/records/export', [GoaliTripController::class, 'export'])->name('goali.export');
         Route::put('/goali/records/{trip}', [GoaliTripController::class, 'update'])->name('goali.update');
         Route::delete('/goali/records/{trip}', [GoaliTripController::class, 'destroy'])->name('goali.destroy');
+        Route::get('/goali/companies', [GoaliCompanyController::class, 'index'])->name('goali.companies.index');
+        Route::post('/goali/companies', [GoaliCompanyController::class, 'store'])->name('goali.companies.store');
+        Route::put('/goali/companies/{company}', [GoaliCompanyController::class, 'update'])->name('goali.companies.update');
+        Route::delete('/goali/companies/{company}', [GoaliCompanyController::class, 'destroy'])->name('goali.companies.destroy');
+        Route::get('/goali/passengers', [GoaliPassengerController::class, 'index'])->name('goali.passengers.index');
+        Route::post('/goali/passengers', [GoaliPassengerController::class, 'store'])->name('goali.passengers.store');
+        Route::put('/goali/passengers/{passenger}', [GoaliPassengerController::class, 'update'])->name('goali.passengers.update');
+        Route::delete('/goali/passengers/{passenger}', [GoaliPassengerController::class, 'destroy'])->name('goali.passengers.destroy');
 
         Route::post(
             '/attendance/store',

@@ -14,6 +14,9 @@ const normalizedTeamName = computed(() => currentTeamName.value.toUpperCase());
 const isCurrentTeamAdmin = computed(
   () => String(page.props.userRole ?? "").trim().toLowerCase() === "admin"
 );
+const canManageGoaliDirectory = computed(
+  () => ["admin", "administrativo"].includes(String(page.props.userRole ?? "").trim().toLowerCase())
+);
 const logoImage = computed(() => {
   if (normalizedTeamName.value === "BARBEARIA CARIOCA 2") {
     return "/images/logomarca2.png";
@@ -164,6 +167,18 @@ onUnmounted(() => {
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
                     :href="route('roles.create', $page.props.jetstream.canCreateTeams)">
                     Gerir Permissões
+                  </Link>
+                  <Link
+                    v-if="canManageGoaliDirectory"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('goali.companies.index')">
+                    Empresas
+                  </Link>
+                  <Link
+                    v-if="canManageGoaliDirectory"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('goali.passengers.index')">
+                    Passageiros
                   </Link>
                   <div v-if="$page.props.auth.user.all_teams.length > 1" class="group relative">
                     <button type="button"

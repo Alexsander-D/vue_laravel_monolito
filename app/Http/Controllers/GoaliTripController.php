@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\GoaliTrip;
+use App\Models\GoaliCompany;
+use App\Models\GoaliPassenger;
 use App\Models\Spatie\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -45,6 +47,8 @@ class GoaliTripController extends Controller
                 : 'Criada',
             'currentUserId' => $user?->id,
             'drivers' => $user ? $this->driversForCurrentTeam($user) : [],
+            'companies' => $user ? $this->companiesForCurrentTeam($user) : [],
+            'passengers' => $user ? $this->passengersForCurrentTeam($user) : [],
             'initialDriverId' => $user && collect($this->driversForCurrentTeam($user))->contains('id', $user->id)
                 ? $user->id
                 : null,
@@ -71,6 +75,7 @@ class GoaliTripController extends Controller
         }
 
         $validated = $this->validatedTrip($request, $user, true);
+        $validated = $this->applyDirectoryValues($validated, $user);
         $validated['user_id'] = $user->getAuthIdentifier();
         $validated['responsible'] = $user->name;
         $createdForAnotherDriver = ($this->isAdmin($user) || $this->canCreateForDrivers($user))
@@ -233,17 +238,14 @@ class GoaliTripController extends Controller
 
         if ($isAdministrative) {
             $validated = $request->validate([
-                'trip_status' => ['required', Rule::in(self::TRIP_STATUSES)],
+                'trip_status' => ['required', Rule::in(['Em Andamento', 'Aguardando Aprovação'])],
             ]);
             $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
-            abort_if($trip->trip_status === 'Pago', 403, 'Corridas pagas não podem ser editadas.');
-
-            $nextStatus = match ($trip->trip_status) {
-                'Criada' => 'Em Andamento',
-                'Em Andamento', 'Aguardando Aprovação' => 'Pago',
-                default => null,
-            };
-            abort_unless($validated['trip_status'] === $nextStatus, 403);
+            abort_unless(
+                ($trip->trip_status === 'Criada' && $validated['trip_status'] === 'Em Andamento')
+                    || ($trip->trip_status === 'Em Andamento' && $validated['trip_status'] === 'Aguardando Aprovação'),
+                403
+            );
             $trip->update([
                 'trip_status' => $validated['trip_status'],
                 'cancelled_by_name' => null,
@@ -258,6 +260,7 @@ class GoaliTripController extends Controller
         abort_if($trip->trip_status === 'Pago', 403, 'Corridas pagas não podem ser editadas.');
 
         $validated = $this->validatedTrip($request, $user);
+        $validated = $this->applyDirectoryValues($validated, $user);
         $nextStatus = match ($trip->trip_status) {
             'Criada' => 'Em Andamento',
             'Em Andamento' => 'Pago',
@@ -557,11 +560,26 @@ class GoaliTripController extends Controller
                     ? array_column($this->driversForCurrentTeam($user), 'id')
                     : [$user->id]),
             ],
-            'solicitation' => ['required', 'in:' . implode(',', self::SOLICITATIONS)],
+            'solicitation' => ['required', 'string', 'max:150'],
+            'company_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('goali_companies', 'id')->where(fn ($query) => $query->where('team_id', $user->current_team_id)),
+            ],
+            'passenger_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('goali_passengers', 'id')->where(fn ($query) => $query->where('team_id', $user->current_team_id)),
+            ],
+            'passenger_ids' => ['nullable', 'array'],
+            'passenger_ids.*' => [
+                'integer',
+                Rule::exists('goali_passengers', 'id')->where(fn ($query) => $query->where('team_id', $user->current_team_id)),
+            ],
             'trip_code' => ['nullable', 'string', 'max:255'],
             'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
-            'passenger' => ['required', 'string', 'max:255'],
+            'passenger' => ['required', 'string'],
             'responsible' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0'],
         ];
@@ -617,5 +635,54 @@ class GoaliTripController extends Controller
             ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
             ->values()
             ->all();
+    }
+
+    private function companiesForCurrentTeam(User $user): array
+    {
+        return GoaliCompany::query()
+            ->where('team_id', $user->current_team_id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'departure_address'])
+            ->toArray();
+    }
+
+    private function passengersForCurrentTeam(User $user): array
+    {
+        return GoaliPassenger::query()
+            ->where('team_id', $user->current_team_id)
+            ->with('company:id,name,departure_address')
+            ->orderBy('name')
+            ->get(['id', 'company_id', 'name', 'boarding_point', 'phone'])
+            ->toArray();
+    }
+
+    private function applyDirectoryValues(array $validated, User $user): array
+    {
+        if (! empty($validated['company_id'])) {
+            $company = GoaliCompany::query()
+                ->where('team_id', $user->current_team_id)
+                ->findOrFail($validated['company_id']);
+            $validated['solicitation'] = $company->name;
+        }
+
+        if (! empty($validated['passenger_ids'])) {
+            $passengers = GoaliPassenger::query()
+                ->where('team_id', $user->current_team_id)
+                ->whereIn('id', $validated['passenger_ids'])
+                ->get(['id', 'company_id', 'name']);
+            abort_unless($passengers->count() === count(array_unique($validated['passenger_ids'])), 422);
+            abort_unless($passengers->every(fn (GoaliPassenger $passenger) => empty($validated['company_id']) || (int) $passenger->company_id === (int) $validated['company_id']), 422);
+            $validated['passenger'] = $passengers->sortBy(fn (GoaliPassenger $passenger) => array_search($passenger->id, $validated['passenger_ids'], true))->pluck('name')->implode("\n");
+            $validated['passenger_id'] = $validated['passenger_ids'][0];
+        } elseif (! empty($validated['passenger_id'])) {
+            $passenger = GoaliPassenger::query()
+                ->where('team_id', $user->current_team_id)
+                ->findOrFail($validated['passenger_id']);
+            abort_unless(empty($validated['company_id']) || (int) $passenger->company_id === (int) $validated['company_id'], 422);
+            $validated['passenger'] = $passenger->name;
+            $validated['passenger_ids'] = [$passenger->id];
+        }
+
+        return $validated;
     }
 }

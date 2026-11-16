@@ -83,18 +83,11 @@ const editTripStatusOptions = computed(() => {
     return [];
   }
 
-  if (props.isDriver) {
-    if (editingRecord.value.trip_status === "Criada") {
-      return ["Em Andamento"];
-    }
-
-    return editingRecord.value.trip_status === "Em Andamento"
-      ? ["Aguardando Aprovação"]
-      : [];
+  if (props.isAdmin) {
+    return props.tripStatuses;
   }
 
-  const nextStatus = nextTripStatus(editingRecord.value.trip_status);
-  return nextStatus ? [nextStatus] : [];
+  return [];
 });
 const selectedEditDriver = computed({
   get: () => props.drivers.find((driver) => driver.id === Number(editForm.driver_id)) || null,
@@ -106,8 +99,10 @@ const canDriverEditTrip = (record) => (
   (record.trip_status === "Em Andamento" || record.trip_status === "Criada")
   && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId))
 );
-const canAdministrativeEditTrip = (record) => (
-  props.isAdministrative && record.trip_status !== "Pago"
+const canAdvanceTripStatus = (record) => (
+  props.isAdministrative
+    ? ["Criada", "Em Andamento"].includes(record.trip_status)
+    : props.isDriver && canDriverEditTrip(record)
 );
 const tableId = "goali-trips-datatable";
 const tableHeaders = computed(() => [
@@ -156,10 +151,10 @@ const tableData = computed(() => props.records.map((record) => ({
     ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
     : "—",
   buttonActions: [
-    (props.isAdmin || canAdministrativeEditTrip(record)) && record.trip_status !== "Pago"
+    props.isAdmin && record.trip_status !== "Pago"
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
-      : (props.isDriver && canDriverEditTrip(record)
-        ? `<button type="button" class="goali-action goali-action--status" data-goali-action="status" data-record-id="${Number(record.id)}">${nextTripStatus(record.trip_status) || "Atualizar status"}</button>`
+      : (canAdvanceTripStatus(record)
+      ? `<button type="button" class="goali-action goali-action--status" data-goali-action="status" data-record-id="${Number(record.id)}">${nextTripStatus(record.trip_status) || "Atualizar status"}</button>`
         : ""),
     props.canCancelTrips
       && record.trip_status !== "Criada"
@@ -257,23 +252,16 @@ const clearDateFilters = () => {
   applyDateFilters();
 };
 const startEdit = (record) => {
-  if (record.trip_status === "Pago" || (props.isDriver && !canDriverEditTrip(record))) {
+  if (record.trip_status === "Pago" || !props.isAdmin) {
     return;
   }
 
   editingId.value = record.id;
-  if (props.isDriver) {
-    editForm.defaults({
-      trip_status: record.trip_status === "Criada" ? "Em Andamento" : "Aguardando Aprovação",
-    }).reset();
-    return;
-  }
-
   editForm.defaults({
     travel_date: record.travel_date,
     travel_time: String(record.travel_time).slice(0, 5),
     status: record.status,
-    trip_status: props.isAdministrative ? nextTripStatus(record.trip_status) : "",
+    trip_status: "",
     solicitation: record.solicitation,
     trip_code: record.trip_code || "",
     driver_id: record.driver_id,
@@ -285,7 +273,7 @@ const startEdit = (record) => {
   }).reset();
 };
 const advanceTripStatus = async (record) => {
-  if (!props.isDriver || !canDriverEditTrip(record)) {
+  if (!canAdvanceTripStatus(record)) {
     return;
   }
 
@@ -301,7 +289,7 @@ const advanceTripStatus = async (record) => {
     showCancelButton: true,
     confirmButtonText: `Confirmar ${nextStatus}`,
     cancelButtonText: "Cancelar",
-    confirmButtonColor: "#0f766e",
+    confirmButtonColor: "#0891b2",
   });
 
   if (result.isConfirmed) {
@@ -311,10 +299,6 @@ const advanceTripStatus = async (record) => {
 const saveEdit = () => {
   if (props.isAdmin && !editForm.solicitation) {
     editForm.setError("solicitation", "Selecione uma empresa.");
-    return;
-  }
-  if (props.isAdministrative && !editForm.trip_status) {
-    editForm.setError("trip_status", "Selecione o próximo status.");
     return;
   }
   editForm.put(route("goali.update", editingId.value), { preserveScroll: true, onSuccess: () => { editingId.value = null; } });
@@ -436,13 +420,13 @@ onBeforeUnmount(() => {
         <div class="grid min-w-0 grid-cols-12 gap-3 sm:gap-4">
           <header class="col-span-12 grid grid-cols-12 gap-3 border-b border-gray-200 pb-4 dark:border-gray-700 sm:gap-4 sm:pb-5">
             <div class="col-span-12 text-center">
-              <p class="text-xs font-bold uppercase text-teal-700">{{ $page.props.auth.user.current_team.name }}</p>
+              <p class="text-xs font-bold uppercase text-cyan-700">{{ $page.props.auth.user.current_team.name }}</p>
               <h1 class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Relatório de deslocamentos</h1>
-              <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" aria-hidden="true"></div>
+              <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-cyan-600" aria-hidden="true"></div>
             </div>
             <div class="col-span-12 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <a v-if="props.canCreateTrips" :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Criar Corrida</a>
-          <a :href="reportUrl" class="inline-flex min-h-11 items-center justify-center rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800">Exportar Excel</a>
+          <a :href="reportUrl" class="inline-flex min-h-11 items-center justify-center rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Exportar Excel</a>
         </div>
       </header>
 
@@ -560,19 +544,19 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="props.isAdmin || canAdministrativeEditTrip(record) || (props.isDriver && canDriverEditTrip(record)) || props.canDeleteTrips || (props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
+              v-if="props.isAdmin || canAdvanceTripStatus(record) || props.canDeleteTrips || (props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
-                v-if="(props.isAdmin || canAdministrativeEditTrip(record)) && record.trip_status !== 'Pago'"
+                v-if="props.isAdmin && record.trip_status !== 'Pago'"
                 type="button"
-                class="min-h-11 flex-1 rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                class="min-h-11 flex-1 rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700"
                 @click="startEdit(record)"
               >Editar</button>
               <button
-                v-if="props.isDriver && canDriverEditTrip(record)"
+                v-if="canAdvanceTripStatus(record)"
                 type="button"
-                class="min-h-11 flex-1 rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                class="min-h-11 flex-1 rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700"
                 @click="advanceTripStatus(record)"
               >{{ nextTripStatus(record.trip_status) }}</button>
               <button
@@ -621,7 +605,7 @@ onBeforeUnmount(() => {
       <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4" @click.self="editingId = null">
         <form class="my-2 max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900 sm:my-6 sm:max-h-[90vh] sm:p-6" data-select2-dropdown-parent @click.stop @submit.prevent="saveEdit">
           <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">Editar deslocamento</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
-          <div v-if="props.isAdmin || props.isAdministrative" class="grid grid-cols-1 gap-4">
+          <div v-if="props.isAdmin" class="grid grid-cols-1 gap-4">
             <label class="filter-label">Próximo status
               <select
                 v-model="editForm.trip_status"
@@ -636,18 +620,6 @@ onBeforeUnmount(() => {
             </label>
           </div>
           <div v-if="props.isAdmin" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label class="filter-label sm:col-span-2">Andamento
-              <select
-                v-model="editForm.trip_status"
-                class="mt-1 min-h-11 w-full rounded-md border-gray-300 shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              >
-                <option value="">Manter status atual</option>
-                <option v-for="status in editTripStatusOptions" :key="status" :value="status">
-                  {{ status }}
-                </option>
-              </select>
-              <InputError :message="editForm.errors.trip_status" />
-            </label>
             <label class="filter-label">Data<TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_date" /></label>
             <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
             <div class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" required /><InputError :message="editForm.errors.status" /></div>
@@ -656,12 +628,12 @@ onBeforeUnmount(() => {
             <label class="filter-label">Código da Viagem<TextInput v-model="editForm.trip_code" type="text" class="mt-1 block w-full" maxlength="255" /><InputError :message="editForm.errors.trip_code" /></label>
             <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
-            <label class="filter-label">Passageiro<TextArea v-model="editForm.passenger" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.passenger" /></label>
+            <label class="filter-label">Passageiro<TextArea v-model="editForm.passenger" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>
             <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" :readonly="props.isDriver" required /><InputError :message="editForm.errors.responsible" /></label>
             <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
           </div>
           <p v-if="editForm.hasErrors" class="mt-3 text-sm text-red-700">Verifique os campos informados.</p>
-          <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : props.isAdministrative ? "Atualizar status" : "Salvar alterações" }}</button></div>
+          <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : "Salvar alterações" }}</button></div>
         </form>
       </div>
     </main>
@@ -698,6 +670,8 @@ onBeforeUnmount(() => {
 }
 :deep(#goali-trips-datatable .goali-action--edit) { background-color: #0f766e; }
 :deep(#goali-trips-datatable .goali-action--edit:hover) { background-color: #115e59; }
+:deep(#goali-trips-datatable .goali-action--status) { background-color: #0891b2; color: #fff; }
+:deep(#goali-trips-datatable .goali-action--status:hover) { background-color: #0e7490; }
 :deep(#goali-trips-datatable .goali-action--cancel) { background-color: #d97706; }
 :deep(#goali-trips-datatable .goali-action--cancel:hover) { background-color: #b45309; }
 :deep(#goali-trips-datatable .goali-action--delete) { background-color: #dc2626; }
