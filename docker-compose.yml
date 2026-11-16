@@ -10,6 +10,7 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
+      DB_HOST: mysql-laravue
     networks:
       - laravel-net
     restart: unless-stopped
@@ -21,13 +22,16 @@ services:
       - php-fpm
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - .:/var/www/html
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - laravel-net
     restart: unless-stopped
 
 networks:
   laravel-net:
+    name: goali-network
     driver: bridge
