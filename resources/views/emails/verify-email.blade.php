@@ -111,7 +111,7 @@
         <div class="footer">
             <p>Se você estiver com problemas para clicar no botão "Verificar endereço de e-mail", copie e cole o seguinte link em seu navegador:</p>
             <p><a href="{{ $verificationUrl }}">{{ $verificationUrl }}</a></p>
-            <p>Atenciosamente,<br>Equipe Barbearia Carioca</p>
+            <p>Atenciosamente,<br>Equipe {{ $appName }}</p>
         </div>
     </div>
 </body>
