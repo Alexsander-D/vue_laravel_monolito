@@ -106,7 +106,11 @@ const createWithoutDriver = ref(false);
 const previousDriverId = ref(props.initialDriverId);
 const enableTripCode = ref(false);
 
-const toggleCompanyMode = () => {
+const toggleCompanyMode = (event = null) => {
+  if (event?.target) {
+    useRegisteredCompany.value = Boolean(event.target.checked);
+  }
+
   // Ao sair do cadastro, a solicitação e o passageiro passam a ser informados
   // manualmente. Sem empresa selecionada, o seletor de passageiros nunca deve
   // aparecer.
@@ -281,7 +285,7 @@ const submit = () => {
               <Select v-if="useRegisteredCompany" id="company_id" v-model="selectedCompany" :options="props.companies"
                 label="name" track-by="id" class="mt-1 block w-full" placeholder="Selecione uma empresa"
                 :allow-empty="false" :select2="true" required />
-              <TextInput v-else id="solicitation" v-model="form.solicitation" type="text" class="mt-1 block w-full"
+              <TextInput v-else id="solicitation" key="manual-solicitation" v-model="form.solicitation" type="text" class="mt-1 block w-full"
                 maxlength="150" placeholder="Informe o nome da empresa" required />
               <p v-if="!props.companies.length" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Nenhuma empresa
                 cadastrada. Informe o nome manualmente.</p>
