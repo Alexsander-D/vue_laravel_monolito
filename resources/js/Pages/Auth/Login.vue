@@ -95,7 +95,6 @@ const showPassword = ref(false);
                     v-model="form.email"
                     type="email"
                     required
-                    autofocus
                     autocomplete="username"
                   />
                   <InputError class="mt-2" :message="form.errors.email" />

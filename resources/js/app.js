@@ -10,13 +10,21 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // O Axios usado internamente pelo Inertia não é necessariamente a mesma
-// instância exposta em window. Envie o token explicitamente para que POSTs,
+// instância exposta em window. Envie os tokens explicitamente para que POSTs,
 // PUTs, PATCHes e DELETEs continuem funcionando após a mudança para HTTPS.
 router.on('before', (event) => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const xsrfCookie = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.split('=').slice(1).join('=');
 
     if (csrfToken && event.detail?.visit?.headers) {
         event.detail.visit.headers['X-CSRF-TOKEN'] = csrfToken;
+    }
+
+    if (xsrfCookie && event.detail?.visit?.headers) {
+        event.detail.visit.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfCookie);
     }
 });
 
