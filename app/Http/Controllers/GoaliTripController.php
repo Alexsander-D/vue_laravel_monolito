@@ -17,7 +17,14 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class GoaliTripController extends Controller
 {
-    private const DRIVER_ROLES = ['Motorista', 'Admin'];
+    private const PERMISSION_VIEW_TRIPS = 'goali-visualizar-corridas';
+    private const PERMISSION_VIEW_ALL_TRIPS = 'goali-visualizar-todas-corridas';
+    private const PERMISSION_CREATE_TRIPS = 'goali-criar-corridas';
+    private const PERMISSION_CREATE_FOR_DRIVERS = 'goali-criar-para-motoristas';
+    private const PERMISSION_MANAGE_TRIPS = 'goali-gerenciar-corridas';
+    private const PERMISSION_UPDATE_STATUS = 'goali-atualizar-status';
+    private const PERMISSION_CANCEL_TRIPS = 'goali-cancelar-corridas';
+    private const PERMISSION_DELETE_TRIPS = 'goali-excluir-corridas';
     private const TRIP_STATUSES = ['Criada', 'Em Andamento', 'Aguardando Aprovação', 'Pago'];
 
     private const SOLICITATIONS = [
@@ -28,11 +35,12 @@ class GoaliTripController extends Controller
     public function form()
     {
         $user = Auth::user();
+        abort_unless($this->hasPermission($user, self::PERMISSION_CREATE_TRIPS), 403);
 
         return Inertia::render('Goali/Form', [
             'solicitations' => self::SOLICITATIONS,
             'responsibleUser' => $user?->name ?? '',
-            'initialTripStatus' => $user && ($this->isAdmin($user) || $this->isDriver($user))
+            'initialTripStatus' => $user && ($this->isAdmin($user) || $this->isDriver($user) || $this->canCreateForDrivers($user))
                 ? 'Em Andamento'
                 : 'Criada',
             'currentUserId' => $user?->id,
@@ -41,12 +49,14 @@ class GoaliTripController extends Controller
                 ? $user->id
                 : null,
             'isAdmin' => $user ? $this->isAdmin($user) : false,
+            'canAssignDrivers' => $user ? $this->canCreateForDrivers($user) || $this->isAdmin($user) : false,
         ]);
     }
 
     public function store(Request $request)
     {
         $user = $request->user();
+        abort_unless($this->hasPermission($user, self::PERMISSION_CREATE_TRIPS), 403);
         $rangeEndDate = null;
 
         if ($request->exists('travel_start_date') || $request->exists('travel_end_date')) {
@@ -63,12 +73,12 @@ class GoaliTripController extends Controller
         $validated = $this->validatedTrip($request, $user, true);
         $validated['user_id'] = $user->getAuthIdentifier();
         $validated['responsible'] = $user->name;
-        $adminCreatedForAnotherDriver = $this->isAdmin($user)
+        $createdForAnotherDriver = ($this->isAdmin($user) || $this->canCreateForDrivers($user))
             && ! empty($validated['driver_id'])
             && (int) $validated['driver_id'] !== (int) $user->getAuthIdentifier();
-        $validated['trip_status'] = $adminCreatedForAnotherDriver
+        $validated['trip_status'] = $createdForAnotherDriver
             ? 'Criada'
-            : (($this->isAdmin($user) || $this->isDriver($user) || empty($validated['driver_id']))
+            : (($this->isAdmin($user) || $this->isDriver($user) || $this->canCreateForDrivers($user) || empty($validated['driver_id']))
                 ? 'Em Andamento'
                 : 'Criada');
 
@@ -95,6 +105,7 @@ class GoaliTripController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        abort_unless($this->hasPermission($user, self::PERMISSION_VIEW_TRIPS), 403);
         $filters = $this->validatedFilters($request);
         $query = $this->filteredQuery($filters, $user);
         $summary = (clone $query)
@@ -119,6 +130,7 @@ class GoaliTripController extends Controller
             'isAdmin' => $this->isAdmin($user),
             'isDriver' => $this->isDriver($user),
             'currentDriverId' => $this->isDriver($user) ? $user->id : null,
+            'canCancelTrips' => $this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS),
             'solicitations' => self::SOLICITATIONS,
             'tripStatuses' => self::TRIP_STATUSES,
             'drivers' => $this->driversForCurrentTeam($user),
@@ -133,6 +145,7 @@ class GoaliTripController extends Controller
         abort_unless($isAdmin || $isDriver, 403);
 
         if ($request->boolean('cancel_trip')) {
+            abort_unless($this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS), 403);
             $request->validate(['cancel_trip' => ['required', 'boolean']]);
             DB::transaction(function () use ($user, $isAdmin, $trip) {
                 $lockedTrip = $this->queryForUser($user)
@@ -150,7 +163,7 @@ class GoaliTripController extends Controller
                     'trip_status' => 'Criada',
                     'driver_id' => null,
                     'cancelled_by_name' => $user->name,
-                    'cancelled_by_role' => $isAdmin ? 'Admin' : 'Motorista',
+                    'cancelled_by_role' => $isAdmin ? 'Admin' : (string) $user->getRoleByUser(),
                     'cancelled_at' => now(),
                 ]);
             });
@@ -243,7 +256,7 @@ class GoaliTripController extends Controller
     public function destroy(Request $request, GoaliTrip $trip)
     {
         $user = $request->user();
-        abort_unless($this->isAdmin($user), 403);
+        abort_unless($this->hasPermission($user, self::PERMISSION_DELETE_TRIPS), 403);
 
         $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
         $trip->delete();
@@ -253,11 +266,12 @@ class GoaliTripController extends Controller
 
     public function export(Request $request)
     {
+        abort_unless($this->hasPermission($request->user(), self::PERMISSION_VIEW_TRIPS), 403);
         $filters = $this->validatedFilters($request);
         $records = $this->filteredQuery($filters, $request->user())->get();
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Relatório Goali');
+        $sheet->setTitle('relatorio_goali');
         $headers = ['Data', 'Horário', 'Tipo', 'Status da corrida', 'Solicitação', 'Código da Viagem', 'Origem', 'Destino', 'Passageiro', 'Motorista', 'Responsável', 'Valor (R$)', 'Cancelada por'];
 
         foreach ($headers as $index => $header) {
@@ -385,7 +399,7 @@ class GoaliTripController extends Controller
             'sortOrder' => ['nullable', 'in:asc,desc'],
         ];
 
-        if ($this->isAdmin($user)) {
+        if ($this->canViewAllTrips($user)) {
             $rules['driverId'] = [
                 'nullable',
                 'integer',
@@ -442,7 +456,7 @@ class GoaliTripController extends Controller
                 }
             })
             ->when(
-                $this->isAdmin($user) ? ($filters['driverId'] ?? null) : null,
+                $this->canViewAllTrips($user) ? ($filters['driverId'] ?? null) : null,
                 fn ($query, $driverId) => $query->where('driver_id', $driverId)
             )
             ->with('driver:id,name')
@@ -456,10 +470,15 @@ class GoaliTripController extends Controller
     {
         $query = GoaliTrip::query();
 
-        if ($this->isDriver($user)) {
+        if (! $this->canViewAllTrips($user)) {
             $query->where(function ($query) use ($user) {
-                $query->where('driver_id', $user->id)
-                    ->orWhereNull('driver_id');
+                $query->where('driver_id', $user->id);
+
+                if ($this->isDriver($user)) {
+                    $query->orWhereNull('driver_id');
+                } else {
+                    $query->orWhere('responsible', $user->name);
+                }
             });
         }
 
@@ -468,12 +487,27 @@ class GoaliTripController extends Controller
 
     private function isDriver(User $user): bool
     {
-        return strcasecmp(trim((string) $user->getRoleByUser()), 'Motorista') === 0;
+        return $this->hasPermission($user, self::PERMISSION_UPDATE_STATUS);
     }
 
     private function isAdmin(User $user): bool
     {
-        return strcasecmp(trim((string) $user->getRoleByUser()), 'Admin') === 0;
+        return $this->hasPermission($user, self::PERMISSION_MANAGE_TRIPS);
+    }
+
+    private function canViewAllTrips(User $user): bool
+    {
+        return $this->hasPermission($user, self::PERMISSION_VIEW_ALL_TRIPS);
+    }
+
+    private function canCreateForDrivers(User $user): bool
+    {
+        return $this->hasPermission($user, self::PERMISSION_CREATE_FOR_DRIVERS);
+    }
+
+    private function hasPermission(User $user, string $permission): bool
+    {
+        return collect($user->getPermissionsInTeamByUser())->contains($permission);
     }
 
     private function rules(User $user): array
@@ -487,9 +521,7 @@ class GoaliTripController extends Controller
                 $this->isAdmin($user) ? 'nullable' : 'required',
                 'required_if:trip_status,Pago',
                 'integer',
-                Rule::in($this->isAdmin($user)
-                    ? array_column($this->driversForCurrentTeam($user), 'id')
-                    : [$user->id]),
+                Rule::in(array_column($this->driversForCurrentTeam($user), 'id')),
             ],
             'solicitation' => ['required', 'in:' . implode(',', self::SOLICITATIONS)],
             'trip_code' => ['nullable', 'string', 'max:255'],
@@ -531,10 +563,23 @@ class GoaliTripController extends Controller
             return [];
         }
 
-        return $team->users()
-            ->wherePivotIn('role', self::DRIVER_ROLES)
-            ->orderBy('name')
-            ->get(['users.id', 'users.name'])
+        $driverRoles = $this->isAdmin($user) || $this->canCreateForDrivers($user)
+            ? ['Motorista']
+            : [];
+        if ($this->isAdmin($user)) {
+            $driverRoles[] = 'Admin';
+        }
+
+        $drivers = $driverRoles
+            ? $team->users()->wherePivotIn('role', $driverRoles)->get(['users.id', 'users.name'])
+            : collect();
+
+        if ($team->users()->whereKey($user->id)->exists() && ! $drivers->contains('id', $user->id)) {
+            $drivers->push($user);
+        }
+
+        return $drivers
+            ->sortBy('name')
             ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
             ->values()
             ->all();
