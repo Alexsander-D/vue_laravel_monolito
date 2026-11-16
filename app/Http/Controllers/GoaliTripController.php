@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -24,6 +25,7 @@ class GoaliTripController extends Controller
     private const PERMISSION_CREATE_TRIPS = 'goali-criar-corridas';
     private const PERMISSION_CREATE_FOR_DRIVERS = 'goali-criar-para-motoristas';
     private const PERMISSION_MANAGE_TRIPS = 'goali-gerenciar-corridas';
+    private const PERMISSION_MANAGE_DIRECTORY = 'goali-gerenciar-cadastros';
     private const PERMISSION_UPDATE_STATUS = 'goali-atualizar-status';
     private const PERMISSION_CANCEL_TRIPS = 'goali-cancelar-corridas';
     private const PERMISSION_DELETE_TRIPS = 'goali-excluir-corridas';
@@ -54,6 +56,7 @@ class GoaliTripController extends Controller
                 : null,
             'isAdmin' => $user ? $this->isAdmin($user) : false,
             'canAssignDrivers' => $user ? $this->canCreateForDrivers($user) || $this->isAdmin($user) : false,
+            'canManageDirectory' => $user ? $this->hasPermission($user, self::PERMISSION_MANAGE_DIRECTORY) : false,
         ]);
     }
 
@@ -131,11 +134,13 @@ class GoaliTripController extends Controller
 
             $record->driver->append('profile_photo_url');
 
-            if ($record->driver->profile_photo_path) {
+            if ($record->driver->profile_photo_path && Storage::disk('public')->exists($record->driver->profile_photo_path)) {
                 $record->driver->setAttribute(
                     'profile_photo_url',
                     '/storage/' . ltrim($record->driver->profile_photo_path, '/'),
                 );
+            } else {
+                $record->driver->setAttribute('profile_photo_url', null);
             }
         });
 

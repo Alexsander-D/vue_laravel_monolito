@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
@@ -33,11 +34,13 @@ class HandleInertiaRequests extends Middleware
     {
         $user = Auth::user();
 
-        if ($user?->profile_photo_path) {
+        if ($user?->profile_photo_path && Storage::disk('public')->exists($user->profile_photo_path)) {
             $user->setAttribute(
                 'profile_photo_url',
                 '/storage/' . ltrim($user->profile_photo_path, '/'),
             );
+        } elseif ($user) {
+            $user->setAttribute('profile_photo_url', null);
         }
 
         return [
