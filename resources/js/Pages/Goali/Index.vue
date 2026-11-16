@@ -421,11 +421,11 @@ onBeforeUnmount(() => {
           <header class="col-span-12 grid grid-cols-12 gap-3 border-b border-cyan-100 bg-cyan-50/70 px-3 pb-4 pt-3 dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:gap-4 sm:px-5 sm:pb-5 sm:pt-5">
             <div class="col-span-12 text-center">
               <p class="text-xs font-bold uppercase text-cyan-700">{{ $page.props.auth.user.current_team.name }}</p>
-              <h1 class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Relatório de deslocamentos</h1>
+              <h1 class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Relatório de corridas</h1>
               <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-cyan-600" aria-hidden="true"></div>
             </div>
             <div class="col-span-12 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <a v-if="props.canCreateTrips" :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100">Criar Corrida</a>
+          <a v-if="props.canCreateTrips" :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800">Criar Corrida</a>
           <a :href="reportUrl" class="inline-flex min-h-11 items-center justify-center rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Exportar Excel</a>
         </div>
       </header>

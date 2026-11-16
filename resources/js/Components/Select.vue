@@ -10,7 +10,7 @@
     :disabled="disabled"
     class="select2-control"
   >
-    <option v-if="allowEmpty && !multiple" value="">{{ placeholder }}</option>
+    <option v-if="!multiple" value="" :disabled="!allowEmpty">{{ placeholder }}</option>
     <option v-for="option in options" :key="String(optionValue(option))" :value="optionValue(option)">
       {{ optionLabel(option) }}
     </option>
@@ -148,7 +148,7 @@ function initializeSelect2() {
   element.select2({
     placeholder: props.placeholder,
     allowClear: props.allowEmpty,
-    closeOnSelect: !props.multiple,
+    closeOnSelect: true,
     maximumSelectionLength: 0,
     width: "100%",
     ...(dropdownParent.length ? { dropdownParent } : modal.length ? { dropdownParent: modal } : {}),
@@ -213,10 +213,10 @@ watch(
       destroySelect2();
     }
   },
-  { deep: true }
+  { deep: true, flush: "post" }
 );
 
-watch(() => props.modelValue, syncSelect2Value, { deep: true });
+watch(() => props.modelValue, syncSelect2Value, { deep: true, flush: "post" });
 
 function updateModelValue(value) {
   const modelValue = props.multiple ? (Array.isArray(value) ? value : []) : value;

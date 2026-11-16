@@ -78,11 +78,15 @@ class CreateNewUser implements CreatesNewUsers
     {
 
         return DB::transaction(function () use ($input) {
-            return User::create([
+            $user = User::create([
                 'name' => Str::upper($input['name']),
                 'email' => $input['email'],
                 'password' => Hash::make($input['password']),
             ]);
+
+            $user->forceFill(['email_verified_at' => now()])->save();
+
+            return $user;
         });
     }
 

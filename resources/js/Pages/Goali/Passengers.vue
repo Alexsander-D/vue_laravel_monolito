@@ -45,7 +45,59 @@ const remove = async (passenger) => { const result = await Swal.fire({ title: "E
         </div>
       </section>
     </main>
-    <DialogModal :show="showModal" max-width="2xl" @close="closeModal"><template #title>{{ modalTitle }}</template><template #content><form class="grid gap-4" @submit.prevent="submit"><label class="font-medium text-sm text-gray-800 dark:text-gray-200">Empresa *<Select v-model="selectedCompany" :options="props.companies" label="name" track-by="id" placeholder="Selecione a empresa" :allow-empty="false" class="mt-1" /><InputError :message="form.errors.company_id" /></label><label class="font-medium text-sm text-gray-800 dark:text-gray-200">Nome *<TextInput v-model="form.name" class="mt-1 block w-full" maxlength="150" required /><InputError :message="form.errors.name" /></label><label class="font-medium text-sm text-gray-800 dark:text-gray-200">Ponto de embarque<TextInput v-model="form.boarding_point" class="mt-1 block w-full" maxlength="255" /><InputError :message="form.errors.boarding_point" /></label><label class="font-medium text-sm text-gray-800 dark:text-gray-200">Telefone<label class="mt-2 flex items-center gap-2 text-sm font-normal"><input v-model="useCompanyPhone" type="checkbox" class="rounded border-gray-300 text-cyan-700" @change="toggleCompanyPhone" />Usar o telefone da empresa</label><TextInput v-model="form.phone" class="mt-1 block w-full" maxlength="30" :disabled="useCompanyPhone" /><InputError :message="form.errors.phone" /></label></form></template><template #footer><button type="button" class="mr-3 rounded-lg border border-gray-300 px-4 py-2 text-sm" @click="closeModal">Cancelar</button><button type="button" class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800" :disabled="form.processing" @click="submit">{{ form.processing ? "Salvando..." : "Salvar" }}</button></template></DialogModal>
+    <DialogModal :show="showModal" max-width="2xl" @close="closeModal">
+      <template #title>{{ modalTitle }}</template>
+      <template #content>
+        <form class="grid gap-4" @submit.prevent="submit">
+          <div>
+            <label for="company_id" class="font-medium text-sm text-gray-800 dark:text-gray-200">Empresa *</label>
+            <Select
+              id="company_id"
+              v-model="selectedCompany"
+              :options="props.companies"
+              label="name"
+              track-by="id"
+              placeholder="Selecione a empresa"
+              :allow-empty="false"
+              :select2="true"
+              class="mt-1"
+            />
+            <InputError :message="form.errors.company_id" />
+          </div>
+          <label class="font-medium text-sm text-gray-800 dark:text-gray-200">
+            Nome *
+            <TextInput v-model="form.name" class="mt-1 block w-full" maxlength="150" required />
+            <InputError :message="form.errors.name" />
+          </label>
+          <label class="font-medium text-sm text-gray-800 dark:text-gray-200">
+            Ponto de embarque
+            <TextInput v-model="form.boarding_point" class="mt-1 block w-full" maxlength="255" />
+            <InputError :message="form.errors.boarding_point" />
+          </label>
+          <div>
+            <label for="passenger-phone" class="font-medium text-sm text-gray-800 dark:text-gray-200">Telefone</label>
+            <label class="mt-2 flex items-center gap-2 text-sm font-normal">
+              <input v-model="useCompanyPhone" type="checkbox" class="rounded border-gray-300 text-cyan-700" @change="toggleCompanyPhone" />
+              Usar o telefone da empresa
+            </label>
+            <TextInput
+              id="passenger-phone"
+              v-model="form.phone"
+              class="mt-1 block w-full"
+              maxlength="30"
+              :disabled="useCompanyPhone"
+            />
+            <InputError :message="form.errors.phone" />
+          </div>
+        </form>
+      </template>
+      <template #footer>
+        <button type="button" class="mr-3 rounded-lg border border-gray-300 px-4 py-2 text-sm" @click="closeModal">Cancelar</button>
+        <button type="button" class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800" :disabled="form.processing" @click="submit">
+          {{ form.processing ? "Salvando..." : "Salvar" }}
+        </button>
+      </template>
+    </DialogModal>
   </BaseLayout>
 </template>
 
