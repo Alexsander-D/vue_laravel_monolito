@@ -53,6 +53,28 @@ class AppDownloadTest extends TestCase
             ->assertRedirect(route('verification.notice'));
     }
 
+    public function test_dashboard_shows_access_notice_for_an_unknown_team(): void
+    {
+        $user = $this->createUser('unknown-team@example.com');
+        $team = $this->createTeam($user, 'EQUIPE DESCONHECIDA');
+        $user->teams()->attach($team->id, ['role' => 'Espectador']);
+        $user->forceFill(['current_team_id' => $team->id])->save();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Errors/UnassignedTeam'));
+    }
+
+    public function test_logout_redirects_to_login_without_rendering_a_team_dashboard(): void
+    {
+        $user = $this->createUser('logout@example.com');
+
+        $this->actingAs($user)
+            ->post(route('logout'))
+            ->assertRedirect(route('login'));
+    }
+
     private function createUser(string $email, bool $verified = true): User
     {
         $user = User::create([

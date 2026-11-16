@@ -118,6 +118,10 @@ Route::middleware([
                 return Inertia::render('Errors/UnassignedTeam');
             }
 
+            if ($normalizeTeamName($currentTeam->name) !== 'BARBEARIA CARIOCA 2') {
+                return Inertia::render('Errors/UnassignedTeam');
+            }
+
             return Inertia::render('Dashboard', [
                 'isAdmin' => strcasecmp(trim((string) $user->getRoleByUser()), 'Admin') === 0,
                 'services' => AttendanceServicePrice::catalog(),
