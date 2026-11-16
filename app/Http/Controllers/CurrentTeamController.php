@@ -17,7 +17,12 @@ class CurrentTeamController extends Controller
 
         abort_unless($user->belongsToTeam($team), 403, 'Você não pertence a esta equipe.');
 
-        $user->forceFill(['current_team_id' => $team->id])->save();
+        // O usuário recebe o accessor profile_photo_url no middleware do Inertia.
+        // Usar save() aqui tentaria gravar esse atributo anexado na tabela users.
+        User::query()
+            ->whereKey($user->getKey())
+            ->update(['current_team_id' => $team->id]);
+        $user->current_team_id = $team->id;
         $user->setRelation('currentTeam', $team);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($team->id);
