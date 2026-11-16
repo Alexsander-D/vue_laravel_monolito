@@ -27,10 +27,9 @@ return [
     | Origens permitidas
     |--------------------------------------------------------------------------
     */
-    'allowed_origins' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', env('CORS_ALLOWED_ORIGINS', env('APP_URL', 'http://localhost'))),
-    ))),
+    'allowed_origins' => env('APP_ENV') === 'production'
+        ? ['http://127.0.0.1:8000']
+        : ['http://3.84.217.247'],
 
     /*
     |--------------------------------------------------------------------------
@@ -58,6 +57,6 @@ return [
     | Suporte a credenciais (cookies, Authorization headers, etc.)
     |--------------------------------------------------------------------------
     */
-    'supports_credentials' => true,
+    'supports_credentials' => false,
 
 ];

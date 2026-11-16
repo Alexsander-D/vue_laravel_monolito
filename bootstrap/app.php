@@ -15,10 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
-        // O SSL termina no proxy/webserver. Preserve o protocolo original nas
-        // URLs, redirects e cookies gerados pelo Laravel.
-        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
-
         $middleware->api(append: [
             HandleCors::class,
         ]);
