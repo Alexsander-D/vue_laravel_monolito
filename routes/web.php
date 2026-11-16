@@ -81,6 +81,22 @@ Route::middleware([
     ->group(function () {
         Route::get('/dashboard', function () {
             $user = auth()->user();
+
+            // A equipe atual pode ter ficado apontando para a equipe da barbearia
+            // depois de um usuário ser vinculado à Goali. Resolva a entrada pelo
+            // vínculo da equipe antes de renderizar qualquer dashboard.
+            $goaliTeam = $user->teams()
+                ->whereRaw('UPPER(TRIM(teams.name)) = ?', ['GOALI TRANSPORTES'])
+                ->first();
+
+            if ($goaliTeam) {
+                if ((int) $user->current_team_id !== (int) $goaliTeam->id) {
+                    $user->forceFill(['current_team_id' => $goaliTeam->id])->save();
+                }
+
+                return redirect()->route('goali.index');
+            }
+
             $currentTeamId = (int) $user->current_team_id;
 
             if ($currentTeamId === 1) {
@@ -90,10 +106,6 @@ Route::middleware([
             $currentTeam = $currentTeamId
                 ? Team::query()->whereKey($currentTeamId)->first()
                 : null;
-
-            if ($currentTeam && strcasecmp(trim($currentTeam->name), 'GOALI TRANSPORTES') === 0) {
-                return redirect()->route('goali.index');
-            }
 
             if (!$currentTeam) {
                 return Inertia::render('Errors/UnassignedTeam');

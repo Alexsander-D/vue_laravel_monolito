@@ -1221,6 +1221,39 @@ class GoaliTripTest extends TestCase
             ->assertRedirect(route('goali.index'));
     }
 
+    public function test_dashboard_never_renders_barber_dashboard_for_a_goali_user_with_an_old_current_team(): void
+    {
+        $user = User::create([
+            'name' => 'Usuário Goali com equipe antiga',
+            'email' => 'goali-old-team@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        $barberTeam = new Team([
+            'name' => 'BARBEARIA CARIOCA 2',
+            'personal_team' => false,
+        ]);
+        $barberTeam->user_id = $user->id;
+        $barberTeam->save();
+        $user->teams()->attach($barberTeam->id, ['role' => 'Admin']);
+
+        $goaliTeam = new Team([
+            'name' => 'GOALI TRANSPORTES',
+            'personal_team' => false,
+        ]);
+        $goaliTeam->user_id = $user->id;
+        $goaliTeam->save();
+        $user->teams()->attach($goaliTeam->id, ['role' => 'Admin']);
+        $user->forceFill(['current_team_id' => $barberTeam->id])->save();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('goali.index'));
+
+        $this->assertSame($goaliTeam->id, $user->fresh()->current_team_id);
+    }
+
     private function attachToGoaliTeam(User $user, string $role): Team
     {
         $team = new Team([
