@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref, defineProps } from "vue";
-import { Inertia } from "@inertiajs/inertia";
 import { useForm } from "@inertiajs/vue3";
 import ActionMessage from "@/Components/ActionMessage.vue";
 import FormSection from "@/Components/FormSection.vue";
@@ -21,7 +20,6 @@ const submitRoleForm = () => {
     preserveScroll: true,
     onSuccess: () => {
       form.reset();
-      Inertia.reload({ only: ["roles"] });
     },
     onError: () => {
       if (form.errors.roleInput) {
@@ -72,10 +70,11 @@ const tableId = ref("ManageRoles");
             <TextInput
               id="roleInput"
               ref="roleInput"
-              rules="required|max:10|regex:/^[A-Z][a-zA-Z]*$/"
               v-model="form.roleInput"
               type="text"
               class="mt-1 block w-full"
+              maxlength="20"
+              required
               placeholder="Após criar uma função para o time não será possível voltar atrás"
               autocomplete="off"
             />

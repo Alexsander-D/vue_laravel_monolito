@@ -19,6 +19,7 @@ const props = defineProps({
   summary: { type: Object, required: true },
   isDriver: { type: Boolean, default: false },
   currentDriverId: { type: Number, default: null },
+  canCancelTrips: { type: Boolean, default: false },
 });
 
 const normalizedFilters = (value) => ({
@@ -150,7 +151,8 @@ const tableData = computed(() => props.records.map((record) => ({
       || (props.isDriver && canDriverEditTrip(record))
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : "",
-    record.trip_status !== "Criada"
+    props.canCancelTrips
+      && record.trip_status !== "Criada"
       && record.driver_id !== null
       && !["Pago", "Aguardando Aprovação"].includes(record.trip_status)
       ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
@@ -367,7 +369,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <BaseLayout title="Relatório Goali">
+  <BaseLayout title="Relatório de corridas">
     <main class="mx-auto w-full min-w-0 px-1 pt-1 sm:px-2">
       <section class="rounded-xl bg-white p-2 shadow-lg dark:bg-gray-900 sm:p-4 lg:p-6">
         <div class="grid min-w-0 grid-cols-12 gap-3 sm:gap-4">
@@ -488,7 +490,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="props.isAdmin || (props.isDriver && canDriverEditTrip(record)) || (record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
+              v-if="props.isAdmin || (props.isDriver && canDriverEditTrip(record)) || (props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
@@ -498,7 +500,7 @@ onBeforeUnmount(() => {
                 @click="startEdit(record)"
               >{{ props.isDriver ? "Atualizar status" : "Editar" }}</button>
               <button
-                v-if="record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
+                v-if="props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
                 @click="cancelTrip(record)"

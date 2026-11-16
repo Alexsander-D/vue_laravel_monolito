@@ -17,6 +17,7 @@ const props = defineProps({
   drivers: { type: Array, default: () => [] },
   initialDriverId: { type: Number, default: null },
   isAdmin: { type: Boolean, default: false },
+  canAssignDrivers: { type: Boolean, default: false },
 });
 
 const currentDateTime = () => {
@@ -46,9 +47,9 @@ const form = useForm({
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success || "");
 const initialTripStatus = computed(() => (
-  props.isAdmin && form.driver_id && Number(form.driver_id) !== Number(props.currentUserId)
+  props.canAssignDrivers && form.driver_id && Number(form.driver_id) !== Number(props.currentUserId)
     ? "Criada"
-    : props.isAdmin
+    : props.canAssignDrivers
       ? "Em Andamento"
       : props.initialTripStatus
 ));
@@ -207,7 +208,7 @@ const submit = () => {
               <span v-if="!createWithoutDriver">*</span></label>
             <Select id="driver_id" v-model="selectedDriver" :options="props.drivers" label="name" track-by="id"
               placeholder="Selecione um motorista" class="mt-1 block w-full" :allow-empty="props.isAdmin"
-              :select2="true" :disabled="!props.isAdmin || createWithoutDriver" :required="!createWithoutDriver" />
+              :select2="true" :disabled="!props.canAssignDrivers || createWithoutDriver" :required="!createWithoutDriver" />
             <InputError :message="form.errors.driver_id" class="mt-2" />
             <label v-if="props.isAdmin" class="mt-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input v-model="createWithoutDriver" type="checkbox" class="rounded border-gray-300 text-teal-700" @change="toggleWithoutDriver" />

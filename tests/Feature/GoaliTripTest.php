@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\GoaliTrip;
+use App\Models\Spatie\Permission;
+use App\Models\Spatie\Role;
 use App\Models\Spatie\Team;
 use App\Models\Spatie\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,6 +15,195 @@ use Tests\TestCase;
 class GoaliTripTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_administrativo_can_create_for_self_and_drivers_and_only_see_its_trips(): void
+    {
+        $administrativo = User::create([
+            'name' => 'Usuário Administrativo',
+            'email' => 'administrativo-goali@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $administrativo->forceFill(['email_verified_at' => now()])->save();
+        $team = $this->attachToGoaliTeam($administrativo, 'Administrativo');
+
+        $driver = User::create([
+            'name' => 'Motorista Goali',
+            'email' => 'motorista-administrativo@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->teams()->attach($team->id, ['role' => 'Motorista']);
+
+        $otherAdmin = User::create([
+            'name' => 'Outro Admin',
+            'email' => 'outro-admin-goali@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $otherAdmin->teams()->attach($team->id, ['role' => 'Admin']);
+
+        $this->actingAs($administrativo)
+            ->get(route('goali.form'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('isAdmin', false)
+                ->where('canAssignDrivers', true)
+                ->where('drivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
+                    === collect([$administrativo->id, $driver->id])->sort()->values()->all()));
+
+        $payload = [
+            'travel_start_date' => now()->addDay()->toDateString(),
+            'travel_end_date' => now()->addDay()->toDateString(),
+            'travel_time' => '09:30',
+            'status' => 'ENTRADA',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Passageiro Administrativo',
+            'responsible' => 'Campo não confiável',
+            'amount' => '50.00',
+        ];
+
+        $this->post(route('goali.store'), [...$payload, 'driver_id' => $driver->id])
+            ->assertRedirect(route('goali.index'));
+        $this->assertDatabaseHas('goali_trips', [
+            'passenger' => 'Passageiro Administrativo',
+            'driver_id' => $driver->id,
+            'responsible' => $administrativo->name,
+            'trip_status' => 'Criada',
+        ]);
+
+        $this->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])
+            ->assertRedirect(route('goali.index'));
+        $this->assertDatabaseHas('goali_trips', [
+            'passenger' => 'Passageiro Administrativo',
+            'driver_id' => $administrativo->id,
+            'trip_status' => 'Em Andamento',
+        ]);
+
+        $this->from(route('goali.form'))
+            ->post(route('goali.store'), [...$payload, 'driver_id' => $otherAdmin->id])
+            ->assertRedirect(route('goali.form'))
+            ->assertSessionHasErrors('driver_id');
+
+        $createTrip = fn (int $driverId, string $responsible, string $status = 'ENTRADA', ?string $date = null) => GoaliTrip::create([
+            'user_id' => $otherAdmin->id,
+            'driver_id' => $driverId,
+            'travel_date' => $date ?? now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => $status,
+            'trip_status' => 'Pago',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida de teste',
+            'responsible' => $responsible,
+            'amount' => '10.00',
+        ]);
+        $assignedToAdministrative = $createTrip($administrativo->id, $otherAdmin->name);
+        $responsibleForTrip = $createTrip($otherAdmin->id, $administrativo->name);
+        $createTrip($administrativo->id, $otherAdmin->name, 'SAÍDA');
+        $createTrip($otherAdmin->id, $otherAdmin->name);
+        $createTrip(
+            $administrativo->id,
+            $otherAdmin->name,
+            'ENTRADA',
+            now()->subDay()->toDateString()
+        );
+
+        $this->get(route('goali.index', [
+            'startDate' => now()->toDateString(),
+            'endDate' => now()->toDateString(),
+            'status' => 'ENTRADA',
+            'tripStatus' => 'Pago',
+            'solicitation' => 'IMB',
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.count', 2)
+                ->where('records', fn ($records) => collect($records)->pluck('id')->sort()->values()->all()
+                    === collect([$assignedToAdministrative->id, $responsibleForTrip->id])->sort()->values()->all()));
+    }
+
+    public function test_creating_a_role_redirects_to_the_updated_roles_page(): void
+    {
+        $user = User::create([
+            'name' => 'Admin de Funções',
+            'email' => 'admin-roles@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $team = new Team([
+            'name' => 'Equipe de Funções',
+            'personal_team' => false,
+        ]);
+        $team->user_id = $user->id;
+        $team->save();
+        $user->teams()->attach($team->id, ['role' => 'Admin']);
+        $user->forceFill(['current_team_id' => $team->id])->save();
+
+        $this->actingAs($user)
+            ->put(route('roles.store'), ['roleInput' => 'Administrativo'])
+            ->assertRedirect(route('roles.create'));
+
+        $this->get(route('roles.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('rolesWithPermissions', fn ($roles) => collect($roles)->contains(
+                    fn ($item) => $item['role']['name'] === 'Administrativo'
+                )));
+    }
+
+    public function test_goali_permissions_migration_sets_the_expected_roles(): void
+    {
+        $user = User::create([
+            'name' => 'Admin Migração',
+            'email' => 'admin-permissions-migration@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $team = new Team([
+            'name' => 'GOALI TRANSPORTES',
+            'personal_team' => false,
+        ]);
+        $team->user_id = $user->id;
+        $team->save();
+
+        $migration = require base_path('database/migrations/2026_11_15_000000_assign_goali_permissions_to_roles.php');
+        $migration->up();
+
+        $adminPermissions = Role::where('team_id', $team->id)
+            ->where('name', 'Admin')
+            ->firstOrFail()
+            ->permissions()
+            ->pluck('name')
+            ->sort()
+            ->values()
+            ->all();
+        $driverPermissions = Role::where('team_id', $team->id)
+            ->where('name', 'Motorista')
+            ->firstOrFail()
+            ->permissions()
+            ->pluck('name')
+            ->sort()
+            ->values()
+            ->all();
+        $administrativoPermissions = Role::where('team_id', $team->id)
+            ->where('name', 'Administrativo')
+            ->firstOrFail()
+            ->permissions()
+            ->pluck('name')
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertContains('goali-visualizar-todas-corridas', $adminPermissions);
+        $this->assertContains('goali-excluir-corridas', $adminPermissions);
+        $this->assertContains('goali-atualizar-status', $driverPermissions);
+        $this->assertContains('goali-cancelar-corridas', $driverPermissions);
+        $this->assertSame([
+            'goali-criar-corridas',
+            'goali-criar-para-motoristas',
+            'goali-visualizar-corridas',
+        ], $administrativoPermissions);
+    }
 
     public function test_it_saves_the_datetime_local_value_as_date_and_time(): void
     {
@@ -332,6 +523,7 @@ class GoaliTripTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         $user->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($user, 'Admin');
 
         $createTrip = fn (string $time, string $status) => GoaliTrip::create([
             'user_id' => $user->id,
@@ -1037,6 +1229,44 @@ class GoaliTripTest extends TestCase
         ]);
         $team->user_id = $user->id;
         $team->save();
+
+        $permissionsByRole = [
+            'Motorista' => [
+                'goali-visualizar-corridas',
+                'goali-criar-corridas',
+                'goali-atualizar-status',
+                'goali-cancelar-corridas',
+            ],
+            'Admin' => [
+                'goali-visualizar-corridas',
+                'goali-visualizar-todas-corridas',
+                'goali-criar-corridas',
+                'goali-criar-para-motoristas',
+                'goali-gerenciar-corridas',
+                'goali-cancelar-corridas',
+                'goali-excluir-corridas',
+            ],
+            'Administrativo' => [
+                'goali-visualizar-corridas',
+                'goali-criar-corridas',
+                'goali-criar-para-motoristas',
+            ],
+        ];
+
+        foreach ($permissionsByRole as $roleName => $permissionNames) {
+            $roleModel = Role::firstOrCreate([
+                'name' => $roleName,
+                'guard_name' => 'web',
+                'team_id' => $team->id,
+            ]);
+            $permissionIds = collect($permissionNames)->map(fn (string $permissionName) => Permission::firstOrCreate([
+                'name' => $permissionName,
+                'guard_name' => 'web',
+                'team_id' => $team->id,
+            ])->id);
+            $roleModel->permissions()->sync($permissionIds);
+        }
+
         $user->teams()->attach($team->id, ['role' => $role]);
         $user->forceFill(['current_team_id' => $team->id])->save();
 
