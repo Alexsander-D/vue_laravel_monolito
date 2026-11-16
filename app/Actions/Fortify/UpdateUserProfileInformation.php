@@ -5,8 +5,11 @@ namespace App\Actions\Fortify;
 use App\Models\Spatie\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
+use Throwable;
 
 class UpdateUserProfileInformation implements UpdatesUserProfileInformation
 {
@@ -23,8 +26,31 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
         ])->validateWithBag('updateProfileInformation');
 
-        if (isset($input['photo'])) {
-            $user->updateProfilePhoto($input['photo']);
+        if (! empty($input['photo'])) {
+            try {
+                $disk = Storage::disk(config('jetstream.profile_photo_disk', 'public'));
+                $disk->makeDirectory('profile-photos');
+                $oldPath = $user->profile_photo_path;
+                $path = $input['photo']->storePublicly('profile-photos', [
+                    'disk' => config('jetstream.profile_photo_disk', 'public'),
+                ]);
+
+                if (! $path) {
+                    throw new \RuntimeException('Não foi possível gravar a foto do perfil.');
+                }
+
+                $user->forceFill(['profile_photo_path' => $path])->save();
+
+                if ($oldPath && $oldPath !== $path) {
+                    $disk->delete($oldPath);
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+
+                throw ValidationException::withMessages([
+                    'photo' => 'Não foi possível salvar a foto. Verifique as permissões do diretório de armazenamento.',
+                ])->errorBag('updateProfileInformation');
+            }
         }
 
         if ($input['email'] !== $user->email &&

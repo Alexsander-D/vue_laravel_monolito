@@ -43,6 +43,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\GoaliTripController;
 use App\Http\Controllers\GoaliCompanyController;
 use App\Http\Controllers\GoaliPassengerController;
+use App\Http\Controllers\MonitoringController;
 use App\Models\AttendanceServicePrice;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -103,6 +104,8 @@ Route::middleware([
                 'services' => AttendanceServicePrice::catalog(),
             ]);
         })->name('dashboard');
+
+        Route::get('/monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
 
         Route::get('/goali/form', [GoaliTripController::class, 'form'])->name('goali.form');
         Route::post('/goali/form', [GoaliTripController::class, 'store'])->name('goali.store');

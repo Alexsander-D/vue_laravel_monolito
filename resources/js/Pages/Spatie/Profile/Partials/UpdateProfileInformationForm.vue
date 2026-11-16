@@ -31,6 +31,7 @@ const updateProfileInformation = () => {
   form.post(route("user-profile-information.update"), {
     errorBag: "updateProfileInformation",
     preserveScroll: true,
+    forceFormData: true,
     onSuccess: () => clearPhotoFileInput(),
   });
 };
@@ -106,6 +107,7 @@ const clearPhotoFileInput = () => {
                 id="photo"
                 ref="photoInput"
                 type="file"
+                accept="image/jpeg,image/png"
                 class="hidden"
                 @change="updatePhotoPreview"
               />

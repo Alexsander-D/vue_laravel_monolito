@@ -181,8 +181,8 @@ const submit = () => {
           Voltar ao relatório
         </Link>
         <div v-if="props.canManageDirectory" class="mb-4 flex flex-wrap gap-2">
-          <Link :href="route('goali.companies.index')" class="inline-flex min-h-11 items-center rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Criar empresa</Link>
-          <Link :href="route('goali.passengers.index')" class="inline-flex min-h-11 items-center rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Criar passageiro</Link>
+          <Link :href="route('goali.companies.index')" class="inline-flex min-h-11 items-center rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Cadastrar empresa</Link>
+          <Link :href="route('goali.passengers.index')" class="inline-flex min-h-11 items-center rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Cadastrar passageiro</Link>
         </div>
         <header class="mb-4 border-b border-cyan-100 bg-cyan-50/70 px-4 py-5 text-center dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:mb-6 sm:pb-5">
           <h1 class="text-xl font-bold uppercase text-gray-900 dark:text-white sm:text-2xl">CRIAR NOVA CORRIDA</h1>
