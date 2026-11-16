@@ -48,12 +48,12 @@ class AccessControlController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'team_id.value' => 'required|exists:teams,id',
+            'team_id' => 'required|exists:teams,id',
             'email' => 'required|email|exists:users,email',
             'role' => 'required|string',
         ], [
-            'team_id.value.required' => 'SELECIONE UM TIME',
-            'team_id.value.exists' => 'TIME NÃO ENCONTRADO',
+            'team_id.required' => 'SELECIONE UM TIME',
+            'team_id.exists' => 'TIME NÃO ENCONTRADO',
             'email.required' => 'INFORME UM E-MAIL VÁLIDO',
             'email.email' => 'INFORME UM E-MAIL VÁLIDO',
             'email.exists' => 'USUÁRIO NÃO ENCONTRADO',
@@ -61,7 +61,7 @@ class AccessControlController extends Controller
             'role.string' => 'INFORME UM ROLE VÁLIDO',
         ]);
 
-        $team = Team::findOrFail($request->team_id['value']);
+        $team = Team::findOrFail($request->integer('team_id'));
 
         app(AddTeamMember::class)->add($user, $team, $request->email, $request->role);
 

@@ -35,7 +35,7 @@ const currentlyManagingRole = ref(false);
 const managingRoleFor = ref(null);
 
 const fetchTeamRoles = (team) => {
-  const teamId = team.value;
+  const teamId = team;
   if (!teamId) {
     console.warn("teamId está indefinido. Abortando requisição.");
     teamSpecificRoles.value = [];
@@ -80,7 +80,7 @@ watch(
 
 const updateMemberTeam = () => {
   addTeamMemberForm.post(
-    route("team-members.store", { team: addTeamMemberForm.team_id.value }),
+    route("access-team-members.create"),
     {
       errorBag: "addTeamMember",
       preserveScroll: true,
