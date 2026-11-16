@@ -134,17 +134,6 @@ onUnmounted(() => {
       <div class="flex w-full flex-col items-stretch lg:ml-auto lg:w-auto lg:flex-row lg:items-center">
         <template
           v-if="$page.props.auth.user.all_teams.some(team => Number(team.id) === Number($page.props.auth.user.current_team_id) && team.name.trim().toLocaleUpperCase() === 'GOALI TRANSPORTES')">
-          <Link
-            class="themeColor rounded-md px-3 py-2 text-sm font-semibold hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
-            :href="route('goali.index')">
-            Corridas
-          </Link>
-          <Link
-            v-if="$page.props.userPermissions?.includes('goali-criar-corridas')"
-            class="rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800"
-            :href="route('goali.form')">
-            Criar corrida
-          </Link>
           <div :class="{
             hidden: !isMenuOpen,
             block: isMenuOpen,
@@ -167,6 +156,18 @@ onUnmounted(() => {
 
               <template #content>
                 <div class="w-60">
+                  <Link
+                    v-if="$page.props.userPermissions?.includes('goali-visualizar-corridas')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('goali.index')">
+                    Relatório de corridas
+                  </Link>
+                  <Link
+                    v-if="$page.props.userPermissions?.includes('goali-criar-corridas')"
+                    class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"
+                    :href="route('goali.form')">
+                    Criar corrida
+                  </Link>
                   <Link
                     v-if="$page.props.auth.user.current_team && isCurrentTeamAdmin"
                     class="themeColor justify-center flex items-center gap-x-3.5 py-2 px-3 rounded text-sm font-medium focus:outline-none"

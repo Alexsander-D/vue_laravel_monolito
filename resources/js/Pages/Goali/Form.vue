@@ -79,6 +79,7 @@ const selectedPassengers = computed({
   },
 });
 const hasCompanyPassengers = computed(() => availablePassengers.value.length > 0);
+const useRegisteredCompany = ref(props.companies.length > 0);
 watch(() => form.company_id, (companyId) => {
   const company = props.companies.find((item) => Number(item.id) === Number(companyId));
   if (company?.departure_address) {
@@ -94,6 +95,13 @@ watch(() => form.passenger_ids, (passengerIds) => {
 const createWithoutDriver = ref(false);
 const previousDriverId = ref(props.initialDriverId);
 const enableTripCode = ref(false);
+
+const toggleCompanyMode = () => {
+  form.company_id = null;
+  form.passenger_ids = [];
+  form.passenger = "";
+  form.solicitation = "";
+};
 
 const toggleWithoutDriver = (event) => {
   if (event.target.checked) {
@@ -119,7 +127,12 @@ const formatAmount = () => {
 };
 
 const submit = () => {
-  if (!form.company_id && !form.solicitation) {
+  if (useRegisteredCompany.value && !form.company_id) {
+    form.setError("company_id", "Selecione uma empresa cadastrada.");
+    return;
+  }
+
+  if (!useRegisteredCompany.value && !form.solicitation) {
     form.setError("solicitation", "Selecione uma empresa.");
     return;
   }
@@ -141,6 +154,7 @@ const submit = () => {
       );
       createWithoutDriver.value = false;
       enableTripCode.value = false;
+      useRegisteredCompany.value = props.companies.length > 0;
       previousDriverId.value = props.initialDriverId;
       form.driver_id = props.initialDriverId;
       const dateTime = currentDateTime();
@@ -237,11 +251,17 @@ const submit = () => {
             <label for="solicitation"
               class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Solicitação / Empresa
               <span>*</span></label>
-            <Select v-if="props.companies.length" id="company_id" v-model="selectedCompany" :options="props.companies"
+            <label class="mt-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input v-model="useRegisteredCompany" type="checkbox" class="rounded border-gray-300 text-cyan-700"
+                :disabled="!props.companies.length" @change="toggleCompanyMode" />
+              Usar empresa cadastrada
+            </label>
+            <Select v-if="useRegisteredCompany" id="company_id" v-model="selectedCompany" :options="props.companies"
               label="name" track-by="id" class="mt-1 block w-full" placeholder="Selecione uma empresa" :allow-empty="false" :select2="true" required />
             <TextInput v-else id="solicitation" v-model="form.solicitation" type="text" class="mt-1 block w-full"
               maxlength="150" placeholder="Informe o nome da empresa" required />
             <p v-if="!props.companies.length" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Nenhuma empresa cadastrada. Informe o nome manualmente.</p>
+            <p v-else class="mt-1 text-xs text-gray-500 dark:text-gray-400">Escolha uma empresa cadastrada para usar os passageiros vinculados ou desmarque para informar os dados manualmente.</p>
             <InputError :message="form.errors.solicitation" class="mt-2" />
             <InputError :message="form.errors.company_id" class="mt-2" />
           </div>
@@ -313,7 +333,7 @@ const submit = () => {
             </PrimaryButton>
             <button type="reset"
               class="min-h-11 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800 sm:w-auto"
-              @click="form.reset()">
+              @click="form.reset(); useRegisteredCompany = props.companies.length > 0; toggleCompanyMode()">
               Limpar formulário
             </button>
             <p v-if="successMessage" class="text-sm text-green-700 dark:text-green-400" role="status">
