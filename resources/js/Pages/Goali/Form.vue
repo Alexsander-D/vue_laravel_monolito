@@ -282,11 +282,15 @@ const submit = () => {
                   :disabled="!props.companies.length" @change="toggleCompanyMode" />
                 Usar empresa cadastrada
               </label>
-              <Select v-if="useRegisteredCompany" id="company_id" v-model="selectedCompany" :options="props.companies"
-                label="name" track-by="id" class="mt-1 block w-full" placeholder="Selecione uma empresa"
-                :allow-empty="false" :select2="true" required />
-              <TextInput v-else id="solicitation" key="manual-solicitation" v-model="form.solicitation" type="text" class="mt-1 block w-full"
-                maxlength="150" placeholder="Informe o nome da empresa" required />
+              <div v-show="useRegisteredCompany" class="mt-1">
+                <Select id="company_id" v-model="selectedCompany" :options="props.companies"
+                  label="name" track-by="id" class="block w-full" placeholder="Selecione uma empresa"
+                  :allow-empty="false" :select2="true" :required="useRegisteredCompany" />
+              </div>
+              <div v-show="!useRegisteredCompany" class="mt-1">
+                <TextInput id="solicitation" v-model="form.solicitation" type="text" class="block w-full"
+                  maxlength="150" placeholder="Informe o nome da empresa" :required="!useRegisteredCompany" />
+              </div>
               <p v-if="!props.companies.length" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Nenhuma empresa
                 cadastrada. Informe o nome manualmente.</p>
               <p v-else class="mt-1 text-xs text-gray-500 dark:text-gray-400">Escolha uma empresa cadastrada para usar
@@ -344,12 +348,15 @@ const submit = () => {
               <label for="passenger"
                 class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Passageiro
                 <span>*</span></label>
-              <Select v-if="hasCompanyPassengers" id="passenger_ids" v-model="selectedPassengers"
-                :options="availablePassengers" label="name" track-by="id" class="mt-1 block w-full"
-                placeholder="Selecione um ou mais passageiros" :allow-empty="false" :select2="true" :multiple="true"
-                required />
-              <TextArea v-else id="passenger" v-model="form.passenger" class="mt-1 block w-full"
-                placeholder="Informe os passageiros" required />
+              <div v-show="hasCompanyPassengers" class="mt-1">
+                <Select id="passenger_ids" v-model="selectedPassengers" :options="availablePassengers" label="name"
+                  track-by="id" class="block w-full" placeholder="Selecione um ou mais passageiros"
+                  :allow-empty="false" :select2="true" :multiple="true" :required="hasCompanyPassengers" />
+              </div>
+              <div v-show="!hasCompanyPassengers" class="mt-1">
+                <TextArea id="passenger" v-model="form.passenger" class="block w-full"
+                  placeholder="Informe os passageiros" :required="!hasCompanyPassengers" />
+              </div>
               <p v-if="hasCompanyPassengers" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Você pode selecionar
                 vários passageiros.</p>
               <InputError :message="form.errors.passenger" class="mt-2" />
