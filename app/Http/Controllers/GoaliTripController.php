@@ -54,6 +54,7 @@ class GoaliTripController extends Controller
             'initialDriverId' => $user && collect($this->driversForCurrentTeam($user))->contains('id', $user->id)
                 ? $user->id
                 : null,
+            'isDriver' => $user ? $this->isDriver($user) : false,
             'isAdmin' => $user ? $this->isAdmin($user) : false,
             'canAssignDrivers' => $user ? $this->canCreateForDrivers($user) || $this->isAdmin($user) : false,
             'canManageDirectory' => $user ? $this->hasPermission($user, self::PERMISSION_MANAGE_DIRECTORY) : false,
@@ -68,7 +69,11 @@ class GoaliTripController extends Controller
 
         if ($request->exists('travel_start_date') || $request->exists('travel_end_date')) {
             $dateRange = $request->validate([
-                'travel_start_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+                'travel_start_date' => [
+                    'required',
+                    'date_format:Y-m-d',
+                    'after_or_equal:' . $this->earliestCreatableDate($user),
+                ],
                 'travel_end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:travel_start_date'],
                 'travel_time' => ['required', 'date_format:H:i'],
             ]);
@@ -89,6 +94,7 @@ class GoaliTripController extends Controller
             : (($this->isAdmin($user) || $this->isDriver($user) || $this->canCreateForDrivers($user) || empty($validated['driver_id']))
                 ? 'Em Andamento'
                 : 'Criada');
+        $validated['in_progress_started_at'] = $validated['trip_status'] === 'Em Andamento' ? now() : null;
 
         DB::transaction(function () use ($validated, $rangeEndDate) {
             $date = CarbonImmutable::parse($validated['travel_date']);
@@ -159,7 +165,7 @@ class GoaliTripController extends Controller
             'canCreateTrips' => $this->hasPermission($user, self::PERMISSION_CREATE_TRIPS),
             'canCancelTrips' => $this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS),
             'canDeleteTrips' => $this->hasPermission($user, self::PERMISSION_DELETE_TRIPS),
-            'solicitations' => self::SOLICITATIONS,
+            'solicitations' => $this->solicitationsForUser($user),
             'tripStatuses' => self::TRIP_STATUSES,
             'drivers' => $this->driversForCurrentTeam($user),
         ]);
@@ -192,6 +198,7 @@ class GoaliTripController extends Controller
                 $lockedTrip->update([
                     'trip_status' => 'Criada',
                     'driver_id' => null,
+                    'in_progress_started_at' => null,
                     'cancelled_by_name' => $user->name,
                     'cancelled_by_role' => $isAdmin ? 'Admin' : (string) $user->getRoleByUser(),
                     'cancelled_at' => now(),
@@ -222,6 +229,7 @@ class GoaliTripController extends Controller
                     $lockedTrip->update([
                         'driver_id' => $user->id,
                         'trip_status' => 'Em Andamento',
+                        'in_progress_started_at' => now(),
                         'cancelled_by_name' => null,
                         'cancelled_by_role' => null,
                         'cancelled_at' => null,
@@ -268,6 +276,9 @@ class GoaliTripController extends Controller
             );
             $trip->update([
                 'trip_status' => $validated['trip_status'],
+                'in_progress_started_at' => $validated['trip_status'] === 'Em Andamento'
+                    ? now()
+                    : $trip->in_progress_started_at,
                 'cancelled_by_name' => null,
                 'cancelled_by_role' => null,
                 'cancelled_at' => null,
@@ -292,6 +303,9 @@ class GoaliTripController extends Controller
         if ($requestedStatus !== null) {
             abort_unless($requestedStatus === $nextStatus, 403);
             $validated['trip_status'] = $requestedStatus;
+            if ($requestedStatus === 'Em Andamento') {
+                $validated['in_progress_started_at'] = now();
+            }
             $validated['cancelled_by_name'] = null;
             $validated['cancelled_by_role'] = null;
             $validated['cancelled_at'] = null;
@@ -398,6 +412,7 @@ class GoaliTripController extends Controller
 
     private function validatedReportFilters(Request $request, User $user): array
     {
+        $availableSolicitations = $this->solicitationsForUser($user);
         $rules = [
             'status' => [
                 'nullable',
@@ -433,14 +448,14 @@ class GoaliTripController extends Controller
             ],
             'solicitation' => [
                 'nullable',
-                function ($attribute, $value, $fail) {
-                    $solicitations = is_array($value) ? $value : [$value];
-                    foreach ($solicitations as $solicitation) {
+                function ($attribute, $value, $fail) use ($availableSolicitations) {
+                    $selectedSolicitations = is_array($value) ? $value : [$value];
+                    foreach ($selectedSolicitations as $solicitation) {
                         if ($solicitation === '') {
                             continue;
                         }
 
-                        if (! is_string($solicitation) || ! in_array($solicitation, self::SOLICITATIONS, true)) {
+                        if (! is_string($solicitation) || ! in_array($solicitation, $availableSolicitations, true)) {
                             $fail('A solicitação selecionada é inválida.');
                             return;
                         }
@@ -527,7 +542,8 @@ class GoaliTripController extends Controller
                     $query->where('driver_id', $user->id)
                         ->orWhereNull('driver_id');
                 } else {
-                    $query->where('responsible', $user->name);
+                    $query->where('responsible', $user->name)
+                        ->orWhere('driver_id', $user->id);
                 }
             });
         }
@@ -621,10 +637,26 @@ class GoaliTripController extends Controller
 
         $rules = $this->rules($user);
         if ($disallowPastDate) {
-            $rules['travel_date'][] = 'after_or_equal:today';
+            $rules['travel_date'][] = 'after_or_equal:' . $this->earliestCreatableDate($user);
         }
 
         return $request->validate($rules);
+    }
+
+    private function earliestCreatableDate(User $user): string
+    {
+        return ($this->isDriver($user) ? CarbonImmutable::yesterday() : CarbonImmutable::today())->toDateString();
+    }
+
+    private function solicitationsForUser(User $user): array
+    {
+        return $this->queryForUser($user)
+            ->whereNotNull('solicitation')
+            ->where('solicitation', '<>', '')
+            ->distinct()
+            ->orderBy('solicitation')
+            ->pluck('solicitation')
+            ->all();
     }
 
     private function driversForCurrentTeam(User $user): array

@@ -16,6 +16,7 @@ const props = defineProps({
   currentUserId: { type: Number, default: null },
   drivers: { type: Array, default: () => [] },
   initialDriverId: { type: Number, default: null },
+  isDriver: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
   canAssignDrivers: { type: Boolean, default: false },
   canManageDirectory: { type: Boolean, default: false },
@@ -31,6 +32,15 @@ const currentDateTime = () => {
     date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
     time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
   };
+};
+const earliestTravelDate = () => {
+  const date = new Date();
+  if (props.isDriver) {
+    date.setDate(date.getDate() - 1);
+  }
+  const pad = (value) => String(value).padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 const initialDateTime = currentDateTime();
 const form = useForm({
@@ -223,7 +233,7 @@ const submit = () => {
                   class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data inicial
                   <span>*</span></label>
                 <TextInput id="travel_start_date" v-model="form.travel_start_date" type="date" class="mt-1 block w-full"
-                  :min="currentDateTime().date" required />
+                  :min="earliestTravelDate()" required />
                 <InputError :message="form.errors.travel_start_date" class="mt-2" />
               </div>
               <div>
@@ -231,7 +241,7 @@ const submit = () => {
                   class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Data final
                   <span>*</span></label>
                 <TextInput id="travel_end_date" v-model="form.travel_end_date" type="date" class="mt-1 block w-full"
-                  :min="form.travel_start_date > currentDateTime().date ? form.travel_start_date : currentDateTime().date"
+                  :min="form.travel_start_date > earliestTravelDate() ? form.travel_start_date : earliestTravelDate()"
                   required />
                 <InputError :message="form.errors.travel_end_date" class="mt-2" />
               </div>
@@ -291,7 +301,9 @@ const submit = () => {
               <label for="driver_id"
                 class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Motorista
                 <span v-if="!createWithoutDriver">*</span></label>
-              <Select id="driver_id" v-model="selectedDriver" :options="props.drivers" label="name" track-by="id"
+              <TextInput v-if="props.isDriver" id="driver_id" :model-value="selectedDriver?.name || props.responsibleUser"
+                type="text" class="mt-1 block w-full" disabled />
+              <Select v-else id="driver_id" v-model="selectedDriver" :options="props.drivers" label="name" track-by="id"
                 placeholder="Selecione um motorista" class="mt-1 block w-full" :allow-empty="props.isAdmin"
                 :select2="true" :disabled="!props.canAssignDrivers || createWithoutDriver"
                 :required="!createWithoutDriver" />

@@ -515,6 +515,93 @@ class GoaliTripTest extends TestCase
         $this->assertDatabaseCount('goali_trips', 0);
     }
 
+    public function test_drivers_can_create_trips_for_yesterday_but_not_earlier(): void
+    {
+        $driver = User::create([
+            'name' => 'Motorista Data Retroativa',
+            'email' => 'driver-backdated-trip@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($driver, 'Motorista');
+
+        $payload = [
+            'status' => 'ENTRADA',
+            'solicitation' => 'Empresa Local',
+            'driver_id' => $driver->id,
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => 'Corrida retroativa',
+            'responsible' => $driver->name,
+            'amount' => '50.00',
+            'travel_time' => '09:15',
+        ];
+
+        $this->actingAs($driver)
+            ->get(route('goali.form'))
+            ->assertInertia(fn (Assert $page) => $page->where('isDriver', true));
+
+        $this->post(route('goali.store'), [
+            ...$payload,
+            'travel_start_date' => now()->subDay()->toDateString(),
+            'travel_end_date' => now()->subDay()->toDateString(),
+        ])->assertRedirect(route('goali.index'));
+
+        $this->assertDatabaseHas('goali_trips', [
+            'driver_id' => $driver->id,
+            'travel_date' => now()->subDay()->toDateString(),
+            'passenger' => 'Corrida retroativa',
+        ]);
+
+        $this->from('/goali/form')
+            ->post(route('goali.store'), [
+                ...$payload,
+                'travel_start_date' => now()->subDays(2)->toDateString(),
+                'travel_end_date' => now()->subDays(2)->toDateString(),
+            ])
+            ->assertRedirect('/goali/form')
+            ->assertSessionHasErrors('travel_start_date');
+
+        $this->assertDatabaseCount('goali_trips', 1);
+    }
+
+    public function test_it_filters_by_solicitations_stored_in_the_database(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Filtro Dinâmico',
+            'email' => 'admin-dynamic-solicitation@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($admin, 'Admin');
+
+        $createTrip = fn (string $solicitation, string $passenger) => GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => $admin->id,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Pago',
+            'solicitation' => $solicitation,
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => $passenger,
+            'responsible' => $admin->name,
+            'amount' => '10.00',
+        ]);
+        $matchingTrip = $createTrip('Empresa Local', 'Passageiro da empresa local');
+        $createTrip('IMB', 'Passageiro de outra empresa');
+
+        $this->actingAs($admin)
+            ->get(route('goali.index', ['solicitation' => 'Empresa Local']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('solicitations', fn ($values) => $values->contains('Empresa Local'))
+                ->where('filters.solicitation', ['Empresa Local'])
+                ->where('summary.count', 1)
+                ->where('records.0.id', $matchingTrip->id));
+    }
+
     public function test_it_filters_and_sorts_trips_by_date_and_time(): void
     {
         $user = User::create([
@@ -806,6 +893,8 @@ class GoaliTripTest extends TestCase
 
         $createdTrip = GoaliTrip::where('passenger', 'Passageiro')->firstOrFail();
         $this->assertSame('Em Andamento', $createdTrip->trip_status);
+        $inProgressStartedAt = $createdTrip->in_progress_started_at;
+        $this->assertNotNull($inProgressStartedAt);
 
         $this->actingAs($driver, 'sanctum')
             ->put(route('goali.update', $createdTrip), ['trip_status' => 'Pago'])
@@ -814,6 +903,7 @@ class GoaliTripTest extends TestCase
             'trip_status' => 'Aguardando Aprovação',
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Aguardando Aprovação', $createdTrip->fresh()->trip_status);
+        $this->assertEquals($inProgressStartedAt, $createdTrip->fresh()->in_progress_started_at);
 
         $runningTrip = GoaliTrip::create([
             'user_id' => $driver->id,
@@ -871,10 +961,12 @@ class GoaliTripTest extends TestCase
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Em Andamento', $createdTrip->fresh()->trip_status);
         $this->assertSame($driver->id, $createdTrip->fresh()->driver_id);
+        $this->assertNotNull($createdTrip->fresh()->in_progress_started_at);
         $this->put(route('goali.update', $createdTrip), [
             'trip_status' => 'Aguardando Aprovação',
         ])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Aguardando Aprovação', $createdTrip->fresh()->trip_status);
+        $this->assertNotNull($createdTrip->fresh()->in_progress_started_at);
 
         $this->put(route('goali.update', $runningTrip), [
             'trip_status' => 'Pago',
@@ -931,10 +1023,13 @@ class GoaliTripTest extends TestCase
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Em Andamento'))
             ->assertRedirect();
         $this->assertSame('Em Andamento', $trip->fresh()->trip_status);
+        $inProgressStartedAt = $trip->fresh()->in_progress_started_at;
+        $this->assertNotNull($inProgressStartedAt);
 
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Pago'))
             ->assertRedirect();
         $this->assertSame('Pago', $trip->fresh()->trip_status);
+        $this->assertEquals($inProgressStartedAt, $trip->fresh()->in_progress_started_at);
 
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip))
             ->assertForbidden();
@@ -963,6 +1058,7 @@ class GoaliTripTest extends TestCase
             'travel_time' => '12:00',
             'status' => 'ENTRADA',
             'trip_status' => 'Aguardando Aprovação',
+            'in_progress_started_at' => now()->subMinute(),
             'solicitation' => 'IMB',
             'origin' => 'Origem',
             'destination' => 'Destino',
@@ -981,6 +1077,7 @@ class GoaliTripTest extends TestCase
         $this->assertSame('Admin', $trip->fresh()->cancelled_by_role);
         $this->assertSame($admin->name, $trip->fresh()->cancelled_by_name);
         $this->assertNotNull($trip->fresh()->cancelled_at);
+        $this->assertNull($trip->fresh()->in_progress_started_at);
     }
 
     public function test_admin_cannot_cancel_an_unassigned_created_trip(): void
@@ -1082,6 +1179,7 @@ class GoaliTripTest extends TestCase
         $trip = GoaliTrip::where('passenger', 'Corrida sem motorista')->firstOrFail();
         $this->assertNull($trip->driver_id);
         $this->assertSame('Em Andamento', $trip->trip_status);
+        $this->assertNotNull($trip->in_progress_started_at);
 
         $admin->teams()->updateExistingPivot($team->id, ['role' => 'Motorista']);
 

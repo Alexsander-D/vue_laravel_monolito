@@ -14,6 +14,7 @@ class GoaliTrip extends Model
         'passenger_id',
         'passenger_ids',
         'driver_id',
+        'in_progress_started_at',
         'cancelled_by_name',
         'cancelled_by_role',
         'cancelled_at',
@@ -32,6 +33,7 @@ class GoaliTrip extends Model
 
     protected $casts = [
         'travel_date' => 'date:Y-m-d',
+        'in_progress_started_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'amount' => 'decimal:2',
         'passenger_ids' => 'array',
