@@ -17,6 +17,7 @@
   </select>
   <multiselect
     v-else
+    ref="multiselectElement"
     v-bind="attrs"
     v-model="localValue"
     :options="options"
@@ -37,7 +38,7 @@
 <script setup>
 import Multiselect from "vue-multiselect";
 import $ from "jquery";
-import { computed, defineEmits, defineProps, onBeforeUnmount, onMounted, ref, useAttrs, watch } from "vue";
+import { computed, defineEmits, defineProps, nextTick, onBeforeUnmount, onMounted, ref, useAttrs, watch } from "vue";
 
 import select2Factory from "select2";
 import "select2/dist/css/select2.css";
@@ -90,6 +91,7 @@ const emit = defineEmits(["update:modelValue", "selected", "select2-close"]);
 const attrs = useAttrs();
 const localValue = ref(props.modelValue);
 const selectElement = ref(null);
+const multiselectElement = ref(null);
 let select2Instance = null;
 let isSyncingSelect2Value = false;
 
@@ -148,7 +150,7 @@ function initializeSelect2() {
   element.select2({
     placeholder: props.placeholder,
     allowClear: props.allowEmpty,
-    closeOnSelect: true,
+    closeOnSelect: !props.multiple,
     maximumSelectionLength: 0,
     width: "100%",
     ...(dropdownParent.length ? { dropdownParent } : modal.length ? { dropdownParent: modal } : {}),
@@ -174,6 +176,12 @@ function initializeSelect2() {
 
     emit("update:modelValue", value);
     emit("selected", value);
+    element.select2("close");
+  });
+  element.on("select2:select", () => {
+    if (!props.multiple) {
+      element.select2("close");
+    }
   });
   element.on("select2:close", () => emit("select2-close"));
   select2Instance = element;
@@ -185,7 +193,7 @@ function destroySelect2() {
     return;
   }
 
-  select2Instance.off("change select2:close").select2("destroy");
+  select2Instance.off("change select2:select select2:close").select2("destroy");
   select2Instance = null;
 }
 
@@ -223,6 +231,10 @@ function updateModelValue(value) {
   localValue.value = modelValue;
   emit("update:modelValue", modelValue);
   emit("selected", modelValue);
+
+  if (!props.multiple) {
+    nextTick(() => multiselectElement.value?.deactivate());
+  }
 }
 
 onMounted(initializeSelect2);
