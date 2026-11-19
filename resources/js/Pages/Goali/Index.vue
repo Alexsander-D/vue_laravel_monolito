@@ -444,8 +444,8 @@ onBeforeUnmount(() => {
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" multiple @select2-close="applyOtherFilters" /></label>
-        <label v-if="props.passengers.length" class="filter-label">Passageiro<Select v-model="filters.passenger" :options="props.passengers" placeholder="Todos" @select2-close="applyOtherFilters" /></label>
-        <label v-if="props.isAdmin" class="filter-label">Motorista<Select v-model="selectedFilterDriver" :options="props.filterDrivers" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></label>
+        <div v-if="props.passengers.length" class="filter-label"><span>Passageiro</span><Select v-model="filters.passenger" :options="props.passengers" aria-label="Passageiro" placeholder="Todos" @select2-close="applyOtherFilters" /></div>
+        <div v-if="props.isAdmin" class="filter-label"><span>Motorista</span><Select v-model="selectedFilterDriver" :options="props.filterDrivers" aria-label="Motorista" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></div>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
