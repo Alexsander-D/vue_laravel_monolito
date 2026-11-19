@@ -301,14 +301,14 @@ const submit = () => {
                   :disabled="!props.companies.length" @change="toggleCompanyMode" />
                 Usar empresa cadastrada
               </label>
-              <div v-show="useRegisteredCompany" class="mt-1">
+              <div v-if="useRegisteredCompany" class="mt-1">
                 <Select id="company_id" v-model="selectedCompany" :options="props.companies"
                   label="name" track-by="id" class="block w-full" placeholder="Selecione uma empresa"
-                  :allow-empty="false" :select2="true" :required="useRegisteredCompany" />
+                  :allow-empty="false" :select2="true" required />
               </div>
-              <div v-show="!useRegisteredCompany" class="mt-1">
+              <div v-else class="mt-1">
                 <TextInput id="solicitation" v-model="form.solicitation" type="text" class="block w-full"
-                  maxlength="150" placeholder="Informe o nome da empresa" :required="!useRegisteredCompany" />
+                  maxlength="150" placeholder="Informe o nome da empresa" required />
               </div>
               <p v-if="!props.companies.length" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Nenhuma empresa
                 cadastrada. Informe o nome manualmente.</p>
