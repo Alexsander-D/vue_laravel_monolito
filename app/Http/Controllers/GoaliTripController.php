@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -57,7 +56,6 @@ class GoaliTripController extends Controller
                 ? $user->id
                 : null,
             'isDriver' => $user ? $this->isDriver($user) : false,
-            'hasInProgressTrip' => $user && $this->isDriver($user) && $this->driverHasInProgressTrip($user),
             'isAdmin' => $user ? $this->isAdmin($user) : false,
             'canAssignDrivers' => $user ? $this->canCreateForDrivers($user) || $this->isAdmin($user) : false,
             'canManageDirectory' => $user ? $this->hasPermission($user, self::PERMISSION_MANAGE_DIRECTORY) : false,
@@ -85,6 +83,10 @@ class GoaliTripController extends Controller
             $request->merge(['travel_date' => $dateRange['travel_start_date']]);
         }
 
+        if ($this->isDriver($user)) {
+            $request->merge(['driver_id' => $user->getAuthIdentifier()]);
+        }
+
         $validated = $this->validatedTrip($request, $user, true);
         $validated = $this->applyDirectoryValues($validated, $user);
         $validated['user_id'] = $user->getAuthIdentifier();
@@ -99,20 +101,7 @@ class GoaliTripController extends Controller
                 : 'Criada');
         $validated['in_progress_started_at'] = $validated['trip_status'] === 'Em Andamento' ? now() : null;
 
-        DB::transaction(function () use ($validated, $rangeEndDate, $user) {
-            if ($this->isDriver($user)) {
-                User::query()
-                    ->whereKey($user->getAuthIdentifier())
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                if ($this->driverHasInProgressTrip($user)) {
-                    throw ValidationException::withMessages([
-                        'active_trip' => 'Finalize sua corrida em andamento antes de criar outra.',
-                    ]);
-                }
-            }
-
+        DB::transaction(function () use ($validated, $rangeEndDate) {
             $date = CarbonImmutable::parse($validated['travel_date']);
             $endDate = CarbonImmutable::parse($rangeEndDate ?? $validated['travel_date']);
 
@@ -595,14 +584,6 @@ class GoaliTripController extends Controller
     private function isDriver(User $user): bool
     {
         return $this->hasPermission($user, self::PERMISSION_UPDATE_STATUS);
-    }
-
-    private function driverHasInProgressTrip(User $user): bool
-    {
-        return GoaliTrip::query()
-            ->where('driver_id', $user->getAuthIdentifier())
-            ->where('trip_status', 'Em Andamento')
-            ->exists();
     }
 
     private function isAdmin(User $user): bool

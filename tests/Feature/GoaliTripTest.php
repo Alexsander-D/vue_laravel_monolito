@@ -1051,7 +1051,7 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('summary.receivable', 75));
     }
 
-    public function test_driver_cannot_create_a_trip_while_one_is_in_progress(): void
+    public function test_driver_can_create_a_trip_while_one_is_in_progress(): void
     {
         $driver = User::create([
             'name' => 'Motorista com corrida ativa',
@@ -1080,15 +1080,14 @@ class GoaliTripTest extends TestCase
             ->get(route('goali.form'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('isDriver', true)
-                ->where('hasInProgressTrip', true));
+                ->where('isDriver', true));
 
         $this->from('/goali/form')
             ->post(route('goali.store'), [
                 'travel_datetime' => now()->format('Y-m-d\TH:i'),
                 'status' => 'ENTRADA',
                 'solicitation' => 'IMB',
-                'driver_id' => $driver->id,
+                'driver_id' => null,
                 'origin' => 'Nova origem',
                 'destination' => 'Novo destino',
                 'passenger' => 'Novo passageiro',
@@ -1096,9 +1095,13 @@ class GoaliTripTest extends TestCase
                 'amount' => '30.00',
             ])
             ->assertRedirect('/goali/form')
-            ->assertSessionHasErrors('active_trip');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('goali_trips', 1);
+        $this->assertDatabaseCount('goali_trips', 2);
+        $this->assertDatabaseHas('goali_trips', [
+            'passenger' => 'Novo passageiro',
+            'driver_id' => $driver->id,
+        ]);
     }
 
     public function test_admin_can_mark_an_in_progress_trip_as_paid(): void
@@ -1318,7 +1321,7 @@ class GoaliTripTest extends TestCase
 
     }
 
-    public function test_only_an_admin_can_create_a_trip_without_a_driver(): void
+    public function test_driver_creation_automatically_assigns_the_driver_to_himself(): void
     {
         $driver = User::create([
             'name' => 'Motorista Goali',
@@ -1339,14 +1342,17 @@ class GoaliTripTest extends TestCase
                 'driver_id' => null,
                 'origin' => 'Origem',
                 'destination' => 'Destino',
-                'passenger' => 'Corrida inválida',
+            'passenger' => 'Corrida atribuída automaticamente',
                 'responsible' => $driver->name,
                 'amount' => '100.00',
             ])
-            ->assertRedirect('/goali/form')
-            ->assertSessionHasErrors('driver_id');
+        ->assertRedirect('/goali/form')
+        ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('goali_trips', ['passenger' => 'Corrida inválida']);
+        $this->assertDatabaseHas('goali_trips', [
+        'passenger' => 'Corrida atribuída automaticamente',
+        'driver_id' => $driver->id,
+        ]);
     }
 
     public function test_users_on_the_unassigned_team_see_the_access_notice_instead_of_dashboard(): void
