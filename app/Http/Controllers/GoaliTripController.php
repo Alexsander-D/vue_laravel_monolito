@@ -665,6 +665,7 @@ class GoaliTripController extends Controller
             'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
             'passenger' => ['required', 'string'],
+            'observation' => ['nullable', 'string', 'max:5000'],
             'responsible' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0'],
         ];

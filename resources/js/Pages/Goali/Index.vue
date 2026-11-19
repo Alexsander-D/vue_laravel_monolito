@@ -282,6 +282,7 @@ const startEdit = (record) => {
     origin: record.origin,
     destination: record.destination,
     passenger: record.passenger,
+    observation: record.observation || "",
     amount: Number(record.amount).toFixed(2),
     responsible: record.responsible,
   }).reset();
@@ -639,6 +640,7 @@ onBeforeUnmount(() => {
             <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
             <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
             <label class="filter-label">Passageiro<TextArea v-model="editForm.passenger" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>
+            <label class="filter-label">Observação<TextArea v-model="editForm.observation" class="mt-1 block w-full" maxlength="5000" autocomplete="off" /><InputError :message="editForm.errors.observation" /></label>
             <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" :readonly="props.isDriver" required /><InputError :message="editForm.errors.responsible" /></label>
             <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
           </div>

@@ -58,6 +58,7 @@ class GoaliTripTest extends TestCase
             'origin' => 'Origem',
             'destination' => 'Destino',
             'passenger' => 'Passageiro Administrativo',
+            'observation' => 'Observação de teste',
             'responsible' => 'Campo não confiável',
             'amount' => '50.00',
         ];
@@ -69,6 +70,7 @@ class GoaliTripTest extends TestCase
             'driver_id' => $driver->id,
             'responsible' => $administrativo->name,
             'trip_status' => 'Criada',
+            'observation' => 'Observação de teste',
         ]);
 
         $this->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])

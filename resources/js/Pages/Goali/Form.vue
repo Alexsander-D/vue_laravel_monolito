@@ -58,6 +58,7 @@ const form = useForm({
   origin: "",
   destination: "",
   passenger: "",
+  observation: "",
   responsible: props.responsibleUser,
   amount: "",
 });
@@ -182,6 +183,7 @@ const submit = () => {
         "origin",
         "destination",
         "passenger",
+        "observation",
         "amount"
       );
       createWithoutDriver.value = false;
@@ -364,6 +366,13 @@ const submit = () => {
               <TextInput id="destination" v-model="form.destination" type="text" class="mt-1 block w-full"
                 maxlength="255" required />
               <InputError :message="form.errors.destination" class="mt-2" />
+            </div>
+            <div class="md:col-span-2">
+              <label for="observation"
+                class="font-medium inline-block text-sm text-gray-800 mt-2.5 dark:text-neutral-200">Observação</label>
+              <TextArea id="observation" v-model="form.observation" class="mt-1 block w-full"
+                maxlength="5000" autocomplete="off" placeholder="Informe observações sobre a corrida" />
+              <InputError :message="form.errors.observation" class="mt-2" />
             </div>
             <div>
               <label for="passenger"
