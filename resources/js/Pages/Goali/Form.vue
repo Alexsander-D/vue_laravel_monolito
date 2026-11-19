@@ -8,6 +8,7 @@ import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Radio from "@/Components/Radio.vue";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
+import Swal from "sweetalert2";
 
 const props = defineProps({
   solicitations: { type: Array, default: () => [] },
@@ -17,6 +18,7 @@ const props = defineProps({
   drivers: { type: Array, default: () => [] },
   initialDriverId: { type: Number, default: null },
   isDriver: { type: Boolean, default: false },
+  hasInProgressTrip: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
   canAssignDrivers: { type: Boolean, default: false },
   canManageDirectory: { type: Boolean, default: false },
@@ -143,7 +145,20 @@ const formatAmount = () => {
   }
 };
 
+const showInProgressTripAlert = () => Swal.fire({
+  title: "Corrida em andamento",
+  text: "Finalize ou envie sua corrida atual para aprovação antes de iniciar outra.",
+  icon: "warning",
+  confirmButtonText: "Entendi",
+  confirmButtonColor: "#0891b2",
+});
+
 const submit = () => {
+  if (props.isDriver && props.hasInProgressTrip) {
+    showInProgressTripAlert();
+    return;
+  }
+
   if (useRegisteredCompany.value && !form.company_id) {
     form.setError("company_id", "Selecione uma empresa cadastrada.");
     return;
@@ -178,6 +193,11 @@ const submit = () => {
       form.travel_start_date = dateTime.date;
       form.travel_end_date = dateTime.date;
       form.travel_time = dateTime.time;
+    },
+    onError: (errors) => {
+      if (errors.active_trip) {
+        showInProgressTripAlert();
+      }
     },
   });
 };

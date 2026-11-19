@@ -14,7 +14,9 @@ const props = defineProps({
   filters: { type: Object, required: true },
   isAdmin: { type: Boolean, default: false },
   solicitations: { type: Array, default: () => [] },
+  passengers: { type: Array, default: () => [] },
   drivers: { type: Array, default: () => [] },
+  filterDrivers: { type: Array, default: () => [] },
   tripStatuses: { type: Array, default: () => [] },
   summary: { type: Object, required: true },
   isDriver: { type: Boolean, default: false },
@@ -42,6 +44,7 @@ const normalizedFilters = (value) => ({
     : value.solicitation
       ? [value.solicitation]
       : [],
+  passenger: value.passenger || "",
   sortOrder: value.sortOrder || "desc",
 });
 const getFilterKey = (value) => JSON.stringify([
@@ -51,6 +54,7 @@ const getFilterKey = (value) => JSON.stringify([
   [...(Array.isArray(value.status) ? value.status : [])].sort(),
   [...(Array.isArray(value.tripStatus) ? value.tripStatus : [])].sort(),
   [...(Array.isArray(value.solicitation) ? value.solicitation : [])].sort(),
+  value.passenger || "",
 ]);
 const dateFilters = useForm({
   startDate: props.filters.startDate || "",
@@ -72,22 +76,28 @@ const editForm = useForm({});
 const reportUrl = computed(() => route("goali.export", combinedFilterData()));
 const sortOrder = computed(() => filters.sortOrder || "desc");
 const editingRecord = computed(() => props.records.find((record) => String(record.id) === String(editingId.value)) || null);
+const nextTripStatus = (status) => ({
+  Criada: "Em Andamento",
+  "Em Andamento": "Aguardando Aprovação",
+  "Aguardando Aprovação": "Pago",
+}[status] || "");
 const selectedFilterDriver = computed({
-  get: () => props.drivers.find((driver) => driver.id === Number(filters.driverId)) || null,
+  get: () => props.filterDrivers.find((driver) => driver.id === Number(filters.driverId)) || null,
   set: (driver) => {
     filters.driverId = driver?.id ?? null;
   },
 });
 const editTripStatusOptions = computed(() => {
-  if (!editingRecord.value) {
+  if (!editingRecord.value || !props.isAdmin) {
     return [];
   }
 
-  if (props.isAdmin) {
-    return props.tripStatuses;
-  }
-
-  return [];
+  const nextStatus = {
+    Criada: "Em Andamento",
+    "Em Andamento": "Pago",
+    "Aguardando Aprovação": "Pago",
+  }[editingRecord.value.trip_status];
+  return nextStatus ? [nextStatus] : [];
 });
 const selectedEditDriver = computed({
   get: () => props.drivers.find((driver) => driver.id === Number(editForm.driver_id)) || null,
@@ -236,6 +246,9 @@ const applyFilters = (dateRange = appliedDateFilters.value) => {
 };
 const applyDateFilters = () => {
   appliedDateFilters.value = { ...dateFilters.data() };
+  filters.driverId = null;
+  filters.solicitation = [];
+  filters.passenger = "";
   applyFilters(appliedDateFilters.value);
 };
 const applyOtherFilters = () => applyFilters();
@@ -243,6 +256,7 @@ const clearFilters = () => {
   filters.status = [];
   filters.tripStatus = [];
   filters.solicitation = [];
+  filters.passenger = "";
   filters.driverId = null;
   applyOtherFilters();
 };
@@ -356,11 +370,6 @@ const cancelTrip = async (record) => {
     router.put(route("goali.update", record.id), { cancel_trip: true }, { preserveScroll: true });
   }
 };
-const nextTripStatus = (status) => ({
-  Criada: "Em Andamento",
-  "Em Andamento": "Aguardando Aprovação",
-  "Aguardando Aprovação": "Pago",
-}[status] || "");
 const tripRowClass = (row) => ({
   "goali-trip--created": row.tripStatus === "Criada",
   "goali-trip--in-progress": row.tripStatus === "Em Andamento",
@@ -430,11 +439,12 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-5" @submit.prevent="applyOtherFilters">
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-6" @submit.prevent="applyOtherFilters">
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" multiple @select2-close="applyOtherFilters" /></label>
-        <label v-if="props.isAdmin" class="filter-label">Motorista<Select v-model="selectedFilterDriver" :options="props.drivers" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></label>
+        <label v-if="props.passengers.length" class="filter-label">Passageiro<Select v-model="filters.passenger" :options="props.passengers" placeholder="Todos" @select2-close="applyOtherFilters" /></label>
+        <label v-if="props.isAdmin" class="filter-label">Motorista<Select v-model="selectedFilterDriver" :options="props.filterDrivers" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></label>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
@@ -610,8 +620,8 @@ onBeforeUnmount(() => {
               <select
                 v-model="editForm.trip_status"
                 class="mt-1 min-h-11 w-full rounded-md border-gray-300 shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                required
               >
+                <option value="">Manter status atual</option>
                 <option v-for="status in editTripStatusOptions" :key="status" :value="status">
                   {{ status }}
                 </option>

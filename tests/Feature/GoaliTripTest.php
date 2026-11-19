@@ -602,6 +602,65 @@ class GoaliTripTest extends TestCase
                 ->where('records.0.id', $matchingTrip->id));
     }
 
+    public function test_filter_options_and_passenger_filter_use_only_trips_in_selected_period(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Filtros por Período',
+            'email' => 'admin-period-filters@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $team = $this->attachToGoaliTeam($admin, 'Admin');
+
+        $driverInPeriod = User::create([
+            'name' => 'Motorista no período',
+            'email' => 'driver-in-filter-period@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driverInPeriod->teams()->attach($team->id, ['role' => 'Motorista']);
+
+        $driverOutsidePeriod = User::create([
+            'name' => 'Motorista fora do período',
+            'email' => 'driver-outside-filter-period@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driverOutsidePeriod->teams()->attach($team->id, ['role' => 'Motorista']);
+
+        $createTrip = fn (int $driverId, string $date, string $solicitation, string $passenger) => GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => $driverId,
+            'travel_date' => $date,
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Pago',
+            'solicitation' => $solicitation,
+            'origin' => 'Origem',
+            'destination' => 'Destino',
+            'passenger' => $passenger,
+            'responsible' => $admin->name,
+            'amount' => '10.00',
+        ]);
+        $matchingTrip = $createTrip($driverInPeriod->id, now()->toDateString(), 'Empresa do período', "Ana\nBruno");
+        $createTrip($admin->id, now()->toDateString(), 'Outra empresa do período', 'Carlos');
+        $createTrip($driverOutsidePeriod->id, now()->subDay()->toDateString(), 'Empresa fora do período', 'Passageiro antigo');
+
+        $this->actingAs($admin)
+            ->get(route('goali.index', [
+                'startDate' => now()->toDateString(),
+                'endDate' => now()->toDateString(),
+                'passenger' => 'Ana',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('solicitations', ['Empresa do período', 'Outra empresa do período'])
+                ->where('passengers', ['Ana', 'Bruno', 'Carlos'])
+                ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
+                    === collect([$admin->id, $driverInPeriod->id])->sort()->values()->all())
+                ->where('filters.passenger', 'Ana')
+                ->where('summary.count', 1)
+                ->where('records.0.id', $matchingTrip->id));
+    }
+
     public function test_it_filters_and_sorts_trips_by_date_and_time(): void
     {
         $user = User::create([
@@ -990,6 +1049,56 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('summary.receivable', 75));
     }
 
+    public function test_driver_cannot_create_a_trip_while_one_is_in_progress(): void
+    {
+        $driver = User::create([
+            'name' => 'Motorista com corrida ativa',
+            'email' => 'driver-active-trip@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $driver->forceFill(['email_verified_at' => now()])->save();
+        $this->attachToGoaliTeam($driver, 'Motorista');
+
+        GoaliTrip::create([
+            'user_id' => $driver->id,
+            'driver_id' => $driver->id,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '09:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Em Andamento',
+            'solicitation' => 'IMB',
+            'origin' => 'Origem ativa',
+            'destination' => 'Destino ativo',
+            'passenger' => 'Passageiro ativo',
+            'responsible' => $driver->name,
+            'amount' => '50.00',
+        ]);
+
+        $this->actingAs($driver)
+            ->get(route('goali.form'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('isDriver', true)
+                ->where('hasInProgressTrip', true));
+
+        $this->from('/goali/form')
+            ->post(route('goali.store'), [
+                'travel_datetime' => now()->format('Y-m-d\TH:i'),
+                'status' => 'ENTRADA',
+                'solicitation' => 'IMB',
+                'driver_id' => $driver->id,
+                'origin' => 'Nova origem',
+                'destination' => 'Novo destino',
+                'passenger' => 'Novo passageiro',
+                'responsible' => $driver->name,
+                'amount' => '30.00',
+            ])
+            ->assertRedirect('/goali/form')
+            ->assertSessionHasErrors('active_trip');
+
+        $this->assertDatabaseCount('goali_trips', 1);
+    }
+
     public function test_admin_can_mark_an_in_progress_trip_as_paid(): void
     {
         $admin = User::create([
@@ -1019,6 +1128,14 @@ class GoaliTripTest extends TestCase
             'responsible' => $admin->name,
             'amount' => '75.00',
         ]);
+
+        $this->put(route('goali.update', $trip), [
+            ...$this->tripUpdatePayload($trip),
+            'origin' => 'Origem atualizada',
+            'trip_status' => '',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('Criada', $trip->fresh()->trip_status);
+        $this->assertSame('Origem atualizada', $trip->fresh()->origin);
 
         $this->put(route('goali.update', $trip), $this->tripUpdatePayload($trip, 'Em Andamento'))
             ->assertRedirect();

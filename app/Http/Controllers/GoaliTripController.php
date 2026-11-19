@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\GoaliTrip;
 use App\Models\GoaliCompany;
 use App\Models\GoaliPassenger;
+use App\Models\GoaliTrip;
 use App\Models\Spatie\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -55,6 +57,7 @@ class GoaliTripController extends Controller
                 ? $user->id
                 : null,
             'isDriver' => $user ? $this->isDriver($user) : false,
+            'hasInProgressTrip' => $user && $this->isDriver($user) && $this->driverHasInProgressTrip($user),
             'isAdmin' => $user ? $this->isAdmin($user) : false,
             'canAssignDrivers' => $user ? $this->canCreateForDrivers($user) || $this->isAdmin($user) : false,
             'canManageDirectory' => $user ? $this->hasPermission($user, self::PERMISSION_MANAGE_DIRECTORY) : false,
@@ -96,7 +99,20 @@ class GoaliTripController extends Controller
                 : 'Criada');
         $validated['in_progress_started_at'] = $validated['trip_status'] === 'Em Andamento' ? now() : null;
 
-        DB::transaction(function () use ($validated, $rangeEndDate) {
+        DB::transaction(function () use ($validated, $rangeEndDate, $user) {
+            if ($this->isDriver($user)) {
+                User::query()
+                    ->whereKey($user->getAuthIdentifier())
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($this->driverHasInProgressTrip($user)) {
+                    throw ValidationException::withMessages([
+                        'active_trip' => 'Finalize sua corrida em andamento antes de criar outra.',
+                    ]);
+                }
+            }
+
             $date = CarbonImmutable::parse($validated['travel_date']);
             $endDate = CarbonImmutable::parse($rangeEndDate ?? $validated['travel_date']);
 
@@ -121,17 +137,16 @@ class GoaliTripController extends Controller
         $user = $request->user();
         abort_unless($this->hasPermission($user, self::PERMISSION_VIEW_TRIPS), 403);
         $filters = $this->validatedFilters($request);
-        $query = $this->filteredQuery($filters, $user);
-        $summary = (clone $query)
-            ->reorder()
-            ->selectRaw(
-                'COUNT(*) as count, ' .
-                'COALESCE(SUM(CASE WHEN driver_id IS NOT NULL THEN amount ELSE 0 END), 0) as amount, ' .
-                'COALESCE(SUM(CASE WHEN trip_status = ? AND driver_id IS NOT NULL THEN amount ELSE 0 END), 0) as receivable',
-                ['Pago']
-            )
-            ->first();
-        $records = $query->get();
+        $periodRecords = $this->recordsForDateRange($filters, $user);
+        $records = $this->filterRecords($periodRecords, $filters);
+        $filterDrivers = $periodRecords
+            ->map(fn (GoaliTrip $record) => $record->driver)
+            ->filter()
+            ->unique('id')
+            ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
+            ->sortBy('name')
+            ->values()
+            ->all();
 
         $records->each(function (GoaliTrip $record): void {
             if (! $record->driver) {
@@ -153,9 +168,9 @@ class GoaliTripController extends Controller
         return Inertia::render('Goali/Index', [
             'records' => $records,
             'summary' => [
-                'count' => (int) $summary->count,
-                'amount' => (float) $summary->amount,
-                'receivable' => (float) $summary->receivable,
+                'count' => $records->count(),
+                'amount' => (float) $records->sum(fn (GoaliTrip $record) => $record->driver_id !== null ? (float) $record->amount : 0),
+                'receivable' => (float) $records->sum(fn (GoaliTrip $record) => $record->trip_status === 'Pago' && $record->driver_id !== null ? (float) $record->amount : 0),
             ],
             'filters' => $filters,
             'isAdmin' => $this->isAdmin($user),
@@ -165,9 +180,11 @@ class GoaliTripController extends Controller
             'canCreateTrips' => $this->hasPermission($user, self::PERMISSION_CREATE_TRIPS),
             'canCancelTrips' => $this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS),
             'canDeleteTrips' => $this->hasPermission($user, self::PERMISSION_DELETE_TRIPS),
-            'solicitations' => $this->solicitationsForUser($user),
+            'solicitations' => $periodRecords->pluck('solicitation')->filter()->unique()->sort()->values()->all(),
+            'passengers' => $this->passengerOptionsForRecords($periodRecords),
             'tripStatuses' => self::TRIP_STATUSES,
             'drivers' => $this->driversForCurrentTeam($user),
+            'filterDrivers' => $filterDrivers,
         ]);
     }
 
@@ -332,8 +349,9 @@ class GoaliTripController extends Controller
     public function export(Request $request)
     {
         abort_unless($this->hasPermission($request->user(), self::PERMISSION_VIEW_TRIPS), 403);
+        $user = $request->user();
         $filters = $this->validatedFilters($request);
-        $records = $this->filteredQuery($filters, $request->user())->get();
+        $records = $this->filterRecords($this->recordsForDateRange($filters, $user), $filters);
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('relatorio_goali');
@@ -412,7 +430,6 @@ class GoaliTripController extends Controller
 
     private function validatedReportFilters(Request $request, User $user): array
     {
-        $availableSolicitations = $this->solicitationsForUser($user);
         $rules = [
             'status' => [
                 'nullable',
@@ -448,20 +465,21 @@ class GoaliTripController extends Controller
             ],
             'solicitation' => [
                 'nullable',
-                function ($attribute, $value, $fail) use ($availableSolicitations) {
-                    $selectedSolicitations = is_array($value) ? $value : [$value];
-                    foreach ($selectedSolicitations as $solicitation) {
+                function ($attribute, $value, $fail) {
+                    $solicitations = is_array($value) ? $value : [$value];
+                    foreach ($solicitations as $solicitation) {
                         if ($solicitation === '') {
                             continue;
                         }
 
-                        if (! is_string($solicitation) || ! in_array($solicitation, $availableSolicitations, true)) {
+                        if (! is_string($solicitation) || strlen($solicitation) > 150) {
                             $fail('A solicitação selecionada é inválida.');
                             return;
                         }
                     }
                 },
             ],
+            'passenger' => ['nullable', 'string'],
             'sortOrder' => ['nullable', 'in:asc,desc'],
         ];
 
@@ -485,51 +503,74 @@ class GoaliTripController extends Controller
             'status' => [],
             'tripStatus' => '',
             'solicitation' => [],
+            'passenger' => '',
             'driverId' => '',
             'sortOrder' => 'desc',
         ], $filters);
     }
 
-    private function filteredQuery(array $filters, User $user)
+    private function recordsForDateRange(array $filters, User $user): Collection
     {
         $sortOrder = $filters['sortOrder'] ?? 'desc';
 
         return $this->queryForUser($user)
             ->when($filters['startDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '>=', $date))
             ->when($filters['endDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '<=', $date))
-            ->when($filters['status'] ?? null, function ($query, $statuses) {
-                $statuses = is_array($statuses) ? $statuses : [$statuses];
-                $statuses = array_values(array_filter($statuses, fn ($status) => $status !== ''));
-
-                if ($statuses) {
-                    $query->whereIn('status', $statuses);
-                }
-            })
-            ->when($filters['tripStatus'] ?? null, function ($query, $statuses) {
-                $statuses = is_array($statuses) ? $statuses : [$statuses];
-                $statuses = array_values(array_filter($statuses, fn ($status) => $status !== ''));
-
-                if ($statuses) {
-                    $query->whereIn('trip_status', $statuses);
-                }
-            })
-            ->when($filters['solicitation'] ?? null, function ($query, $solicitations) {
-                $solicitations = is_array($solicitations) ? $solicitations : [$solicitations];
-                $solicitations = array_values(array_filter($solicitations, fn ($solicitation) => $solicitation !== ''));
-
-                if ($solicitations) {
-                    $query->whereIn('solicitation', $solicitations);
-                }
-            })
-            ->when(
-                $this->canViewAllTrips($user) ? ($filters['driverId'] ?? null) : null,
-                fn ($query, $driverId) => $query->where('driver_id', $driverId)
-            )
             ->with('driver:id,name,profile_photo_path')
             ->orderByRaw("CASE trip_status WHEN 'Criada' THEN 0 WHEN 'Em Andamento' THEN 1 WHEN 'Aguardando Aprovação' THEN 2 WHEN 'Pago' THEN 3 ELSE 4 END")
             ->orderBy('travel_date', $sortOrder)
             ->orderBy('travel_time', $sortOrder)
-            ->orderBy('id', $sortOrder);
+            ->orderBy('id', $sortOrder)
+            ->get();
+    }
+
+    private function filterRecords(Collection $records, array $filters): Collection
+    {
+        $statuses = array_values(array_filter((array) ($filters['status'] ?? []), fn ($value) => $value !== ''));
+        $tripStatuses = array_values(array_filter((array) ($filters['tripStatus'] ?? []), fn ($value) => $value !== ''));
+        $solicitations = array_values(array_filter((array) ($filters['solicitation'] ?? []), fn ($value) => $value !== ''));
+        $driverId = $filters['driverId'] ?? '';
+        $passenger = $filters['passenger'] ?? '';
+
+        return $records->filter(function (GoaliTrip $record) use ($statuses, $tripStatuses, $solicitations, $driverId, $passenger) {
+            if ($statuses && ! in_array($record->status, $statuses, true)) {
+                return false;
+            }
+
+            if ($tripStatuses && ! in_array($record->trip_status, $tripStatuses, true)) {
+                return false;
+            }
+
+            if ($solicitations && ! in_array($record->solicitation, $solicitations, true)) {
+                return false;
+            }
+
+            if ($driverId !== '' && (string) $record->driver_id !== (string) $driverId) {
+                return false;
+            }
+
+            return $passenger === '' || in_array($passenger, $this->passengerLines($record), true);
+        })->values();
+    }
+
+    private function passengerOptionsForRecords(Collection $records): array
+    {
+        return $records
+            ->flatMap(fn (GoaliTrip $record) => $this->passengerLines($record))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    private function passengerLines(GoaliTrip $record): array
+    {
+        return collect(preg_split('/\R/u', (string) $record->passenger))
+            ->map(fn (string $passenger) => trim($passenger))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function queryForUser(User $user)
@@ -554,6 +595,14 @@ class GoaliTripController extends Controller
     private function isDriver(User $user): bool
     {
         return $this->hasPermission($user, self::PERMISSION_UPDATE_STATUS);
+    }
+
+    private function driverHasInProgressTrip(User $user): bool
+    {
+        return GoaliTrip::query()
+            ->where('driver_id', $user->getAuthIdentifier())
+            ->where('trip_status', 'Em Andamento')
+            ->exists();
     }
 
     private function isAdmin(User $user): bool
@@ -646,17 +695,6 @@ class GoaliTripController extends Controller
     private function earliestCreatableDate(User $user): string
     {
         return ($this->isDriver($user) ? CarbonImmutable::yesterday() : CarbonImmutable::today())->toDateString();
-    }
-
-    private function solicitationsForUser(User $user): array
-    {
-        return $this->queryForUser($user)
-            ->whereNotNull('solicitation')
-            ->where('solicitation', '<>', '')
-            ->distinct()
-            ->orderBy('solicitation')
-            ->pluck('solicitation')
-            ->all();
     }
 
     private function driversForCurrentTeam(User $user): array
