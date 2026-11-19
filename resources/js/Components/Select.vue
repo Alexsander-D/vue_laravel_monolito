@@ -176,11 +176,11 @@ function initializeSelect2() {
 
     emit("update:modelValue", value);
     emit("selected", value);
-    element.select2("close");
+    window.setTimeout(() => element.select2("close"), 0);
   });
   element.on("select2:select", () => {
     if (!props.multiple) {
-      element.select2("close");
+      window.setTimeout(() => element.select2("close"), 0);
     }
   });
   element.on("select2:close", () => emit("select2-close"));
