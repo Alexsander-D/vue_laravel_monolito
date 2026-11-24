@@ -15,6 +15,7 @@ return new class extends Migration
         ],
         'Administrativo' => [
             'goali-visualizar-corridas',
+            'goali-visualizar-todas-corridas',
             'goali-criar-corridas',
             'goali-criar-para-motoristas',
             'goali-cancelar-corridas',

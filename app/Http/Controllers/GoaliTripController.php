@@ -163,6 +163,7 @@ class GoaliTripController extends Controller
             ],
             'filters' => $filters,
             'isAdmin' => $this->isAdmin($user),
+            'canViewAllTrips' => $this->canViewAllTrips($user),
             'isAdministrative' => $this->isAdministrative($user),
             'isDriver' => $this->isDriver($user),
             'currentDriverId' => $this->isDriver($user) ? $user->id : null,
@@ -476,7 +477,7 @@ class GoaliTripController extends Controller
             $rules['driverId'] = [
                 'nullable',
                 'integer',
-                Rule::in(array_column($this->driversForCurrentTeam($user), 'id')),
+                Rule::in($this->filterableDriverIdsForCurrentTeam($user)),
             ];
         }
 
@@ -707,6 +708,17 @@ class GoaliTripController extends Controller
             ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
             ->values()
             ->all();
+    }
+
+    private function filterableDriverIdsForCurrentTeam(User $user): array
+    {
+        $team = $user->currentTeam;
+
+        if (! $team || strcasecmp(trim($team->name), 'GOALI TRANSPORTES') !== 0) {
+            return [];
+        }
+
+        return $team->users()->pluck('users.id')->all();
     }
 
     private function companiesForCurrentTeam(User $user): array

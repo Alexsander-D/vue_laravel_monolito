@@ -16,7 +16,7 @@ class GoaliTripTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_administrativo_can_create_for_self_and_drivers_and_only_see_its_trips(): void
+    public function test_administrativo_can_create_for_self_and_drivers_and_view_all_trips(): void
     {
         $administrativo = User::create([
             'name' => 'Usuário Administrativo',
@@ -103,7 +103,7 @@ class GoaliTripTest extends TestCase
         $assignedToAdministrative = $createTrip($administrativo->id, $otherAdmin->name);
         $responsibleForTrip = $createTrip($otherAdmin->id, $administrativo->name);
         $createTrip($administrativo->id, $otherAdmin->name, 'SAÍDA');
-        $createTrip($otherAdmin->id, $otherAdmin->name);
+        $tripForAnotherResponsible = $createTrip($otherAdmin->id, $otherAdmin->name);
         $createTrip(
             $administrativo->id,
             $otherAdmin->name,
@@ -120,9 +120,21 @@ class GoaliTripTest extends TestCase
         ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('summary.count', 2)
+                ->where('summary.count', 3)
                 ->where('records', fn ($records) => collect($records)->pluck('id')->sort()->values()->all()
-                    === collect([$assignedToAdministrative->id, $responsibleForTrip->id])->sort()->values()->all()));
+                    === collect([$assignedToAdministrative->id, $responsibleForTrip->id, $tripForAnotherResponsible->id])->sort()->values()->all()));
+
+        $this->get(route('goali.index', [
+            'startDate' => now()->toDateString(),
+            'endDate' => now()->toDateString(),
+            'driverId' => $driver->id,
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('canViewAllTrips', true)
+                ->where('filters.driverId', (string) $driver->id)
+                ->where('summary.count', 1)
+                ->where('records.0.id', $assignedToAdministrative->id));
     }
 
     public function test_creating_a_role_redirects_to_the_updated_roles_page(): void
@@ -168,7 +180,7 @@ class GoaliTripTest extends TestCase
         $team->user_id = $user->id;
         $team->save();
 
-        $migration = require base_path('database/migrations/2026_11_15_000000_assign_goali_permissions_to_roles.php');
+        $migration = require base_path('database/migrations/2026_11_16_000000_sync_goali_role_permissions.php');
         $migration->up();
 
         $adminPermissions = Role::where('team_id', $team->id)
@@ -204,6 +216,7 @@ class GoaliTripTest extends TestCase
             'goali-criar-corridas',
             'goali-criar-para-motoristas',
             'goali-visualizar-corridas',
+            'goali-visualizar-todas-corridas',
         ], $administrativoPermissions);
     }
 
@@ -1504,6 +1517,7 @@ class GoaliTripTest extends TestCase
             ],
             'Administrativo' => [
                 'goali-visualizar-corridas',
+                'goali-visualizar-todas-corridas',
                 'goali-criar-corridas',
                 'goali-criar-para-motoristas',
             ],
