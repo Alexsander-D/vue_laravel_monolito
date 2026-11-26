@@ -12,7 +12,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -29,8 +31,7 @@ class GoaliTripController extends Controller
     private const PERMISSION_MANAGE_DIRECTORY = 'goali-gerenciar-cadastros';
     private const PERMISSION_UPDATE_STATUS = 'goali-atualizar-status';
     private const PERMISSION_CANCEL_TRIPS = 'goali-cancelar-corridas';
-    private const PERMISSION_DELETE_TRIPS = 'goali-excluir-corridas';
-    private const TRIP_STATUSES = ['Criada', 'Em Andamento', 'Aguardando Aprovação', 'Pago'];
+    private const TRIP_STATUSES = ['Criada', 'Em Andamento', 'Aguardando Aprovação', 'Pago', 'Cancelada'];
 
     private const SOLICITATIONS = [
         'ELADECORA', 'IMB', 'OSESP', 'FRANGO DOURADO', 'INFINITYLLOG',
@@ -57,9 +58,39 @@ class GoaliTripController extends Controller
                 : null,
             'isDriver' => $user ? $this->isDriver($user) : false,
             'isAdmin' => $user ? $this->isAdmin($user) : false,
+            'isAdministrative' => $user ? $this->isAdministrative($user) : false,
             'canAssignDrivers' => $user ? $this->canCreateForDrivers($user) || $this->isAdmin($user) : false,
             'canManageDirectory' => $user ? $this->hasPermission($user, self::PERMISSION_MANAGE_DIRECTORY) : false,
         ]);
+    }
+
+    public function checkDuplicate(Request $request)
+    {
+        $user = $request->user();
+        abort_unless($this->hasPermission($user, self::PERMISSION_CREATE_TRIPS), 403);
+
+        $validated = $request->validate([
+            'travel_start_date' => ['required', 'date_format:Y-m-d'],
+            'travel_end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:travel_start_date'],
+            'solicitation' => ['required', 'string', 'max:150'],
+            'origin' => ['required', 'string', 'max:255'],
+            'destination' => ['required', 'string', 'max:255'],
+            'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0'],
+        ]);
+
+        $date = CarbonImmutable::parse($validated['travel_start_date']);
+        $endDate = CarbonImmutable::parse($validated['travel_end_date']);
+
+        for (; $date->lessThanOrEqualTo($endDate); $date = $date->addDay()) {
+            if ($this->duplicateExists([
+                ...$validated,
+                'travel_date' => $date->toDateString(),
+            ])) {
+                return response()->json(['duplicate' => true]);
+            }
+        }
+
+        return response()->json(['duplicate' => false]);
     }
 
     public function store(Request $request)
@@ -101,17 +132,24 @@ class GoaliTripController extends Controller
                 : 'Criada');
         $validated['in_progress_started_at'] = $validated['trip_status'] === 'Em Andamento' ? now() : null;
 
-        DB::transaction(function () use ($validated, $rangeEndDate) {
-            $date = CarbonImmutable::parse($validated['travel_date']);
-            $endDate = CarbonImmutable::parse($rangeEndDate ?? $validated['travel_date']);
+        try {
+            DB::transaction(function () use ($validated, $rangeEndDate) {
+                $date = CarbonImmutable::parse($validated['travel_date']);
+                $endDate = CarbonImmutable::parse($rangeEndDate ?? $validated['travel_date']);
 
-            for (; $date->lessThanOrEqualTo($endDate); $date = $date->addDay()) {
-                GoaliTrip::create([
-                    ...$validated,
-                    'travel_date' => $date->toDateString(),
-                ]);
-            }
-        });
+                for (; $date->lessThanOrEqualTo($endDate); $date = $date->addDay()) {
+                    $tripData = [
+                        ...$validated,
+                        'travel_date' => $date->toDateString(),
+                    ];
+                    $this->assertNoDuplicateTrip($tripData, null, 'travel_start_date');
+                    $tripData['duplicate_hash'] = $this->duplicateHash($tripData);
+                    GoaliTrip::create($tripData);
+                }
+            });
+        } catch (QueryException $exception) {
+            $this->rethrowUnlessDuplicateHashViolation($exception, 'travel_start_date');
+        }
 
         return redirect()->route('goali.index')->with(
             'success',
@@ -128,16 +166,12 @@ class GoaliTripController extends Controller
         $filters = $this->validatedFilters($request);
         $periodRecords = $this->recordsForDateRange($filters, $user);
         $records = $this->filterRecords($periodRecords, $filters);
-        $filterDrivers = $periodRecords
-            ->map(fn (GoaliTrip $record) => $record->driver)
-            ->filter()
-            ->unique('id')
-            ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
-            ->sortBy('name')
-            ->values()
-            ->all();
+        $isAdmin = $this->isAdmin($user);
+        $records->each(function (GoaliTrip $record) use ($isAdmin): void {
+            if (! $isAdmin) {
+                $record->makeHidden('company_profit');
+            }
 
-        $records->each(function (GoaliTrip $record): void {
             if (! $record->driver) {
                 return;
             }
@@ -169,12 +203,14 @@ class GoaliTripController extends Controller
             'currentDriverId' => $this->isDriver($user) ? $user->id : null,
             'canCreateTrips' => $this->hasPermission($user, self::PERMISSION_CREATE_TRIPS),
             'canCancelTrips' => $this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS),
-            'canDeleteTrips' => $this->hasPermission($user, self::PERMISSION_DELETE_TRIPS),
             'solicitations' => $periodRecords->pluck('solicitation')->filter()->unique()->sort()->values()->all(),
             'passengers' => $this->passengerOptionsForRecords($periodRecords),
+            'responsibles' => $this->canViewAllTrips($user)
+                ? $periodRecords->pluck('responsible')->filter()->unique()->sort()->values()->all()
+                : [],
             'tripStatuses' => self::TRIP_STATUSES,
             'drivers' => $this->driversForCurrentTeam($user),
-            'filterDrivers' => $filterDrivers,
+            'filterDrivers' => $this->driversForCurrentTeam($user),
         ]);
     }
 
@@ -185,7 +221,30 @@ class GoaliTripController extends Controller
         $isAdministrative = $this->isAdministrative($user);
         $isDriver = $this->isDriver($user);
         $isCancelling = $request->boolean('cancel_trip');
+        $isMarkingCancelled = $request->boolean('mark_cancelled');
         abort_unless($isAdmin || $isAdministrative || $isDriver || ($isCancelling && $this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS)), 403);
+
+        if ($isMarkingCancelled) {
+            abort_unless($isAdmin, 403);
+            $request->validate(['mark_cancelled' => ['required', 'boolean']]);
+            DB::transaction(function () use ($user, $trip) {
+                $lockedTrip = $this->queryForUser($user)
+                    ->lockForUpdate()
+                    ->findOrFail($trip->getKey());
+
+                abort_unless($lockedTrip->trip_status !== 'Cancelada', 403);
+
+                $lockedTrip->update([
+                    'trip_status' => 'Cancelada',
+                    'in_progress_started_at' => null,
+                    'cancelled_by_name' => $user->name,
+                    'cancelled_by_role' => 'Admin',
+                    'cancelled_at' => now(),
+                ]);
+            });
+
+            return back()->with('success', 'Corrida marcada como cancelada e mantida no histórico.');
+        }
 
         if ($isCancelling) {
             abort_unless($this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS), 403);
@@ -198,6 +257,7 @@ class GoaliTripController extends Controller
                 abort_unless(
                     $lockedTrip->trip_status !== 'Pago'
                         && $lockedTrip->trip_status !== 'Criada'
+                        && $lockedTrip->trip_status !== 'Cancelada'
                         && $lockedTrip->driver_id !== null,
                     403
                 );
@@ -297,8 +357,10 @@ class GoaliTripController extends Controller
         $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
         abort_if($trip->trip_status === 'Pago', 403, 'Corridas pagas não podem ser editadas.');
 
-        $validated = $this->validatedTrip($request, $user);
+        $validated = $this->validatedTrip($request, $user, false, true);
         $validated = $this->applyDirectoryValues($validated, $user);
+        $this->assertNoDuplicateTrip($validated, $trip->getKey());
+        $validated['duplicate_hash'] = $this->duplicateHash($validated);
         $nextStatus = match ($trip->trip_status) {
             'Criada' => 'Em Andamento',
             'Em Andamento' => 'Pago',
@@ -320,20 +382,13 @@ class GoaliTripController extends Controller
             unset($validated['trip_status']);
         }
 
-        $trip->update($validated);
+        try {
+            $trip->update($validated);
+        } catch (QueryException $exception) {
+            $this->rethrowUnlessDuplicateHashViolation($exception);
+        }
 
         return back()->with('success', 'Registro atualizado com sucesso.');
-    }
-
-    public function destroy(Request $request, GoaliTrip $trip)
-    {
-        $user = $request->user();
-        abort_unless($this->hasPermission($user, self::PERMISSION_DELETE_TRIPS), 403);
-
-        $trip = $this->queryForUser($user)->findOrFail($trip->getKey());
-        $trip->delete();
-
-        return back()->with('success', 'Registro excluído com sucesso.');
     }
 
     public function export(Request $request)
@@ -345,7 +400,7 @@ class GoaliTripController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('relatorio_goali');
-        $headers = ['Data', 'Horário', 'Tipo', 'Status da corrida', 'Solicitação', 'Código da Viagem', 'Origem', 'Destino', 'Passageiro', 'Motorista', 'Responsável', 'Valor (R$)', 'Cancelada por'];
+        $headers = ['ID', 'Data', 'Horário', 'Tipo', 'Status da corrida', 'Solicitação', 'Código da Viagem', 'Origem', 'Destino', 'Passageiro', 'Motorista', 'Responsável', 'Valor (R$)', 'Cancelada por'];
 
         foreach ($headers as $index => $header) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($index + 1) . '1', $header);
@@ -353,6 +408,7 @@ class GoaliTripController extends Controller
 
         foreach ($records as $rowIndex => $record) {
             $values = [
+                'ID' . $record->id,
                 $record->travel_date->format('d/m/Y'),
                 substr($record->travel_time, 0, 5),
                 $record->status,
@@ -381,10 +437,11 @@ class GoaliTripController extends Controller
             }
         }
 
-        foreach (range('A', 'L') as $column) {
+        $lastColumn = Coordinate::stringFromColumnIndex(count($headers));
+        foreach (range('A', $lastColumn) as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
-        $sheet->getStyle('A1:L1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:' . $lastColumn . '1')->getFont()->setBold(true);
         $tempFile = tempnam(sys_get_temp_dir(), 'goali-report-');
         (new Xlsx($spreadsheet))->save($tempFile);
 
@@ -479,6 +536,7 @@ class GoaliTripController extends Controller
                 'integer',
                 Rule::in($this->filterableDriverIdsForCurrentTeam($user)),
             ];
+            $rules['responsible'] = ['nullable', 'string', 'max:255'];
         }
 
         $filters = $request->validate($rules);
@@ -494,6 +552,7 @@ class GoaliTripController extends Controller
             'tripStatus' => '',
             'solicitation' => [],
             'passenger' => '',
+            'responsible' => '',
             'driverId' => '',
             'sortOrder' => 'desc',
         ], $filters);
@@ -521,8 +580,9 @@ class GoaliTripController extends Controller
         $solicitations = array_values(array_filter((array) ($filters['solicitation'] ?? []), fn ($value) => $value !== ''));
         $driverId = $filters['driverId'] ?? '';
         $passenger = $filters['passenger'] ?? '';
+        $responsible = $filters['responsible'] ?? '';
 
-        return $records->filter(function (GoaliTrip $record) use ($statuses, $tripStatuses, $solicitations, $driverId, $passenger) {
+        return $records->filter(function (GoaliTrip $record) use ($statuses, $tripStatuses, $solicitations, $driverId, $passenger, $responsible) {
             if ($statuses && ! in_array($record->status, $statuses, true)) {
                 return false;
             }
@@ -536,6 +596,10 @@ class GoaliTripController extends Controller
             }
 
             if ($driverId !== '' && (string) $record->driver_id !== (string) $driverId) {
+                return false;
+            }
+
+            if ($responsible !== '' && $record->responsible !== $responsible) {
                 return false;
             }
 
@@ -612,15 +676,15 @@ class GoaliTripController extends Controller
         return $user && collect($user->getPermissionsInTeamByUser())->contains($permission);
     }
 
-    private function rules(User $user): array
+    private function rules(User $user, bool $includeCompanyProfit = false): array
     {
-        return [
+        $rules = [
             'travel_date' => ['required', 'date'],
             'travel_time' => ['required', 'date_format:H:i'],
             'status' => ['required', 'in:ENTRADA,SAÍDA'],
             'trip_status' => ['sometimes', 'nullable', Rule::in(self::TRIP_STATUSES)],
             'driver_id' => [
-                $this->isAdmin($user) ? 'nullable' : 'required',
+                $this->isAdmin($user) || $this->canCreateForDrivers($user) ? 'nullable' : 'required',
                 'required_if:trip_status,Pago',
                 'integer',
                 Rule::in($this->isAdmin($user) || $this->canCreateForDrivers($user)
@@ -651,9 +715,20 @@ class GoaliTripController extends Controller
             'responsible' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0'],
         ];
+
+        if ($includeCompanyProfit && $this->isAdmin($user)) {
+            $rules['company_profit'] = ['nullable', 'numeric', 'decimal:0,2', 'min:0'];
+        }
+
+        return $rules;
     }
 
-    private function validatedTrip(Request $request, User $user, bool $disallowPastDate = false): array
+    private function validatedTrip(
+        Request $request,
+        User $user,
+        bool $disallowPastDate = false,
+        bool $includeCompanyProfit = false
+    ): array
     {
         if ($request->exists('travel_datetime')) {
             $request->validate([
@@ -667,7 +742,7 @@ class GoaliTripController extends Controller
             ]);
         }
 
-        $rules = $this->rules($user);
+        $rules = $this->rules($user, $includeCompanyProfit);
         if ($disallowPastDate) {
             $rules['travel_date'][] = 'after_or_equal:' . $this->earliestCreatableDate($user);
         }
@@ -688,26 +763,75 @@ class GoaliTripController extends Controller
             return [];
         }
 
-        $driverRoles = $this->isAdmin($user) || $this->canCreateForDrivers($user)
-            ? ['Motorista']
-            : [];
-        if ($this->isAdmin($user)) {
-            $driverRoles[] = 'Admin';
-        }
-
-        $drivers = $driverRoles
-            ? $team->users()->wherePivotIn('role', $driverRoles)->get(['users.id', 'users.name'])
-            : collect();
-
-        if ($team->users()->whereKey($user->id)->exists() && ! $drivers->contains('id', $user->id)) {
-            $drivers->push($user);
-        }
-
-        return $drivers
+        return $team->users()
+            ->get(['users.id', 'users.name'])
             ->sortBy('name')
             ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
             ->values()
             ->all();
+    }
+
+    private function assertNoDuplicateTrip(
+        array $attributes,
+        ?int $exceptId = null,
+        string $errorField = 'travel_date'
+    ): void {
+        if ($this->duplicateExists($attributes, $exceptId)) {
+            throw ValidationException::withMessages([
+                $errorField => 'Já existe uma corrida com a mesma data, solicitação, origem, destino e valor.',
+            ]);
+        }
+    }
+
+    private function duplicateExists(array $attributes, ?int $exceptId = null): bool
+    {
+        $matches = GoaliTrip::query()
+            ->whereDate('travel_date', CarbonImmutable::parse($attributes['travel_date'])->toDateString())
+            ->where('amount', number_format((float) $attributes['amount'], 2, '.', ''))
+            ->when($exceptId, fn ($query) => $query->where('id', '<>', $exceptId))
+            ->get(['id', 'solicitation', 'origin', 'destination']);
+
+        $expected = [
+            $this->normalizeDuplicateValue($attributes['solicitation']),
+            $this->normalizeDuplicateValue($attributes['origin']),
+            $this->normalizeDuplicateValue($attributes['destination']),
+        ];
+
+        return $matches->contains(fn (GoaliTrip $trip) => [
+            $this->normalizeDuplicateValue($trip->solicitation),
+            $this->normalizeDuplicateValue($trip->origin),
+            $this->normalizeDuplicateValue($trip->destination),
+        ] === $expected);
+    }
+
+    private function duplicateHash(array $attributes): string
+    {
+        return hash('sha256', json_encode([
+            CarbonImmutable::parse($attributes['travel_date'])->toDateString(),
+            $this->normalizeDuplicateValue($attributes['solicitation']),
+            $this->normalizeDuplicateValue($attributes['origin']),
+            $this->normalizeDuplicateValue($attributes['destination']),
+            number_format((float) $attributes['amount'], 2, '.', ''),
+        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
+
+    private function normalizeDuplicateValue(string $value): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $value) ?? ''), 'UTF-8');
+    }
+
+    private function rethrowUnlessDuplicateHashViolation(
+        QueryException $exception,
+        string $errorField = 'travel_date'
+    ): never
+    {
+        if (! str_contains($exception->getMessage(), 'duplicate_hash')) {
+            throw $exception;
+        }
+
+        throw ValidationException::withMessages([
+            $errorField => 'Já existe uma corrida com a mesma data, solicitação, origem, destino e valor.',
+        ]);
     }
 
     private function filterableDriverIdsForCurrentTeam(User $user): array

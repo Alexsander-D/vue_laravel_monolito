@@ -30,6 +30,8 @@ class GoaliTrip extends Model
         'observation',
         'responsible',
         'amount',
+        'company_profit',
+        'duplicate_hash',
     ];
 
     protected $casts = [
@@ -37,6 +39,7 @@ class GoaliTrip extends Model
         'in_progress_started_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'amount' => 'decimal:2',
+        'company_profit' => 'decimal:2',
         'passenger_ids' => 'array',
     ];
 

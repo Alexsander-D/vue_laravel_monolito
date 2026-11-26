@@ -18,6 +18,7 @@ const props = defineProps({
   passengers: { type: Array, default: () => [] },
   drivers: { type: Array, default: () => [] },
   filterDrivers: { type: Array, default: () => [] },
+  responsibles: { type: Array, default: () => [] },
   tripStatuses: { type: Array, default: () => [] },
   summary: { type: Object, required: true },
   isDriver: { type: Boolean, default: false },
@@ -25,7 +26,6 @@ const props = defineProps({
   currentDriverId: { type: Number, default: null },
   canCreateTrips: { type: Boolean, default: false },
   canCancelTrips: { type: Boolean, default: false },
-  canDeleteTrips: { type: Boolean, default: false },
 });
 
 const normalizedFilters = (value) => ({
@@ -46,6 +46,7 @@ const normalizedFilters = (value) => ({
       ? [value.solicitation]
       : [],
   passenger: value.passenger || "",
+  responsible: value.responsible || "",
   sortOrder: value.sortOrder || "desc",
 });
 const getFilterKey = (value) => JSON.stringify([
@@ -56,6 +57,7 @@ const getFilterKey = (value) => JSON.stringify([
   [...(Array.isArray(value.tripStatus) ? value.tripStatus : [])].sort(),
   [...(Array.isArray(value.solicitation) ? value.solicitation : [])].sort(),
   value.passenger || "",
+  value.responsible || "",
 ]);
 const dateFilters = useForm({
   startDate: props.filters.startDate || "",
@@ -89,15 +91,21 @@ const selectedFilterDriver = computed({
   },
 });
 const editTripStatusOptions = computed(() => {
-  if (!editingRecord.value || !props.isAdmin) {
+  if (!editingRecord.value || (!props.isAdmin && !props.isAdministrative)) {
     return [];
   }
 
-  const nextStatus = {
-    Criada: "Em Andamento",
-    "Em Andamento": "Pago",
-    "Aguardando Aprovação": "Pago",
-  }[editingRecord.value.trip_status];
+  const allowedStatuses = props.isAdministrative && !props.isAdmin
+    ? {
+      Criada: "Em Andamento",
+      "Em Andamento": "Aguardando Aprovação",
+    }
+    : {
+      Criada: "Em Andamento",
+      "Em Andamento": "Pago",
+      "Aguardando Aprovação": "Pago",
+    };
+  const nextStatus = allowedStatuses[editingRecord.value.trip_status];
   return nextStatus ? [nextStatus] : [];
 });
 const selectedEditDriver = computed({
@@ -110,10 +118,13 @@ const canDriverEditTrip = (record) => (
   (record.trip_status === "Em Andamento" || record.trip_status === "Criada")
   && (record.driver_id === null || Number(record.driver_id) === Number(props.currentDriverId))
 );
+const canEditTrip = (record) => (
+  record.trip_status !== "Pago"
+  && (props.isAdmin
+    || (props.isAdministrative && ["Criada", "Em Andamento"].includes(record.trip_status)))
+);
 const canAdvanceTripStatus = (record) => (
-  props.isAdministrative
-    ? ["Criada", "Em Andamento"].includes(record.trip_status)
-    : props.isDriver && canDriverEditTrip(record)
+  !props.isAdmin && !props.isAdministrative && props.isDriver && canDriverEditTrip(record)
 );
 const tableId = "goali-trips-datatable";
 const tableHeaders = computed(() => [
@@ -121,6 +132,7 @@ const tableHeaders = computed(() => [
   { name: "Tipo" },
   { name: "Status" },
   { name: "Solicitação" },
+  { name: "ID" },
   { name: "Código da Viagem" },
   { name: "Origem / Destino" },
   { name: "Passageiro" },
@@ -135,6 +147,7 @@ const tableColumns = computed(() => [
   "status",
   "tripStatus",
   "solicitation",
+  "tripId",
   "tripCode",
   "route",
   "passenger",
@@ -149,9 +162,11 @@ const tableData = computed(() => props.records.map((record) => ({
   status: record.status,
   tripStatus: record.trip_status,
   solicitation: record.solicitation,
+  tripId: `ID${record.id}`,
   tripCode: record.trip_code || "—",
   route: `${record.origin} → ${record.destination}`,
   passenger: record.passenger,
+  driverId: record.driver_id,
   driver: {
     name: record.driver?.name || "—",
     photoUrl: record.driver?.profile_photo_url || "",
@@ -162,19 +177,20 @@ const tableData = computed(() => props.records.map((record) => ({
     ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
     : "—",
   buttonActions: [
-    props.isAdmin && record.trip_status !== "Pago"
+    canEditTrip(record)
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : (canAdvanceTripStatus(record)
       ? `<button type="button" class="goali-action goali-action--status" data-goali-action="status" data-record-id="${Number(record.id)}">${nextTripStatus(record.trip_status) || "Atualizar status"}</button>`
         : ""),
     props.canCancelTrips
       && record.trip_status !== "Criada"
+      && record.trip_status !== "Cancelada"
       && record.driver_id !== null
       && !["Pago", "Aguardando Aprovação"].includes(record.trip_status)
-      ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Cancelar</button>`
+      ? `<button type="button" class="goali-action goali-action--cancel" data-goali-action="cancel" data-record-id="${Number(record.id)}">Devolver à fila</button>`
       : "",
-    props.canDeleteTrips
-      ? `<button type="button" class="goali-action goali-action--delete" data-goali-action="delete" data-record-id="${Number(record.id)}">Excluir</button>`
+    props.isAdmin && record.trip_status !== "Cancelada"
+      ? `<button type="button" class="goali-action goali-action--cancelled" data-goali-action="mark-cancelled" data-record-id="${Number(record.id)}">Marcar Cancelada</button>`
       : "",
   ].join(""),
 })));
@@ -194,6 +210,7 @@ const mobileFilteredRecords = computed(() => {
     record.trip_status,
     record.solicitation,
     record.trip_code,
+    `ID${record.id}`,
     record.origin,
     record.destination,
     record.passenger,
@@ -250,6 +267,7 @@ const applyDateFilters = () => {
   filters.driverId = null;
   filters.solicitation = [];
   filters.passenger = "";
+  filters.responsible = "";
   applyFilters(appliedDateFilters.value);
 };
 const applyOtherFilters = () => applyFilters();
@@ -258,6 +276,7 @@ const clearFilters = () => {
   filters.tripStatus = [];
   filters.solicitation = [];
   filters.passenger = "";
+  filters.responsible = "";
   filters.driverId = null;
   applyOtherFilters();
 };
@@ -267,7 +286,7 @@ const clearDateFilters = () => {
   applyDateFilters();
 };
 const startEdit = (record) => {
-  if (record.trip_status === "Pago" || !props.isAdmin) {
+  if (!canEditTrip(record)) {
     return;
   }
 
@@ -285,6 +304,9 @@ const startEdit = (record) => {
     passenger: record.passenger,
     observation: record.observation || "",
     amount: Number(record.amount).toFixed(2),
+    company_profit: record.company_profit === null || record.company_profit === undefined
+      ? ""
+      : Number(record.company_profit).toFixed(2),
     responsible: record.responsible,
   }).reset();
 };
@@ -313,23 +335,44 @@ const advanceTripStatus = async (record) => {
   }
 };
 const saveEdit = () => {
+  if (props.isAdministrative && !props.isAdmin) {
+    if (!editForm.trip_status) {
+      editForm.setError("trip_status", "Selecione o próximo status.");
+      return;
+    }
+
+    router.put(route("goali.update", editingId.value), { trip_status: editForm.trip_status }, {
+      preserveScroll: true,
+      onSuccess: () => { editingId.value = null; },
+      onError: (errors) => editForm.setError(errors),
+    });
+    return;
+  }
+
   if (props.isAdmin && !editForm.solicitation) {
     editForm.setError("solicitation", "Selecione uma empresa.");
     return;
   }
   editForm.put(route("goali.update", editingId.value), { preserveScroll: true, onSuccess: () => { editingId.value = null; } });
 };
-const deleteRecord = async (record) => {
+const markTripCancelled = async (record) => {
+  if (!props.isAdmin || record.trip_status === "Cancelada") {
+    return;
+  }
+
   const result = await Swal.fire({
-    title: "Excluir registro?",
-    text: `O deslocamento de ${record.passenger} será removido.`,
-    icon: "warning",
+    title: "Marcar corrida como cancelada?",
+    text: `A corrida de ${record.passenger} será mantida no histórico com status Cancelada.`,
+    icon: "question",
     showCancelButton: true,
-    confirmButtonText: "Excluir",
+    confirmButtonText: "Marcar Cancelada",
     cancelButtonText: "Cancelar",
     confirmButtonColor: "#b42318",
   });
-  if (result.isConfirmed) router.delete(route("goali.destroy", record.id), { preserveScroll: true });
+
+  if (result.isConfirmed) {
+    router.put(route("goali.update", record.id), { mark_cancelled: true }, { preserveScroll: true });
+  }
 };
 const handleTableAction = (event) => {
   const target = event.target instanceof Element ? event.target : null;
@@ -347,23 +390,23 @@ const handleTableAction = (event) => {
     startEdit(record);
   } else if (button.dataset.goaliAction === "status") {
     advanceTripStatus(record);
-  } else if (button.dataset.goaliAction === "delete") {
-    deleteRecord(record);
+  } else if (button.dataset.goaliAction === "mark-cancelled") {
+    markTripCancelled(record);
   } else if (button.dataset.goaliAction === "cancel") {
-    cancelTrip(record);
+    returnTripToQueue(record);
   }
 };
-const cancelTrip = async (record) => {
-  if (record.trip_status === "Criada" || record.driver_id === null) {
+const returnTripToQueue = async (record) => {
+  if (record.trip_status === "Criada" || record.trip_status === "Cancelada" || record.driver_id === null) {
     return;
   }
 
   const result = await Swal.fire({
-    title: "Cancelar corrida?",
+    title: "Devolver corrida à fila?",
     text: `A corrida de ${record.passenger} voltará para Criada, sem motorista. Seu nome e perfil ficarão registrados.`,
     icon: "warning",
     showCancelButton: true,
-    confirmButtonText: "Confirmar cancelamento",
+    confirmButtonText: "Devolver à fila",
     cancelButtonText: "Manter corrida",
     confirmButtonColor: "#b45309",
   });
@@ -373,10 +416,12 @@ const cancelTrip = async (record) => {
   }
 };
 const tripRowClass = (row) => ({
-  "goali-trip--created": row.tripStatus === "Criada",
-  "goali-trip--in-progress": row.tripStatus === "Em Andamento",
-  "goali-trip--awaiting": row.tripStatus === "Aguardando Aprovação",
-  "goali-trip--finished": row.tripStatus === "Pago",
+  "goali-trip--cancelled": row.tripStatus === "Cancelada",
+  "goali-trip--created": row.tripStatus !== "Cancelada" && row.driverId !== null && row.tripStatus === "Criada",
+  "goali-trip--unassigned": row.tripStatus !== "Cancelada" && row.driverId === null,
+  "goali-trip--in-progress": row.tripStatus !== "Cancelada" && row.driverId !== null && row.tripStatus === "Em Andamento",
+  "goali-trip--awaiting": row.tripStatus !== "Cancelada" && row.driverId !== null && row.tripStatus === "Aguardando Aprovação",
+  "goali-trip--finished": row.tripStatus !== "Cancelada" && row.driverId !== null && row.tripStatus === "Pago",
 });
 const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
@@ -447,12 +492,13 @@ onBeforeUnmount(() => {
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearDateFilters">Limpar período</button>
       </form>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-6" @submit.prevent="applyOtherFilters">
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-7" @submit.prevent="applyOtherFilters">
         <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
         <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" multiple @select2-close="applyOtherFilters" /></label>
         <div v-if="props.passengers.length" class="filter-label"><span>Passageiro</span><Select v-model="filters.passenger" :options="props.passengers" aria-label="Passageiro" placeholder="Todos" @select2-close="applyOtherFilters" /></div>
         <div v-if="props.canViewAllTrips" class="filter-label"><span>Motorista</span><Select v-model="selectedFilterDriver" :options="props.filterDrivers" aria-label="Motorista" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></div>
+        <div v-if="props.canViewAllTrips" class="filter-label"><span>Responsável</span><Select v-model="filters.responsible" :options="props.responsibles" aria-label="Responsável" placeholder="Todos" @select2-close="applyOtherFilters" /></div>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
@@ -480,19 +526,23 @@ onBeforeUnmount(() => {
             :key="record.id"
             class="overflow-hidden rounded-lg border-l-8 shadow-md"
             :class="{
-              'border-gray-500 border-y border-r bg-gray-50 dark:border-gray-400 dark:bg-gray-800': record.trip_status === 'Criada',
-              'border-blue-700 border-y border-r bg-blue-50 dark:border-blue-400 dark:bg-blue-950/50': record.trip_status === 'Em Andamento',
-              'border-amber-600 border-y border-r bg-amber-50 dark:border-amber-400 dark:bg-amber-950/50': record.trip_status === 'Aguardando Aprovação',
-              'border-green-700 border-y border-r bg-green-50 dark:border-green-400 dark:bg-green-950/50': record.trip_status === 'Pago',
+              'border-red-700 border-y border-r bg-red-50 dark:border-red-400 dark:bg-red-950/50': record.trip_status === 'Cancelada',
+              'border-orange-600 border-y border-r bg-orange-50 dark:border-orange-400 dark:bg-orange-950/50': !record.driver_id && record.trip_status !== 'Cancelada',
+              'border-gray-500 border-y border-r bg-gray-50 dark:border-gray-400 dark:bg-gray-800': record.driver_id && record.trip_status === 'Criada',
+              'border-blue-700 border-y border-r bg-blue-50 dark:border-blue-400 dark:bg-blue-950/50': record.driver_id && record.trip_status === 'Em Andamento',
+              'border-amber-600 border-y border-r bg-amber-50 dark:border-amber-400 dark:bg-amber-950/50': record.driver_id && record.trip_status === 'Aguardando Aprovação',
+              'border-green-700 border-y border-r bg-green-50 dark:border-green-400 dark:bg-green-950/50': record.driver_id && record.trip_status === 'Pago',
             }"
           >
             <div
               class="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3"
               :class="{
-                'border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800': record.trip_status === 'Criada',
-                'border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900/60': record.trip_status === 'Em Andamento',
-                'border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900/60': record.trip_status === 'Aguardando Aprovação',
-                'border-green-200 bg-green-100 dark:border-green-800 dark:bg-green-900/60': record.trip_status === 'Pago',
+                'border-red-200 bg-red-100 dark:border-red-800 dark:bg-red-900/60': record.trip_status === 'Cancelada',
+                'border-orange-200 bg-orange-100 dark:border-orange-800 dark:bg-orange-900/60': !record.driver_id && record.trip_status !== 'Cancelada',
+                'border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800': record.driver_id && record.trip_status === 'Criada',
+                'border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900/60': record.driver_id && record.trip_status === 'Em Andamento',
+                'border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900/60': record.driver_id && record.trip_status === 'Aguardando Aprovação',
+                'border-green-200 bg-green-100 dark:border-green-800 dark:bg-green-900/60': record.driver_id && record.trip_status === 'Pago',
               }"
             >
               <div>
@@ -504,16 +554,22 @@ onBeforeUnmount(() => {
                 <span
                   class="rounded-full px-2.5 py-1 text-xs font-semibold"
                   :class="{
-                    'bg-gray-700 text-white dark:bg-gray-600': record.trip_status === 'Criada',
-                    'bg-blue-700 text-white dark:bg-blue-600': record.trip_status === 'Em Andamento',
-                    'bg-amber-700 text-white dark:bg-amber-600': record.trip_status === 'Aguardando Aprovação',
-                    'bg-green-700 text-white dark:bg-green-600': record.trip_status === 'Pago',
+                    'bg-red-700 text-white dark:bg-red-600': record.trip_status === 'Cancelada',
+                    'bg-orange-700 text-white dark:bg-orange-600': !record.driver_id && record.trip_status !== 'Cancelada',
+                    'bg-gray-700 text-white dark:bg-gray-600': record.driver_id && record.trip_status === 'Criada',
+                    'bg-blue-700 text-white dark:bg-blue-600': record.driver_id && record.trip_status === 'Em Andamento',
+                    'bg-amber-700 text-white dark:bg-amber-600': record.driver_id && record.trip_status === 'Aguardando Aprovação',
+                    'bg-green-700 text-white dark:bg-green-600': record.driver_id && record.trip_status === 'Pago',
                   }"
                 >{{ record.trip_status }}</span>
               </div>
             </div>
 
             <div class="space-y-3 px-4 py-3">
+              <div>
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">ID</p>
+                <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">ID{{ record.id }}</p>
+              </div>
               <div v-if="record.trip_code">
                 <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Código da Viagem</p>
                 <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.trip_code }}</p>
@@ -556,11 +612,11 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-if="props.isAdmin || canAdvanceTripStatus(record) || props.canDeleteTrips || (props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
+              v-if="props.isAdmin || canEditTrip(record) || canAdvanceTripStatus(record) || (props.canCancelTrips && record.trip_status !== 'Criada' && record.trip_status !== 'Cancelada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
               class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
             >
               <button
-                v-if="props.isAdmin && record.trip_status !== 'Pago'"
+                v-if="canEditTrip(record)"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700"
                 @click="startEdit(record)"
@@ -572,17 +628,17 @@ onBeforeUnmount(() => {
                 @click="advanceTripStatus(record)"
               >{{ nextTripStatus(record.trip_status) }}</button>
               <button
-                v-if="props.canCancelTrips && record.trip_status !== 'Criada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
+                v-if="props.canCancelTrips && record.trip_status !== 'Criada' && record.trip_status !== 'Cancelada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
                 type="button"
                 class="min-h-11 flex-1 rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
-                @click="cancelTrip(record)"
-              >Cancelar</button>
+                @click="returnTripToQueue(record)"
+              >Devolver à fila</button>
               <button
-                v-if="props.canDeleteTrips"
+                v-if="props.isAdmin && record.trip_status !== 'Cancelada'"
                 type="button"
-                class="min-h-11 flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
-                @click="deleteRecord(record)"
-              >Excluir</button>
+                class="min-h-11 flex-1 rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                @click="markTripCancelled(record)"
+              >Marcar Cancelada</button>
             </div>
           </article>
         </div>
@@ -617,7 +673,7 @@ onBeforeUnmount(() => {
       <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4" @click.self="editingId = null">
         <form class="my-2 max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900 sm:my-6 sm:max-h-[90vh] sm:p-6" data-select2-dropdown-parent @click.stop @submit.prevent="saveEdit">
           <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">Editar deslocamento</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
-          <div v-if="props.isAdmin" class="grid grid-cols-1 gap-4">
+          <div v-if="props.isAdmin || props.isAdministrative" class="grid grid-cols-1 gap-4">
             <label class="filter-label">Próximo status
               <select
                 v-model="editForm.trip_status"
@@ -644,9 +700,10 @@ onBeforeUnmount(() => {
             <label class="filter-label">Observação<TextArea v-model="editForm.observation" class="mt-1 block w-full" maxlength="5000" autocomplete="off" /><InputError :message="editForm.errors.observation" /></label>
             <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" :readonly="props.isDriver" required /><InputError :message="editForm.errors.responsible" /></label>
             <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
+            <label class="filter-label">Lucro da empresa (R$)<TextInput v-model="editForm.company_profit" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" /><InputError :message="editForm.errors.company_profit" /></label>
           </div>
           <p v-if="editForm.hasErrors" class="mt-3 text-sm text-red-700">Verifique os campos informados.</p>
-          <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-800" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : "Salvar alterações" }}</button></div>
+          <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-800" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : props.isAdmin ? "Salvar alterações" : "Atualizar status" }}</button></div>
         </form>
       </div>
     </main>
@@ -687,15 +744,18 @@ onBeforeUnmount(() => {
 :deep(#goali-trips-datatable .goali-action--status:hover) { background-color: #0e7490; }
 :deep(#goali-trips-datatable .goali-action--cancel) { background-color: #d97706; }
 :deep(#goali-trips-datatable .goali-action--cancel:hover) { background-color: #b45309; }
-:deep(#goali-trips-datatable .goali-action--delete) { background-color: #dc2626; }
-:deep(#goali-trips-datatable .goali-action--delete:hover) { background-color: #b91c1c; }
+:deep(#goali-trips-datatable .goali-action--cancelled) { background-color: #b91c1c; }
+:deep(#goali-trips-datatable .goali-action--cancelled:hover) { background-color: #991b1b; }
 :deep(#goali-trips-datatable .goali-action:focus-visible) {
   outline: 3px solid #93c5fd;
   outline-offset: 2px;
 }
 :deep(#goali-trips-datatable .goali-action:active) { transform: translateY(1px); }
 :deep(.goali-trip--created > td) { background-color: #f3f4f6 !important; }
+:deep(.goali-trip--unassigned > td) { background-color: #ffedd5 !important; }
 :deep(.goali-trip--in-progress > td) { background-color: #eff6ff !important; }
 :deep(.goali-trip--awaiting > td) { background-color: #fef3c7 !important; }
 :deep(.goali-trip--finished > td) { background-color: #dcfce7 !important; }
+:deep(.goali-trip--cancelled > td) { background-color: #fee2e2 !important; }
+:deep(.goali-trip--cancelled > td) { background-color: #fee2e2 !important; }
 </style>

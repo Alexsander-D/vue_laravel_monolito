@@ -128,11 +128,11 @@ Route::middleware([
         })->name('dashboard');
 
         Route::get('/goali/form', [GoaliTripController::class, 'form'])->name('goali.form');
+        Route::post('/goali/check-duplicate', [GoaliTripController::class, 'checkDuplicate'])->name('goali.check-duplicate');
         Route::post('/goali/form', [GoaliTripController::class, 'store'])->name('goali.store');
         Route::get('/goali/records', [GoaliTripController::class, 'index'])->name('goali.index');
         Route::get('/goali/records/export', [GoaliTripController::class, 'export'])->name('goali.export');
         Route::put('/goali/records/{trip}', [GoaliTripController::class, 'update'])->name('goali.update');
-        Route::delete('/goali/records/{trip}', [GoaliTripController::class, 'destroy'])->name('goali.destroy');
         Route::get('/goali/companies', [GoaliCompanyController::class, 'index'])->name('goali.companies.index');
         Route::post('/goali/companies', [GoaliCompanyController::class, 'store'])->name('goali.companies.store');
         Route::put('/goali/companies/{company}', [GoaliCompanyController::class, 'update'])->name('goali.companies.update');

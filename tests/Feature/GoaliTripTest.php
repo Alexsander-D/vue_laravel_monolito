@@ -45,9 +45,10 @@ class GoaliTripTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('isAdmin', false)
+                ->where('isAdministrative', true)
                 ->where('canAssignDrivers', true)
                 ->where('drivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
-                    === collect([$administrativo->id, $driver->id])->sort()->values()->all()));
+                    === collect([$administrativo->id, $driver->id, $otherAdmin->id])->sort()->values()->all()));
 
         $payload = [
             'travel_start_date' => now()->addDay()->toDateString(),
@@ -73,7 +74,16 @@ class GoaliTripTest extends TestCase
             'observation' => 'Observação de teste',
         ]);
 
-        $this->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])
+        $this->from(route('goali.form'))
+            ->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])
+            ->assertRedirect(route('goali.form'))
+            ->assertSessionHasErrors('travel_date');
+
+        $this->post(route('goali.store'), [
+            ...$payload,
+            'origin' => 'Outra origem',
+            'driver_id' => $administrativo->id,
+        ])
             ->assertRedirect(route('goali.index'));
         $this->assertDatabaseHas('goali_trips', [
             'passenger' => 'Passageiro Administrativo',
@@ -81,8 +91,24 @@ class GoaliTripTest extends TestCase
             'trip_status' => 'Em Andamento',
         ]);
 
+        $this->post(route('goali.store'), [
+            ...$payload,
+            'origin' => 'Corrida sem motorista',
+            'driver_id' => null,
+        ])->assertRedirect(route('goali.index'));
+        $this->assertDatabaseHas('goali_trips', [
+            'origin' => 'Corrida sem motorista',
+            'driver_id' => null,
+            'trip_status' => 'Em Andamento',
+        ]);
+
+        $outsider = User::create([
+            'name' => 'Usuário externo',
+            'email' => 'usuario-externo-goali@example.com',
+            'password' => Hash::make('password'),
+        ]);
         $this->from(route('goali.form'))
-            ->post(route('goali.store'), [...$payload, 'driver_id' => $otherAdmin->id])
+            ->post(route('goali.store'), [...$payload, 'origin' => 'Origem externa', 'driver_id' => $outsider->id])
             ->assertRedirect(route('goali.form'))
             ->assertSessionHasErrors('driver_id');
 
@@ -127,14 +153,27 @@ class GoaliTripTest extends TestCase
         $this->get(route('goali.index', [
             'startDate' => now()->toDateString(),
             'endDate' => now()->toDateString(),
-            'driverId' => $driver->id,
+            'driverId' => $administrativo->id,
+            'status' => 'ENTRADA',
         ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('canViewAllTrips', true)
-                ->where('filters.driverId', (string) $driver->id)
+                ->where('filters.driverId', (string) $administrativo->id)
                 ->where('summary.count', 1)
                 ->where('records.0.id', $assignedToAdministrative->id));
+
+        $this->get(route('goali.index', [
+            'startDate' => now()->toDateString(),
+            'endDate' => now()->toDateString(),
+            'responsible' => $otherAdmin->name,
+            'status' => 'ENTRADA',
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.responsible', $otherAdmin->name)
+                ->where('summary.count', 2)
+                ->where('responsibles', fn ($values) => $values->contains($otherAdmin->name)));
     }
 
     public function test_creating_a_role_redirects_to_the_updated_roles_page(): void
@@ -253,10 +292,8 @@ class GoaliTripTest extends TestCase
                 ->component('Goali/Form')
                 ->where('initialTripStatus', 'Em Andamento')
                 ->where('currentUserId', $user->id)
-                ->where('drivers', [
-                    ['id' => $driver->id, 'name' => $driver->name],
-                    ['id' => $user->id, 'name' => $user->name],
-                ]));
+                ->where('drivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
+                    === collect([$driver->id, $user->id, $outsider->id])->sort()->values()->all()));
 
         $this->actingAs($user)
             ->post(route('goali.store'), [
@@ -321,6 +358,7 @@ class GoaliTripTest extends TestCase
             'passenger' => 'Passageiro atualizado',
             'responsible' => 'Operador Teste',
             'amount' => '150.00',
+            'company_profit' => '25.00',
         ])->assertRedirect();
 
         $this->assertDatabaseHas('goali_trips', [
@@ -334,17 +372,17 @@ class GoaliTripTest extends TestCase
             'origin' => 'Origem atualizada',
             'passenger' => 'Passageiro atualizado',
             'amount' => '150.00',
+            'company_profit' => '25.00',
         ]);
 
-        $this->delete(route('goali.destroy', $trip))->assertRedirect();
-        $this->assertDatabaseMissing('goali_trips', ['id' => $trip->id]);
+        $this->assertDatabaseHas('goali_trips', ['id' => $trip->id]);
     }
 
-    public function test_admin_can_delete_trips_in_any_status(): void
+    public function test_admin_can_mark_trips_cancelled_without_deleting_them(): void
     {
         $admin = User::create([
             'name' => 'Admin Goali',
-            'email' => 'delete-any-status@example.com',
+            'email' => 'cancel-any-status@example.com',
             'password' => Hash::make('password'),
         ]);
         $admin->forceFill(['email_verified_at' => now()])->save();
@@ -367,9 +405,13 @@ class GoaliTripTest extends TestCase
             ]);
 
             $this->actingAs($admin)
-                ->delete(route('goali.destroy', $trip))
+                ->put(route('goali.update', $trip), ['mark_cancelled' => true])
                 ->assertRedirect();
-            $this->assertDatabaseMissing('goali_trips', ['id' => $trip->id]);
+            $this->assertDatabaseHas('goali_trips', [
+                'id' => $trip->id,
+                'trip_status' => 'Cancelada',
+                'cancelled_by_name' => $admin->name,
+            ]);
         }
     }
 
@@ -617,7 +659,7 @@ class GoaliTripTest extends TestCase
                 ->where('records.0.id', $matchingTrip->id));
     }
 
-    public function test_filter_options_and_passenger_filter_use_only_trips_in_selected_period(): void
+    public function test_driver_filter_options_include_all_team_members_and_passenger_options_use_selected_period(): void
     {
         $admin = User::create([
             'name' => 'Admin Filtros por Período',
@@ -670,7 +712,7 @@ class GoaliTripTest extends TestCase
                 ->where('solicitations', ['Empresa do período', 'Outra empresa do período'])
                 ->where('passengers', ['Ana', 'Bruno', 'Carlos'])
                 ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
-                    === collect([$admin->id, $driverInPeriod->id])->sort()->values()->all())
+                    === collect([$admin->id, $driverInPeriod->id, $driverOutsidePeriod->id])->sort()->values()->all())
                 ->where('filters.passenger', 'Ana')
                 ->where('summary.count', 1)
                 ->where('records.0.id', $matchingTrip->id));
@@ -829,7 +871,8 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('isAdmin', false)
                 ->where('filters.driverId', '')
-                ->where('summary.count', 2));
+                ->where('summary.count', 2)
+                ->where('records', fn ($records) => ! array_key_exists('company_profit', $records[0])));
     }
 
     public function test_trip_value_totals_exclude_unassigned_trips(): void
@@ -1045,8 +1088,8 @@ class GoaliTripTest extends TestCase
         $this->put(route('goali.update', $runningTrip), [
             'trip_status' => 'Pago',
         ])->assertSessionHasErrors('trip_status');
-        $this->delete(route('goali.destroy', $runningTrip))
-            ->assertForbidden();
+        $this->delete(route('goali.update', $runningTrip))
+            ->assertStatus(405);
 
         $driver->teams()->updateExistingPivot($team->id, ['role' => 'Admin']);
 
