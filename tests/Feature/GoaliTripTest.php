@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\GoaliTrip;
+use App\Models\GoaliCompany;
 use App\Models\Spatie\Permission;
 use App\Models\Spatie\Role;
 use App\Models\Spatie\Team;
@@ -622,7 +623,7 @@ class GoaliTripTest extends TestCase
         $this->assertDatabaseCount('goali_trips', 1);
     }
 
-    public function test_it_filters_by_solicitations_stored_in_the_database(): void
+    public function test_it_filters_by_solicitations_from_trips_and_registered_companies(): void
     {
         $admin = User::create([
             'name' => 'Admin Filtro Dinâmico',
@@ -630,7 +631,11 @@ class GoaliTripTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         $admin->forceFill(['email_verified_at' => now()])->save();
-        $this->attachToGoaliTeam($admin, 'Admin');
+        $team = $this->attachToGoaliTeam($admin, 'Admin');
+        GoaliCompany::create([
+            'team_id' => $team->id,
+            'name' => 'Empresa cadastrada',
+        ]);
 
         $createTrip = fn (string $solicitation, string $passenger) => GoaliTrip::create([
             'user_id' => $admin->id,
@@ -653,7 +658,8 @@ class GoaliTripTest extends TestCase
             ->get(route('goali.index', ['solicitation' => 'Empresa Local']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('solicitations', fn ($values) => $values->contains('Empresa Local'))
+                ->where('solicitations', fn ($values) => $values->contains('Empresa Local')
+                    && $values->contains('Empresa cadastrada'))
                 ->where('filters.solicitation', ['Empresa Local'])
                 ->where('summary.count', 1)
                 ->where('records.0.id', $matchingTrip->id));
@@ -682,6 +688,10 @@ class GoaliTripTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         $driverOutsidePeriod->teams()->attach($team->id, ['role' => 'Motorista']);
+        GoaliCompany::create([
+            'team_id' => $team->id,
+            'name' => 'Empresa cadastrada fora do período',
+        ]);
 
         $createTrip = fn (int $driverId, string $date, string $solicitation, string $passenger) => GoaliTrip::create([
             'user_id' => $admin->id,
@@ -709,7 +719,12 @@ class GoaliTripTest extends TestCase
             ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('solicitations', ['Empresa do período', 'Outra empresa do período'])
+                ->where('solicitations', [
+                    'Empresa cadastrada fora do período',
+                    'Empresa do período',
+                    'Empresa fora do período',
+                    'Outra empresa do período',
+                ])
                 ->where('passengers', ['Ana', 'Bruno', 'Carlos'])
                 ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
                     === collect([$admin->id, $driverInPeriod->id, $driverOutsidePeriod->id])->sort()->values()->all())

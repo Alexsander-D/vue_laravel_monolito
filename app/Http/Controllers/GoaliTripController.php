@@ -33,18 +33,13 @@ class GoaliTripController extends Controller
     private const PERMISSION_CANCEL_TRIPS = 'goali-cancelar-corridas';
     private const TRIP_STATUSES = ['Criada', 'Em Andamento', 'Aguardando Aprovação', 'Pago', 'Cancelada'];
 
-    private const SOLICITATIONS = [
-        'ELADECORA', 'IMB', 'OSESP', 'FRANGO DOURADO', 'INFINITYLLOG',
-        'LOGVALE', 'CMW', 'REINALDO', 'PROHALL', 'INVENTA',
-    ];
-
     public function form()
     {
         $user = Auth::user();
         abort_unless($this->hasPermission($user, self::PERMISSION_CREATE_TRIPS), 403);
 
         return Inertia::render('Goali/Form', [
-            'solicitations' => self::SOLICITATIONS,
+            'solicitations' => $user ? $this->solicitationOptionsForUser($user) : [],
             'responsibleUser' => $user?->name ?? '',
             'initialTripStatus' => $user && ($this->isAdmin($user) || $this->isDriver($user) || $this->canCreateForDrivers($user))
                 ? 'Em Andamento'
@@ -203,7 +198,7 @@ class GoaliTripController extends Controller
             'currentDriverId' => $this->isDriver($user) ? $user->id : null,
             'canCreateTrips' => $this->hasPermission($user, self::PERMISSION_CREATE_TRIPS),
             'canCancelTrips' => $this->hasPermission($user, self::PERMISSION_CANCEL_TRIPS),
-            'solicitations' => $periodRecords->pluck('solicitation')->filter()->unique()->sort()->values()->all(),
+            'solicitations' => $this->solicitationOptionsForUser($user),
             'passengers' => $this->passengerOptionsForRecords($periodRecords),
             'responsibles' => $this->canViewAllTrips($user)
                 ? $periodRecords->pluck('responsible')->filter()->unique()->sort()->values()->all()
@@ -767,6 +762,25 @@ class GoaliTripController extends Controller
             ->get(['users.id', 'users.name'])
             ->sortBy('name')
             ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
+            ->values()
+            ->all();
+    }
+
+    private function solicitationOptionsForUser(User $user): array
+    {
+        return $this->queryForUser($user)
+            ->whereNotNull('solicitation')
+            ->where('solicitation', '<>', '')
+            ->distinct()
+            ->pluck('solicitation')
+            ->merge(
+                GoaliCompany::query()
+                    ->where('team_id', $user->current_team_id)
+                    ->pluck('name')
+            )
+            ->filter(fn (string $solicitation) => trim($solicitation) !== '')
+            ->unique()
+            ->sort()
             ->values()
             ->all();
     }
