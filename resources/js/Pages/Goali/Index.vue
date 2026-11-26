@@ -138,6 +138,7 @@ const tableHeaders = computed(() => [
   { name: "Passageiro" },
   { name: "Motorista" },
   ...(props.isAdmin ? [{ name: "Responsável" }] : []),
+  ...(props.isAdmin ? [{ name: "Lucro da empresa" }] : []),
   { name: "Valor" },
   ...(props.isAdmin ? [{ name: "Cancelada por" }] : []),
   { name: "Ações" },
@@ -153,6 +154,7 @@ const tableColumns = computed(() => [
   "passenger",
   "driver",
   ...(props.isAdmin ? ["responsible"] : []),
+  ...(props.isAdmin ? ["companyProfit"] : []),
   "amount",
   ...(props.isAdmin ? ["cancelledBy"] : []),
   "buttonActions",
@@ -172,6 +174,7 @@ const tableData = computed(() => props.records.map((record) => ({
     photoUrl: record.driver?.profile_photo_url || "",
   },
   responsible: record.responsible,
+  ...(props.isAdmin ? { companyProfit: Number(record.company_profit || 0) } : {}),
   amount: Number(record.amount || 0),
   cancelledBy: record.cancelled_by_role
     ? `${record.cancelled_by_role}: ${record.cancelled_by_name}`
@@ -279,11 +282,6 @@ const clearFilters = () => {
   filters.responsible = "";
   filters.driverId = null;
   applyOtherFilters();
-};
-const clearDateFilters = () => {
-  dateFilters.startDate = "";
-  dateFilters.endDate = "";
-  applyDateFilters();
 };
 const startEdit = (record) => {
   if (!canEditTrip(record)) {
@@ -447,6 +445,7 @@ const tableColumnRenderers = {
     return `<span class="inline-flex items-center gap-2 whitespace-nowrap">${photo}<span>${name}</span></span>`;
   },
   amount: (value, type) => (type === "display" ? money(value) : Number(value || 0)),
+  companyProfit: (value, type) => (type === "display" ? money(value) : Number(value || 0)),
 };
 const date = (value) => {
   const datePart = String(value || "").slice(0, 10);
@@ -486,10 +485,9 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 py-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-3" @submit.prevent="applyDateFilters">
+      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 py-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-2" @submit.prevent="applyDateFilters">
         <label class="filter-label">Data inicial<TextInput v-model="dateFilters.startDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /></label>
         <label class="filter-label">Data final<TextInput v-model="dateFilters.endDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /><InputError :message="dateFilters.errors.endDate || dateFilters.errors.startDate" /></label>
-        <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearDateFilters">Limpar período</button>
       </form>
 
       <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-7" @submit.prevent="applyOtherFilters">
@@ -502,10 +500,11 @@ onBeforeUnmount(() => {
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 
-      <section class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:grid-cols-3 sm:gap-4 sm:py-4">
+      <section class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:gap-4 sm:py-4" :class="props.isAdmin ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'">
         <div class="rounded-md border-l-4 border-teal-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Registros no período</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ props.summary.count }}</p></div>
         <div class="rounded-md border-l-4 border-amber-500 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor total</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.amount) }}</p></div>
         <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor pago</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.receivable) }}</p></div>
+        <div v-if="props.isAdmin" class="rounded-md border-l-4 border-emerald-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Lucro total da empresa</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.companyProfit) }}</p></div>
       </section>
 
       <section class="col-span-12 lg:hidden" aria-label="Deslocamentos">
@@ -599,6 +598,10 @@ onBeforeUnmount(() => {
                 <div>
                   <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valor</p>
                   <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{ money(record.amount) }}</p>
+                </div>
+                <div v-if="props.isAdmin" class="col-span-2">
+                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Lucro da empresa</p>
+                  <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{ money(record.company_profit) }}</p>
                 </div>
                 <div v-if="props.isAdmin" class="col-span-2">
                   <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Responsável</p>

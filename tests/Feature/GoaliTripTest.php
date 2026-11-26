@@ -887,6 +887,7 @@ class GoaliTripTest extends TestCase
                 ->where('isAdmin', false)
                 ->where('filters.driverId', '')
                 ->where('summary.count', 2)
+                ->where('summary', fn ($summary) => ! array_key_exists('companyProfit', $summary))
                 ->where('records', fn ($records) => ! array_key_exists('company_profit', $records[0])));
     }
 
@@ -913,6 +914,7 @@ class GoaliTripTest extends TestCase
             'passenger' => 'Corrida atribuída',
             'responsible' => $admin->name,
             'amount' => '75.00',
+            'company_profit' => '25.00',
         ]);
 
         GoaliTrip::create([
@@ -928,6 +930,7 @@ class GoaliTripTest extends TestCase
             'passenger' => 'Corrida sem motorista',
             'responsible' => $admin->name,
             'amount' => '50.00',
+            'company_profit' => '10.00',
         ]);
 
         $this->actingAs($admin)
@@ -936,7 +939,8 @@ class GoaliTripTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('summary.count', 2)
                 ->where('summary.amount', 75)
-                ->where('summary.receivable', 75));
+                ->where('summary.receivable', 75)
+                ->where('summary.companyProfit', 35));
     }
 
     public function test_it_defaults_to_today_and_prioritizes_trips_by_status(): void

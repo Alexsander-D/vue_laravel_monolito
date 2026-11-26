@@ -183,13 +183,19 @@ class GoaliTripController extends Controller
             }
         });
 
+        $summary = [
+            'count' => $records->count(),
+            'amount' => (float) $records->sum(fn (GoaliTrip $record) => $record->driver_id !== null ? (float) $record->amount : 0),
+            'receivable' => (float) $records->sum(fn (GoaliTrip $record) => $record->trip_status === 'Pago' && $record->driver_id !== null ? (float) $record->amount : 0),
+        ];
+
+        if ($isAdmin) {
+            $summary['companyProfit'] = (float) $records->sum(fn (GoaliTrip $record) => (float) ($record->company_profit ?? 0));
+        }
+
         return Inertia::render('Goali/Index', [
             'records' => $records,
-            'summary' => [
-                'count' => $records->count(),
-                'amount' => (float) $records->sum(fn (GoaliTrip $record) => $record->driver_id !== null ? (float) $record->amount : 0),
-                'receivable' => (float) $records->sum(fn (GoaliTrip $record) => $record->trip_status === 'Pago' && $record->driver_id !== null ? (float) $record->amount : 0),
-            ],
+            'summary' => $summary,
             'filters' => $filters,
             'isAdmin' => $this->isAdmin($user),
             'canViewAllTrips' => $this->canViewAllTrips($user),
