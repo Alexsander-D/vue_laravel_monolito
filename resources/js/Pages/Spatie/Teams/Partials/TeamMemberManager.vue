@@ -28,7 +28,6 @@ const props = defineProps({
 });
 
 const page = usePage();
-const currentUserId = computed(() => Number(page.props.auth?.user?.id ?? 0));
 
 const addTeamMemberForm = useForm({
   user_id: "",
@@ -425,11 +424,11 @@ const displayableRole = (role) => {
                 Gerenciar motoristas
               </SecondaryButton>
               <SecondaryButton
-                v-if="manager.role === 'Admin' && manager.id === currentUserId && goaliDrivers.length"
+                v-if="goaliDrivers.length"
                 type="button"
                 @click="manageGoaliDriverAssignments(manager, goaliDrivers.map((driver) => driver.id))"
               >
-                Atribuir todos a mim
+                Atribuir todos a este gestor
               </SecondaryButton>
             </div>
           </div>
