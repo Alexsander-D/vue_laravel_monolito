@@ -147,12 +147,12 @@ class GoaliTripController extends Controller
 
         $summary = [
             'count' => $records->count(),
-            'amount' => (float) $records->sum(fn (GoaliTrip $record) => $record->driver_id !== null ? (float) $record->amount : 0),
-            'receivable' => (float) $records->sum(fn (GoaliTrip $record) => $record->trip_status === 'Pago' && $record->driver_id !== null ? (float) $record->amount : 0),
+            'amount' => (float) $records->sum(fn(GoaliTrip $record) => $record->driver_id !== null ? (float) $record->amount : 0),
+            'receivable' => (float) $records->sum(fn(GoaliTrip $record) => $record->trip_status === 'Pago' && $record->driver_id !== null ? (float) $record->amount : 0),
         ];
 
         if ($isAdmin) {
-            $summary['companyProfit'] = (float) $records->sum(fn (GoaliTrip $record) => (float) ($record->company_profit ?? 0));
+            $summary['companyProfit'] = (float) $records->sum(fn(GoaliTrip $record) => (float) ($record->company_profit ?? 0));
         }
 
         return Inertia::render('Goali/Index', [
@@ -504,7 +504,7 @@ class GoaliTripController extends Controller
         foreach (['status', 'tripStatus', 'solicitation'] as $filterName) {
             if (array_key_exists($filterName, $filters)) {
                 $values = is_array($filters[$filterName]) ? $filters[$filterName] : [$filters[$filterName]];
-                $filters[$filterName] = array_values(array_filter($values, fn ($value) => $value !== ''));
+                $filters[$filterName] = array_values(array_filter($values, fn($value) => $value !== ''));
             }
         }
 
@@ -526,8 +526,8 @@ class GoaliTripController extends Controller
         $sortOrder = $filters['sortOrder'] ?? 'desc';
 
         return $this->queryForUser($user)
-            ->when($filters['startDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '>=', $date))
-            ->when($filters['endDate'] ?? null, fn ($query, $date) => $query->whereDate('travel_date', '<=', $date))
+            ->when($filters['startDate'] ?? null, fn($query, $date) => $query->whereDate('travel_date', '>=', $date))
+            ->when($filters['endDate'] ?? null, fn($query, $date) => $query->whereDate('travel_date', '<=', $date))
             ->with('driver:id,name,profile_photo_path')
             ->orderByRaw("CASE trip_status WHEN 'Criada' THEN 0 WHEN 'Em Andamento' THEN 1 WHEN 'Aguardando Aprovação' THEN 2 WHEN 'Pago' THEN 3 ELSE 4 END")
             ->orderBy('travel_date', $sortOrder)
@@ -538,9 +538,9 @@ class GoaliTripController extends Controller
 
     private function filterRecords(Collection $records, array $filters, User $user): Collection
     {
-        $statuses = array_values(array_filter((array) ($filters['status'] ?? []), fn ($value) => $value !== ''));
-        $tripStatuses = array_values(array_filter((array) ($filters['tripStatus'] ?? []), fn ($value) => $value !== ''));
-        $solicitations = array_values(array_filter((array) ($filters['solicitation'] ?? []), fn ($value) => $value !== ''));
+        $statuses = array_values(array_filter((array) ($filters['status'] ?? []), fn($value) => $value !== ''));
+        $tripStatuses = array_values(array_filter((array) ($filters['tripStatus'] ?? []), fn($value) => $value !== ''));
+        $solicitations = array_values(array_filter((array) ($filters['solicitation'] ?? []), fn($value) => $value !== ''));
         $driverId = $filters['driverId'] ?? '';
         $driverRole = $filters['driverRole'] ?? '';
         $responsibleRole = $filters['responsibleRole'] ?? '';
@@ -556,11 +556,11 @@ class GoaliTripController extends Controller
                 ->get(['team_user.user_id', 'team_user.role', 'users.name']);
 
             $driverRoles = $members
-                ->mapWithKeys(fn ($member) => [(int) $member->user_id => $member->role])
+                ->mapWithKeys(fn($member) => [(int) $member->user_id => $member->role])
                 ->all();
             $responsibleNamesByRole = $members
                 ->groupBy('role')
-                ->map(fn ($roleMembers) => $roleMembers->pluck('name')->all())
+                ->map(fn($roleMembers) => $roleMembers->pluck('name')->all())
                 ->all();
         }
 
@@ -613,7 +613,7 @@ class GoaliTripController extends Controller
     private function passengerOptionsForRecords(Collection $records): array
     {
         return $records
-            ->flatMap(fn (GoaliTrip $record) => $this->passengerLines($record))
+            ->flatMap(fn(GoaliTrip $record) => $this->passengerLines($record))
             ->unique()
             ->sort()
             ->values()
@@ -623,7 +623,7 @@ class GoaliTripController extends Controller
     private function passengerLines(GoaliTrip $record): array
     {
         return collect(preg_split('/\R/u', (string) $record->passenger))
-            ->map(fn (string $passenger) => trim($passenger))
+            ->map(fn(string $passenger) => trim($passenger))
             ->filter()
             ->unique()
             ->values()
@@ -636,9 +636,15 @@ class GoaliTripController extends Controller
 
         if ($this->isGoaliScopedManager($user) && ! $this->isAdmin($user)) {
             $assignedDriverIds = $this->assignedDriverIdsForCurrentTeam($user);
-            $query->where(function ($query) use ($user, $assignedDriverIds) {
-                $query->where('responsible', $user->name);
 
+            $query->where(function ($query) use ($user, $assignedDriverIds) {
+                // Corridas em que é o responsável.
+                $query->where('responsible', $user->name)
+
+                    // Corridas em que ele próprio é o motorista.
+                    ->orWhere('driver_id', $user->id);
+
+                // Corridas dos motoristas vinculados ao administrativo.
                 if ($assignedDriverIds) {
                     $query->orWhereIn('driver_id', $assignedDriverIds);
                 }
@@ -707,17 +713,17 @@ class GoaliTripController extends Controller
             'company_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('goali_companies', 'id')->where(fn ($query) => $query->where('team_id', $user->current_team_id)),
+                Rule::exists('goali_companies', 'id')->where(fn($query) => $query->where('team_id', $user->current_team_id)),
             ],
             'passenger_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('goali_passengers', 'id')->where(fn ($query) => $query->where('team_id', $user->current_team_id)),
+                Rule::exists('goali_passengers', 'id')->where(fn($query) => $query->where('team_id', $user->current_team_id)),
             ],
             'passenger_ids' => ['nullable', 'array'],
             'passenger_ids.*' => [
                 'integer',
-                Rule::exists('goali_passengers', 'id')->where(fn ($query) => $query->where('team_id', $user->current_team_id)),
+                Rule::exists('goali_passengers', 'id')->where(fn($query) => $query->where('team_id', $user->current_team_id)),
             ],
             'trip_code' => ['nullable', 'string', 'max:255'],
             'origin' => ['required', 'string', 'max:255'],
@@ -740,8 +746,7 @@ class GoaliTripController extends Controller
         User $user,
         bool $disallowPastDate = false,
         bool $includeCompanyProfit = false
-    ): array
-    {
+    ): array {
         if ($request->exists('travel_datetime')) {
             $request->validate([
                 'travel_datetime' => ['required', 'date_format:Y-m-d\TH:i'],
@@ -778,7 +783,7 @@ class GoaliTripController extends Controller
         return $team->users()
             ->get(['users.id', 'users.name'])
             ->sortBy('name')
-            ->map(fn (User $driver) => ['id' => $driver->id, 'name' => $driver->name])
+            ->map(fn(User $driver) => ['id' => $driver->id, 'name' => $driver->name])
             ->values()
             ->all();
     }
@@ -795,7 +800,7 @@ class GoaliTripController extends Controller
                     ->where('team_id', $user->current_team_id)
                     ->pluck('name')
             )
-            ->filter(fn (string $solicitation) => trim($solicitation) !== '')
+            ->filter(fn(string $solicitation) => trim($solicitation) !== '')
             ->unique()
             ->sort()
             ->values()
@@ -829,7 +834,7 @@ class GoaliTripController extends Controller
 
         return array_values(array_filter(
             $drivers,
-            fn ($driver) => in_array((int) $driver['id'], $assignedDriverIds, true),
+            fn($driver) => in_array((int) $driver['id'], $assignedDriverIds, true),
         ));
     }
 
@@ -848,7 +853,7 @@ class GoaliTripController extends Controller
 
         return array_values(array_filter(
             $drivers,
-            fn ($driver) => isset($allowedDriverIds[(int) $driver['id']]),
+            fn($driver) => isset($allowedDriverIds[(int) $driver['id']]),
         ));
     }
 
@@ -877,7 +882,7 @@ class GoaliTripController extends Controller
             ->where('goali_driver_assignments.manager_id', $user->id)
             ->where('team_user.role', 'Motorista')
             ->pluck('goali_driver_assignments.driver_id')
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->all();
     }
 
@@ -915,8 +920,8 @@ class GoaliTripController extends Controller
                 ->whereIn('id', $validated['passenger_ids'])
                 ->get(['id', 'company_id', 'name']);
             abort_unless($passengers->count() === count(array_unique($validated['passenger_ids'])), 422);
-            abort_unless($passengers->every(fn (GoaliPassenger $passenger) => empty($validated['company_id']) || (int) $passenger->company_id === (int) $validated['company_id']), 422);
-            $validated['passenger'] = $passengers->sortBy(fn (GoaliPassenger $passenger) => array_search($passenger->id, $validated['passenger_ids'], true))->pluck('name')->implode("\n");
+            abort_unless($passengers->every(fn(GoaliPassenger $passenger) => empty($validated['company_id']) || (int) $passenger->company_id === (int) $validated['company_id']), 422);
+            $validated['passenger'] = $passengers->sortBy(fn(GoaliPassenger $passenger) => array_search($passenger->id, $validated['passenger_ids'], true))->pluck('name')->implode("\n");
             $validated['passenger_id'] = $validated['passenger_ids'][0];
         } elseif (! empty($validated['passenger_id'])) {
             $passenger = GoaliPassenger::query()

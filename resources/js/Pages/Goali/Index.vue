@@ -344,27 +344,46 @@ const advanceTripStatus = async (record) => {
     router.put(route("goali.update", record.id), { trip_status: nextStatus }, { preserveScroll: true });
   }
 };
+
 const saveEdit = () => {
+  // Administrativo altera somente o status.
   if (props.isAdministrative && !props.isAdmin) {
     if (!editForm.trip_status) {
       editForm.setError("trip_status", "Selecione o próximo status.");
       return;
     }
 
-    router.put(route("goali.update", editingId.value), { trip_status: editForm.trip_status }, {
-      preserveScroll: true,
-      onSuccess: () => { editingId.value = null; },
-      onError: (errors) => editForm.setError(errors),
-    });
+    router.put(
+      route("goali.update", editingId.value),
+      { trip_status: editForm.trip_status },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          editingId.value = null;
+        },
+        onError: (errors) => {
+          editForm.setError(errors);
+        },
+      }
+    );
+
     return;
   }
 
+  // Administrador utiliza a edição completa.
   if (props.isAdmin && !editForm.solicitation) {
     editForm.setError("solicitation", "Selecione uma empresa.");
     return;
   }
-  editForm.put(route("goali.update", editingId.value), { preserveScroll: true, onSuccess: () => { editingId.value = null; } });
+
+  editForm.put(route("goali.update", editingId.value), {
+    preserveScroll: true,
+    onSuccess: () => {
+      editingId.value = null;
+    },
+  });
 };
+
 const markTripCancelled = async (record) => {
   if (!props.isAdmin || record.trip_status === "Cancelada") {
     return;
@@ -605,7 +624,7 @@ onBeforeUnmount(() => {
                   <div class="flex flex-wrap gap-1.5">
                     <span
                       class="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 dark:bg-teal-900/40 dark:text-teal-200">{{
-                      record.status }}</span>
+                        record.status }}</span>
                     <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="{
                       'bg-red-700 text-white dark:bg-red-600': record.trip_status === 'Cancelada',
                       'bg-orange-700 text-white dark:bg-orange-600': !record.driver_id && record.trip_status !== 'Cancelada',
@@ -807,10 +826,10 @@ onBeforeUnmount(() => {
               @click="editingId = null">Cancelar</button><button type="submit"
               class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white"
               :disabled="editForm.processing">{{ editForm.processing
-  ? "Salvando..."
-  : props.isAdmin
-    ? "Salvar alterações"
-    : "Atualizar status" }}</button></div>
+                ? "Salvando..."
+                : props.isAdmin
+                  ? "Salvar alterações"
+              : "Atualizar status" }}</button></div>
         </form>
       </div>
     </main>
