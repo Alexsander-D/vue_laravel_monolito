@@ -696,8 +696,9 @@ onBeforeUnmount(() => {
 
             <p v-else
               class="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              {{ mobileSearch ? "Nenhum deslocamento encontrado para essa busca." : "Nenhum deslocamento encontrado para
-              os filtros selecionados." }}
+              {{ mobileSearch
+                ? "Nenhum deslocamento encontrado para essa busca."
+                : "Nenhum deslocamento encontrado para os filtros selecionados." }}
             </p>
 
             <div v-if="mobileFilteredRecords.length"
@@ -805,8 +806,11 @@ onBeforeUnmount(() => {
               class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-800"
               @click="editingId = null">Cancelar</button><button type="submit"
               class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white"
-              :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : props.isAdmin ? "Salvar
-              alterações" : "Atualizar status" }}</button></div>
+              :disabled="editForm.processing">{{ editForm.processing
+  ? "Salvando..."
+  : props.isAdmin
+    ? "Salvar alterações"
+    : "Atualizar status" }}</button></div>
         </form>
       </div>
     </main>
