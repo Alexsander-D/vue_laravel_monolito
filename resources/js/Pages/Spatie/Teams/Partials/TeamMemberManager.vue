@@ -126,9 +126,9 @@ const removeTeamMember = () => {
   );
 };
 
-const manageGoaliDriverAssignments = (manager, driverIds = manager.driverIds) => {
+const manageGoaliDriverAssignments = (manager) => {
   driverAssignmentManager.value = manager;
-  driverAssignmentForm.defaults({ driver_ids: [...driverIds] });
+  driverAssignmentForm.defaults({ driver_ids: [...manager.driverIds] });
   driverAssignmentForm.reset();
   driverAssignmentForm.clearErrors();
 };
@@ -145,6 +145,11 @@ const saveGoaliDriverAssignments = () => {
       onSuccess: () => { driverAssignmentManager.value = null; },
     }
   );
+};
+
+const assignAllGoaliDrivers = () => {
+  driverAssignmentForm.driver_ids = props.goaliDrivers.map((driver) => driver.id);
+  saveGoaliDriverAssignments();
 };
 
 const displayableRole = (role) => {
@@ -423,13 +428,6 @@ const displayableRole = (role) => {
               <SecondaryButton type="button" @click="manageGoaliDriverAssignments(manager)">
                 Gerenciar motoristas
               </SecondaryButton>
-              <SecondaryButton
-                v-if="goaliDrivers.length"
-                type="button"
-                @click="manageGoaliDriverAssignments(manager, goaliDrivers.map((driver) => driver.id))"
-              >
-                Atribuir todos a este gestor
-              </SecondaryButton>
             </div>
           </div>
           <p v-else class="text-sm text-gray-500 dark:text-gray-400">
@@ -467,6 +465,15 @@ const displayableRole = (role) => {
       </template>
       <template #footer>
         <SecondaryButton type="button" @click="driverAssignmentManager = null">Cancelar</SecondaryButton>
+        <SecondaryButton
+          v-if="goaliDrivers.length"
+          class="ms-3"
+          :class="{ 'opacity-25': driverAssignmentForm.processing }"
+          :disabled="driverAssignmentForm.processing"
+          @click="assignAllGoaliDrivers"
+        >
+          Atribuir todos
+        </SecondaryButton>
         <PrimaryButton
           class="ms-3"
           :class="{ 'opacity-25': driverAssignmentForm.processing }"
