@@ -147,9 +147,15 @@ const saveGoaliDriverAssignments = () => {
   );
 };
 
-const assignAllGoaliDrivers = () => {
-  driverAssignmentForm.driver_ids = props.goaliDrivers.map((driver) => driver.id);
-  saveGoaliDriverAssignments();
+const allGoaliDriversSelected = computed(() =>
+  props.goaliDrivers.length > 0
+  && props.goaliDrivers.every((driver) => driverAssignmentForm.driver_ids.includes(driver.id))
+);
+
+const toggleAllGoaliDrivers = () => {
+  driverAssignmentForm.driver_ids = allGoaliDriversSelected.value
+    ? []
+    : props.goaliDrivers.map((driver) => driver.id);
 };
 
 const displayableRole = (role) => {
@@ -470,9 +476,9 @@ const displayableRole = (role) => {
           class="ms-3"
           :class="{ 'opacity-25': driverAssignmentForm.processing }"
           :disabled="driverAssignmentForm.processing"
-          @click="assignAllGoaliDrivers"
+          @click="toggleAllGoaliDrivers"
         >
-          Atribuir todos
+          {{ allGoaliDriversSelected ? "Desmarcar todos" : "Atribuir todos" }}
         </SecondaryButton>
         <PrimaryButton
           class="ms-3"
