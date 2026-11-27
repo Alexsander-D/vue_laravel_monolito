@@ -45,10 +45,10 @@ class GoaliTripController extends Controller
                 ? 'Em Andamento'
                 : 'Criada',
             'currentUserId' => $user?->id,
-            'drivers' => $user ? $this->driversForCurrentTeam($user) : [],
+            'drivers' => $user ? $this->tripDriverOptionsForCurrentUser($user) : [],
             'companies' => $user ? $this->companiesForCurrentTeam($user) : [],
             'passengers' => $user ? $this->passengersForCurrentTeam($user) : [],
-            'initialDriverId' => $user && collect($this->driversForCurrentTeam($user))->contains('id', $user->id)
+            'initialDriverId' => $user && collect($this->tripDriverOptionsForCurrentUser($user))->contains('id', $user->id)
                 ? $user->id
                 : null,
             'isDriver' => $user ? $this->isDriver($user) : false,
@@ -698,7 +698,7 @@ class GoaliTripController extends Controller
                 'required_if:trip_status,Pago',
                 'integer',
                 Rule::in($this->isAdmin($user) || $this->canCreateForDrivers($user)
-                    ? array_column($this->driversForCurrentTeam($user), 'id')
+                    ? array_column($this->tripDriverOptionsForCurrentUser($user), 'id')
                     : [$user->id]),
             ],
             'solicitation' => ['required', 'string', 'max:150'],
@@ -891,6 +891,25 @@ class GoaliTripController extends Controller
         return array_values(array_filter(
             $drivers,
             fn ($driver) => in_array((int) $driver['id'], $assignedDriverIds, true),
+        ));
+    }
+
+    private function tripDriverOptionsForCurrentUser(User $user): array
+    {
+        $drivers = $this->driversForCurrentTeam($user);
+
+        if (! $this->isGoaliScopedManager($user)) {
+            return $drivers;
+        }
+
+        $allowedDriverIds = array_fill_keys([
+            (int) $user->id,
+            ...$this->assignedDriverIdsForCurrentTeam($user),
+        ], true);
+
+        return array_values(array_filter(
+            $drivers,
+            fn ($driver) => isset($allowedDriverIds[(int) $driver['id']]),
         ));
     }
 

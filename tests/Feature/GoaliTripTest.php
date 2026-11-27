@@ -57,7 +57,7 @@ class GoaliTripTest extends TestCase
                 ->where('isAdministrative', true)
                 ->where('canAssignDrivers', true)
                 ->where('drivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
-                    === collect([$administrativo->id, $driver->id, $otherAdmin->id])->sort()->values()->all()));
+                    === collect([$administrativo->id, $driver->id])->sort()->values()->all()));
 
         $payload = [
             'travel_start_date' => now()->addDay()->toDateString(),
@@ -82,6 +82,11 @@ class GoaliTripTest extends TestCase
             'trip_status' => 'Criada',
             'observation' => 'Observação de teste',
         ]);
+
+        $this->from(route('goali.form'))
+            ->post(route('goali.store'), [...$payload, 'origin' => 'Origem sem vinculo', 'driver_id' => $otherAdmin->id])
+            ->assertRedirect(route('goali.form'))
+            ->assertSessionHasErrors('driver_id');
 
         $this->from(route('goali.form'))
             ->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])
@@ -959,6 +964,14 @@ class GoaliTripTest extends TestCase
                 ->where('records', fn ($records) => collect($records)->pluck('id')->sort()->values()->all()
                     === collect([$assignedTrip->id, $administrativoResponsibleTrip->id])->sort()->values()->all())
                 ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->all() === [$assignedDriver->id]));
+
+        $this->flushSession();
+        $this->actingAs($administrativo)
+            ->get(route('goali.form'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('drivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
+                    === collect([$administrativo->id, $assignedDriver->id])->sort()->values()->all()));
 
         $this->flushSession();
         $this->actingAs($admin)
