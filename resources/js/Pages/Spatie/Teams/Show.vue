@@ -11,6 +11,9 @@ const props = defineProps({
   availableRoles: Array,
   permissions: Object,
   unassignedUsers: Array,
+  canManageGoaliDriverAssignments: Boolean,
+  goaliDriverManagers: Array,
+  goaliDrivers: Array,
 });
 </script>
 
@@ -27,6 +30,9 @@ const props = defineProps({
           :available-roles="availableRoles"
           :user-permissions="permissions"
           :unassigned-users="unassignedUsers"
+          :can-manage-goali-driver-assignments="canManageGoaliDriverAssignments"
+          :goali-driver-managers="goaliDriverManagers"
+          :goali-drivers="goaliDrivers"
         />
 
         <SectionBorder />

@@ -63,6 +63,7 @@ Route::group(['middleware' => config('jetstream.middleware', ['web'])], function
                 Route::put('/current-team', [CurrentTeamController::class, 'update'])->name('current-team.update');
                 Route::post('/teams/{team}/members', [TeamMemberController::class, 'store'])->name('team-members.store');
                 Route::put('/teams/{team}/members/{user}', [TeamMemberController::class, 'update'])->name('team-members.update');
+                Route::put('/teams/{team}/members/{user}/goali-drivers', [TeamMemberController::class, 'updateGoaliDriverAssignments'])->name('team-members.goali-drivers.update');
                 Route::delete('/teams/{team}/members/{user}', [TeamMemberController::class, 'destroy'])->name('team-members.destroy');
 
                 Route::get('/team-invitations/{invitation}', [TeamInvitationController::class, 'accept'])

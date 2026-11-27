@@ -22,6 +22,9 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  canManageGoaliDriverAssignments: { type: Boolean, default: false },
+  goaliDriverManagers: { type: Array, default: () => [] },
+  goaliDrivers: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -51,11 +54,13 @@ const updateRoleForm = useForm({
 
 const leaveTeamForm = useForm({});
 const removeTeamMemberForm = useForm({});
+const driverAssignmentForm = useForm({ driver_ids: [] });
 
 const currentlyManagingRole = ref(false);
 const managingRoleFor = ref(null);
 const confirmingLeavingTeam = ref(false);
 const teamMemberBeingRemoved = ref(null);
+const driverAssignmentManager = ref(null);
 
 const addTeamMember = () => {
   if (!addTeamMemberForm.role) {
@@ -117,6 +122,27 @@ const removeTeamMember = () => {
       preserveScroll: true,
       preserveState: true,
       onSuccess: () => (teamMemberBeingRemoved.value = null),
+    }
+  );
+};
+
+const manageGoaliDriverAssignments = (manager) => {
+  driverAssignmentManager.value = manager;
+  driverAssignmentForm.defaults({ driver_ids: [...manager.driverIds] });
+  driverAssignmentForm.reset();
+  driverAssignmentForm.clearErrors();
+};
+
+const saveGoaliDriverAssignments = () => {
+  if (!driverAssignmentManager.value) {
+    return;
+  }
+
+  driverAssignmentForm.put(
+    route('team-members.goali-drivers.update', [props.team.id, driverAssignmentManager.value.id]),
+    {
+      preserveScroll: true,
+      onSuccess: () => { driverAssignmentManager.value = null; },
     }
   );
 };
@@ -373,6 +399,77 @@ const displayableRole = (role) => {
         </template>
       </ActionSection>
     </div>
+
+    <div v-if="canManageGoaliDriverAssignments" class="mt-10">
+      <SectionBorder />
+      <ActionSection>
+        <template #title>Motoristas vinculados aos gestores</template>
+        <template #description>
+          Defina quais motoristas cada Admin ou Administrativo pode consultar no relatorio. Corridas em que a pessoa for responsavel tambem permanecem visiveis.
+        </template>
+        <template #content>
+          <div v-if="goaliDriverManagers.length" class="space-y-4">
+            <div
+              v-for="manager in goaliDriverManagers"
+              :key="manager.id"
+              class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+            >
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white">{{ manager.name }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {{ manager.role }} - {{ manager.driverIds.length }} motorista(s) vinculado(s)
+                </p>
+              </div>
+              <SecondaryButton type="button" @click="manageGoaliDriverAssignments(manager)">
+                Gerenciar motoristas
+              </SecondaryButton>
+            </div>
+          </div>
+          <p v-else class="text-sm text-gray-500 dark:text-gray-400">
+            Nao ha Admin ou Administrativo nesta equipe.
+          </p>
+        </template>
+      </ActionSection>
+    </div>
+
+    <DialogModal :show="Boolean(driverAssignmentManager)" @close="driverAssignmentManager = null">
+      <template #title>Vincular motoristas</template>
+      <template #content>
+        <p v-if="driverAssignmentManager" class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+          Selecione os motoristas atribuidos a {{ driverAssignmentManager.name }}.
+        </p>
+        <div v-if="goaliDrivers.length" class="max-h-80 space-y-3 overflow-y-auto">
+          <label
+            v-for="driver in goaliDrivers"
+            :key="driver.id"
+            class="flex cursor-pointer items-center gap-3 rounded-md border border-gray-200 p-3 dark:border-gray-700"
+          >
+            <input
+              v-model="driverAssignmentForm.driver_ids"
+              type="checkbox"
+              :value="driver.id"
+              class="rounded border-gray-300 text-cyan-700 shadow-sm focus:ring-cyan-700 dark:border-gray-600 dark:bg-gray-800"
+            />
+            <span class="text-sm text-gray-800 dark:text-gray-200">{{ driver.name }}</span>
+          </label>
+        </div>
+        <p v-else class="text-sm text-gray-500 dark:text-gray-400">
+          Nao ha motoristas na equipe Goali.
+        </p>
+        <InputError :message="driverAssignmentForm.errors.driver_ids" class="mt-3" />
+      </template>
+      <template #footer>
+        <SecondaryButton type="button" @click="driverAssignmentManager = null">Cancelar</SecondaryButton>
+        <PrimaryButton
+          class="ms-3"
+          :class="{ 'opacity-25': driverAssignmentForm.processing }"
+          :disabled="driverAssignmentForm.processing"
+          @click="saveGoaliDriverAssignments"
+        >
+          Salvar vinculos
+        </PrimaryButton>
+      </template>
+    </DialogModal>
 
     <!-- Role Management Modal -->
     <DialogModal :show="currentlyManagingRole" @close="currentlyManagingRole = false">

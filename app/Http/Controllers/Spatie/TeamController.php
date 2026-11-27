@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Spatie;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Jetstream\Actions\ValidateTeamDeletion;
 use Laravel\Jetstream\Contracts\CreatesTeams;
@@ -28,6 +29,39 @@ class TeamController extends Controller
         $team = Jetstream::newTeamModel()->findOrFail($teamId);
 
         Gate::authorize('view', $team);
+        $team->load('owner', 'users', 'teamInvitations');
+
+        $isGoaliTeam = strcasecmp(trim($team->name), 'GOALI TRANSPORTES') === 0;
+        $viewer = $team->users->firstWhere('id', $request->user()->id);
+        $canManageGoaliDriverAssignments = $isGoaliTeam
+            && (int) $request->user()->current_team_id === (int) $team->id
+            && $viewer?->pivot?->role === 'Admin';
+        $goaliDrivers = $canManageGoaliDriverAssignments
+            ? $team->users
+                ->filter(fn ($member) => $member->pivot->role === 'Motorista')
+                ->map(fn ($driver) => ['id' => (int) $driver->id, 'name' => $driver->name])
+                ->values()
+                ->all()
+            : [];
+        $assignedDriverIdsByManager = $canManageGoaliDriverAssignments
+            ? DB::table('goali_driver_assignments')
+                ->where('team_id', $team->id)
+                ->get(['manager_id', 'driver_id'])
+                ->groupBy('manager_id')
+                ->map(fn ($assignments) => $assignments->pluck('driver_id')->map(fn ($id) => (int) $id)->all())
+            : collect();
+        $goaliDriverManagers = $canManageGoaliDriverAssignments
+            ? $team->users
+                ->filter(fn ($member) => in_array($member->pivot->role, ['Admin', 'Administrativo'], true))
+                ->map(fn ($manager) => [
+                    'id' => (int) $manager->id,
+                    'name' => $manager->name,
+                    'role' => $manager->pivot->role,
+                    'driverIds' => $assignedDriverIdsByManager->get($manager->id, []),
+                ])
+                ->values()
+                ->all()
+            : [];
 
         $unassignedTeam = Team::whereName('EQUIPE NÃO ATRIBUÍDA')->first();
         $unassignedUsers = $unassignedTeam && $unassignedTeam->id !== $team->id
@@ -37,7 +71,10 @@ class TeamController extends Controller
             : collect();
 
         return Jetstream::inertia()->render($request, 'Spatie/Teams/Show', [
-            'team' => $team->load('owner', 'users', 'teamInvitations'),
+            'team' => $team,
+            'canManageGoaliDriverAssignments' => $canManageGoaliDriverAssignments,
+            'goaliDriverManagers' => $goaliDriverManagers,
+            'goaliDrivers' => $goaliDrivers,
             'unassignedUsers' => $unassignedUsers,
             'availableRoles' => array_values(Jetstream::$roles),
             'availablePermissions' => Jetstream::$permissions,

@@ -210,8 +210,8 @@ class GoaliTripController extends Controller
                 ? $periodRecords->pluck('responsible')->filter()->unique()->sort()->values()->all()
                 : [],
             'tripStatuses' => self::TRIP_STATUSES,
-            'drivers' => $this->driversForCurrentTeam($user),
-            'filterDrivers' => $this->driversForCurrentTeam($user),
+            'drivers' => $this->filterDriversForCurrentUser($user),
+            'filterDrivers' => $this->filterDriversForCurrentUser($user),
         ]);
     }
 
@@ -632,7 +632,16 @@ class GoaliTripController extends Controller
     {
         $query = GoaliTrip::query();
 
-        if (! $this->canViewAllTrips($user)) {
+        if ($this->isGoaliScopedManager($user)) {
+            $assignedDriverIds = $this->assignedDriverIdsForCurrentTeam($user);
+            $query->where(function ($query) use ($user, $assignedDriverIds) {
+                $query->where('responsible', $user->name);
+
+                if ($assignedDriverIds) {
+                    $query->orWhereIn('driver_id', $assignedDriverIds);
+                }
+            });
+        } elseif (! $this->canViewAllTrips($user)) {
             $query->where(function ($query) use ($user) {
                 if ($this->isDriver($user)) {
                     $query->where('driver_id', $user->id)
@@ -862,7 +871,56 @@ class GoaliTripController extends Controller
             return [];
         }
 
+        if ($this->isGoaliScopedManager($user)) {
+            return $this->assignedDriverIdsForCurrentTeam($user);
+        }
+
         return $team->users()->pluck('users.id')->all();
+    }
+
+    private function filterDriversForCurrentUser(User $user): array
+    {
+        $drivers = $this->driversForCurrentTeam($user);
+
+        if (! $this->isGoaliScopedManager($user)) {
+            return $drivers;
+        }
+
+        $assignedDriverIds = $this->assignedDriverIdsForCurrentTeam($user);
+
+        return array_values(array_filter(
+            $drivers,
+            fn ($driver) => in_array((int) $driver['id'], $assignedDriverIds, true),
+        ));
+    }
+
+    private function isGoaliScopedManager(User $user): bool
+    {
+        $team = $user->currentTeam;
+        $role = strtolower(trim((string) $user->getRoleByUser()));
+
+        return $team
+            && strcasecmp(trim($team->name), 'GOALI TRANSPORTES') === 0
+            && in_array($role, ['admin', 'administrativo'], true);
+    }
+
+    private function assignedDriverIdsForCurrentTeam(User $user): array
+    {
+        if (! $user->current_team_id) {
+            return [];
+        }
+
+        return DB::table('goali_driver_assignments')
+            ->join('team_user', function ($join) {
+                $join->on('team_user.team_id', '=', 'goali_driver_assignments.team_id')
+                    ->on('team_user.user_id', '=', 'goali_driver_assignments.driver_id');
+            })
+            ->where('goali_driver_assignments.team_id', $user->current_team_id)
+            ->where('goali_driver_assignments.manager_id', $user->id)
+            ->where('team_user.role', 'Motorista')
+            ->pluck('goali_driver_assignments.driver_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     private function companiesForCurrentTeam(User $user): array

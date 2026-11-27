@@ -8,7 +8,9 @@ use App\Models\Spatie\User;
 use App\Support\Jetstream;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Laravel\Jetstream\Actions\UpdateTeamMemberRole;
 use Laravel\Jetstream\Contracts\AddsTeamMembers;
 use Laravel\Jetstream\Contracts\InvitesTeamMembers;
@@ -91,7 +93,83 @@ class TeamMemberController extends Controller
 
         $team->users()->updateExistingPivot($userId, ['role' => $role->name]);
 
+        if (strcasecmp(trim($team->name), 'GOALI TRANSPORTES') === 0) {
+            if (! in_array($role->name, ['Admin', 'Administrativo'], true)) {
+                DB::table('goali_driver_assignments')
+                    ->where('team_id', $team->id)
+                    ->where('manager_id', $userId)
+                    ->delete();
+            }
+
+            if ($role->name !== 'Motorista') {
+                DB::table('goali_driver_assignments')
+                    ->where('team_id', $team->id)
+                    ->where('driver_id', $userId)
+                    ->delete();
+            }
+        }
+
         return back(303);
+    }
+
+    public function updateGoaliDriverAssignments(Request $request, $teamId, $userId)
+    {
+        $team = Jetstream::newTeamModel()->findOrFail($teamId);
+        $admin = $request->user();
+
+        abort_unless(
+            (int) $admin->current_team_id === (int) $team->id
+                && strcasecmp(trim($team->name), 'GOALI TRANSPORTES') === 0
+                && $team->users()
+                    ->where('users.id', $admin->id)
+                    ->wherePivot('role', 'Admin')
+                    ->exists(),
+            403
+        );
+
+        $manager = $team->users()->where('users.id', $userId)->firstOrFail();
+        abort_unless(in_array($manager->pivot->role, ['Admin', 'Administrativo'], true), 404);
+
+        $validated = $request->validate([
+            'driver_ids' => ['present', 'array'],
+            'driver_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+        $driverIds = array_map('intval', $validated['driver_ids']);
+        $eligibleDriverIds = $team->users()
+            ->wherePivot('role', 'Motorista')
+            ->whereIn('users.id', $driverIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (count($eligibleDriverIds) !== count($driverIds)) {
+            throw ValidationException::withMessages([
+                'driver_ids' => 'Selecione somente motoristas desta equipe.',
+            ]);
+        }
+
+        DB::transaction(function () use ($team, $manager, $driverIds): void {
+            DB::table('goali_driver_assignments')
+                ->where('team_id', $team->id)
+                ->where('manager_id', $manager->id)
+                ->delete();
+
+            if ($driverIds) {
+                $now = now();
+                DB::table('goali_driver_assignments')->insert(array_map(
+                    fn ($driverId) => [
+                        'team_id' => $team->id,
+                        'manager_id' => $manager->id,
+                        'driver_id' => $driverId,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ],
+                    $driverIds,
+                ));
+            }
+        });
+
+        return back(303)->with('success', 'Motoristas atribuidos com sucesso.');
     }
 
     /**
@@ -106,11 +184,15 @@ class TeamMemberController extends Controller
     {
         $team = Jetstream::newTeamModel()->findOrFail($teamId);
 
-        app(RemovesTeamMembers::class)->remove(
-            $request->user(),
-            $team,
-            $user = Jetstream::findUserByIdOrFail($userId)
-        );
+        $user = Jetstream::findUserByIdOrFail($userId);
+        app(RemovesTeamMembers::class)->remove($request->user(), $team, $user);
+
+        DB::table('goali_driver_assignments')
+            ->where('team_id', $team->id)
+            ->where(fn ($query) => $query
+                ->where('manager_id', $user->id)
+                ->orWhere('driver_id', $user->id))
+            ->delete();
 
         if ($request->user()->id === $user->id) {
             return redirect(config('fortify.home'));

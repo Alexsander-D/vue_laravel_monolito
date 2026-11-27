@@ -17,7 +17,7 @@ class GoaliTripTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_administrativo_can_create_for_self_and_drivers_and_view_all_trips(): void
+    public function test_administrativo_can_create_for_self_and_assigned_drivers_and_view_scoped_trips(): void
     {
         $administrativo = User::create([
             'name' => 'Usuário Administrativo',
@@ -40,7 +40,15 @@ class GoaliTripTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         $otherAdmin->teams()->attach($team->id, ['role' => 'Admin']);
+        $otherAdmin->forceFill(['email_verified_at' => now(), 'current_team_id' => $team->id])->save();
 
+        $this->actingAs($otherAdmin)
+            ->put(route('team-members.goali-drivers.update', [$team->id, $administrativo->id]), [
+                'driver_ids' => [$driver->id],
+            ])
+            ->assertRedirect();
+
+        $this->flushSession();
         $this->actingAs($administrativo)
             ->get(route('goali.form'))
             ->assertOk()
@@ -78,7 +86,7 @@ class GoaliTripTest extends TestCase
         $this->from(route('goali.form'))
             ->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])
             ->assertRedirect(route('goali.form'))
-            ->assertSessionHasErrors('travel_date');
+            ->assertSessionHasErrors('travel_start_date');
 
         $this->post(route('goali.store'), [
             ...$payload,
@@ -127,7 +135,7 @@ class GoaliTripTest extends TestCase
             'responsible' => $responsible,
             'amount' => '10.00',
         ]);
-        $assignedToAdministrative = $createTrip($administrativo->id, $otherAdmin->name);
+        $assignedToAdministrative = $createTrip($driver->id, $otherAdmin->name);
         $responsibleForTrip = $createTrip($otherAdmin->id, $administrativo->name);
         $createTrip($administrativo->id, $otherAdmin->name, 'SAÍDA');
         $tripForAnotherResponsible = $createTrip($otherAdmin->id, $otherAdmin->name);
@@ -147,20 +155,20 @@ class GoaliTripTest extends TestCase
         ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('summary.count', 3)
+                ->where('summary.count', 2)
                 ->where('records', fn ($records) => collect($records)->pluck('id')->sort()->values()->all()
-                    === collect([$assignedToAdministrative->id, $responsibleForTrip->id, $tripForAnotherResponsible->id])->sort()->values()->all()));
+                    === collect([$assignedToAdministrative->id, $responsibleForTrip->id])->sort()->values()->all()));
 
         $this->get(route('goali.index', [
             'startDate' => now()->toDateString(),
             'endDate' => now()->toDateString(),
-            'driverId' => $administrativo->id,
+            'driverId' => $driver->id,
             'status' => 'ENTRADA',
         ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('canViewAllTrips', true)
-                ->where('filters.driverId', (string) $administrativo->id)
+                ->where('filters.driverId', (string) $driver->id)
                 ->where('summary.count', 1)
                 ->where('records.0.id', $assignedToAdministrative->id));
 
@@ -173,7 +181,7 @@ class GoaliTripTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('filters.responsible', $otherAdmin->name)
-                ->where('summary.count', 2)
+                ->where('summary.count', 1)
                 ->where('responsibles', fn ($values) => $values->contains($otherAdmin->name)));
     }
 
@@ -665,7 +673,7 @@ class GoaliTripTest extends TestCase
                 ->where('records.0.id', $matchingTrip->id));
     }
 
-    public function test_driver_filter_options_include_all_team_members_and_passenger_options_use_selected_period(): void
+    public function test_driver_filter_options_include_assigned_drivers_and_passenger_options_use_selected_period(): void
     {
         $admin = User::create([
             'name' => 'Admin Filtros por Período',
@@ -688,6 +696,11 @@ class GoaliTripTest extends TestCase
             'password' => Hash::make('password'),
         ]);
         $driverOutsidePeriod->teams()->attach($team->id, ['role' => 'Motorista']);
+        $this->actingAs($admin)
+            ->put(route('team-members.goali-drivers.update', [$team->id, $admin->id]), [
+                'driver_ids' => [$driverInPeriod->id, $driverOutsidePeriod->id],
+            ])
+            ->assertRedirect();
         GoaliCompany::create([
             'team_id' => $team->id,
             'name' => 'Empresa cadastrada fora do período',
@@ -727,7 +740,7 @@ class GoaliTripTest extends TestCase
                 ])
                 ->where('passengers', ['Ana', 'Bruno', 'Carlos'])
                 ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
-                    === collect([$admin->id, $driverInPeriod->id, $driverOutsidePeriod->id])->sort()->values()->all())
+                    === collect([$driverInPeriod->id, $driverOutsidePeriod->id])->sort()->values()->all())
                 ->where('filters.passenger', 'Ana')
                 ->where('summary.count', 1)
                 ->where('records.0.id', $matchingTrip->id));
@@ -815,6 +828,12 @@ class GoaliTripTest extends TestCase
             'current_team_id' => $team->id,
         ])->save();
 
+        $this->actingAs($admin)
+            ->put(route('team-members.goali-drivers.update', [$team->id, $admin->id]), [
+                'driver_ids' => [$driver->id],
+            ])
+            ->assertRedirect();
+
         $createTrip = fn (?int $driverId, string $passenger) => GoaliTrip::create([
             'user_id' => $admin->id,
             'driver_id' => $driverId,
@@ -842,6 +861,109 @@ class GoaliTripTest extends TestCase
                 ->where('summary.count', 1)
                 ->where('records.0.passenger', 'Corrida do motorista'));
 
+    }
+
+    public function test_goali_managers_only_see_assigned_drivers_or_trips_they_are_responsible_for(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin com motoristas',
+            'email' => 'admin-driver-scope@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+        $team = $this->attachToGoaliTeam($admin, 'Admin');
+
+        $administrativo = User::create([
+            'name' => 'Administrativo com motoristas',
+            'email' => 'administrativo-driver-scope@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $administrativo->forceFill(['email_verified_at' => now(), 'current_team_id' => $team->id])->save();
+        $administrativo->teams()->attach($team->id, ['role' => 'Administrativo']);
+
+        $drivers = collect(['Atribuido', 'Responsavel Admin', 'Responsavel Administrativo'])->map(function ($name) use ($team) {
+            $driver = User::create([
+                'name' => $name,
+                'email' => strtolower(str_replace(' ', '-', $name)) . '@example.com',
+                'password' => Hash::make('password'),
+            ]);
+            $driver->forceFill(['email_verified_at' => now()])->save();
+            $driver->teams()->attach($team->id, ['role' => 'Motorista']);
+
+            return $driver;
+        });
+        [$assignedDriver, $adminResponsibleDriver, $administrativoResponsibleDriver] = $drivers->all();
+
+        foreach ([$admin->id, $administrativo->id] as $managerId) {
+            $this->actingAs($admin)
+                ->put(route('team-members.goali-drivers.update', [$team->id, $managerId]), [
+                    'driver_ids' => [$assignedDriver->id],
+                ])
+                ->assertRedirect();
+        }
+
+        $this->actingAs($admin)
+            ->get(route('teams.show', $team))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('canManageGoaliDriverAssignments', true)
+                ->where('goaliDriverManagers', fn ($managers) => collect($managers)->contains(
+                    fn ($manager) => $manager['id'] === $administrativo->id
+                        && $manager['driverIds'] === [$assignedDriver->id]
+                )));
+
+        $this->flushSession();
+        $this->actingAs($administrativo, 'sanctum')
+            ->put(route('team-members.goali-drivers.update', [$team->id, $administrativo->id]), [
+                'driver_ids' => [],
+            ])
+            ->assertForbidden();
+
+        $createTrip = fn (int $driverId, string $responsible, string $passenger) => GoaliTrip::create([
+            'user_id' => $admin->id,
+            'driver_id' => $driverId,
+            'travel_date' => now()->toDateString(),
+            'travel_time' => '12:00',
+            'status' => 'ENTRADA',
+            'trip_status' => 'Pago',
+            'solicitation' => 'IMB',
+            'origin' => $passenger,
+            'destination' => 'Destino',
+            'passenger' => $passenger,
+            'responsible' => $responsible,
+            'amount' => '10.00',
+        ]);
+        $assignedTrip = $createTrip($assignedDriver->id, 'Outro responsavel', 'Corrida atribuida');
+        $adminResponsibleTrip = $createTrip($adminResponsibleDriver->id, $admin->name, 'Corrida do admin responsavel');
+        $administrativoResponsibleTrip = $createTrip($administrativoResponsibleDriver->id, $administrativo->name, 'Corrida do administrativo responsavel');
+        $hiddenTrip = $createTrip($adminResponsibleDriver->id, 'Responsavel externo', 'Corrida nao atribuida');
+
+        $this->flushSession();
+        $adminIndexResponse = $this->actingAs($admin, 'sanctum')
+            ->get(route('goali.index'));
+        $adminIndexResponse
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.count', 2)
+                ->where('records', fn ($records) => collect($records)->pluck('id')->sort()->values()->all()
+                    === collect([$assignedTrip->id, $adminResponsibleTrip->id])->sort()->values()->all())
+                ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->all() === [$assignedDriver->id]));
+
+        $this->flushSession();
+        $this->actingAs($administrativo)
+            ->get(route('goali.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('isAdministrative', true)
+                ->where('summary.count', 2)
+                ->where('records', fn ($records) => collect($records)->pluck('id')->sort()->values()->all()
+                    === collect([$assignedTrip->id, $administrativoResponsibleTrip->id])->sort()->values()->all())
+                ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->all() === [$assignedDriver->id]));
+
+        $this->flushSession();
+        $this->actingAs($admin)
+            ->put(route('goali.update', $hiddenTrip), ['mark_cancelled' => true])
+            ->assertNotFound();
     }
 
     public function test_non_admin_cannot_apply_the_driver_filter(): void
@@ -887,8 +1009,8 @@ class GoaliTripTest extends TestCase
                 ->where('isAdmin', false)
                 ->where('filters.driverId', '')
                 ->where('summary.count', 2)
-                ->where('summary', fn ($summary) => ! array_key_exists('companyProfit', $summary))
-                ->where('records', fn ($records) => ! array_key_exists('company_profit', $records[0])));
+                ->where('summary', fn ($summary) => ! $summary->has('companyProfit'))
+                ->where('records', fn ($records) => ! collect($records[0])->has('company_profit')));
     }
 
     public function test_trip_value_totals_exclude_unassigned_trips(): void
