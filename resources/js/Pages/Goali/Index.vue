@@ -20,6 +20,7 @@ const props = defineProps({
   filterDrivers: { type: Array, default: () => [] },
   responsibles: { type: Array, default: () => [] },
   tripStatuses: { type: Array, default: () => [] },
+  tripRoles: { type: Array, default: () => [] },
   summary: { type: Object, required: true },
   isDriver: { type: Boolean, default: false },
   isAdministrative: { type: Boolean, default: false },
@@ -47,6 +48,8 @@ const normalizedFilters = (value) => ({
       : [],
   passenger: value.passenger || "",
   responsible: value.responsible || "",
+  driverRole: value.driverRole || "",
+  responsibleRole: value.responsibleRole || "",
   sortOrder: value.sortOrder || "desc",
 });
 const getFilterKey = (value) => JSON.stringify([
@@ -58,6 +61,8 @@ const getFilterKey = (value) => JSON.stringify([
   [...(Array.isArray(value.solicitation) ? value.solicitation : [])].sort(),
   value.passenger || "",
   value.responsible || "",
+  value.driverRole || "",
+  value.responsibleRole || "",
 ]);
 const dateFilters = useForm({
   startDate: props.filters.startDate || "",
@@ -274,24 +279,7 @@ const applyDateFilters = () => {
   applyFilters(appliedDateFilters.value);
 };
 const applyOtherFilters = () => applyFilters();
-const clearFilters = () => {
-  filters.status = [];
-  filters.tripStatus = [];
-  filters.solicitation = [];
-  filters.passenger = "";
-  filters.responsible = "";
-  filters.driverId = null;
-  applyOtherFilters();
-};
-const startEdit = (record) => {
-  if (!canEditTrip(record)) {
-    return;
-  }
-
-  editingId.value = record.id;
-  editForm.defaults({
-    travel_date: record.travel_date,
-    travel_time: String(record.travel_time).slice(0, 5),
+undefinedng(record.travel_time).slice(0, 5),
     status: record.status,
     trip_status: "",
     solicitation: record.solicitation,
@@ -497,6 +485,8 @@ onBeforeUnmount(() => {
         <div v-if="props.passengers.length" class="filter-label"><span>Passageiro</span><Select v-model="filters.passenger" :options="props.passengers" aria-label="Passageiro" placeholder="Todos" @select2-close="applyOtherFilters" /></div>
         <div v-if="props.canViewAllTrips" class="filter-label"><span>Motorista</span><Select v-model="selectedFilterDriver" :options="props.filterDrivers" aria-label="Motorista" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></div>
         <div v-if="props.canViewAllTrips" class="filter-label"><span>Responsável</span><Select v-model="filters.responsible" :options="props.responsibles" aria-label="Responsável" placeholder="Todos" @select2-close="applyOtherFilters" /></div>
+        <div v-if="props.isAdmin && props.tripRoles.length" class="filter-label"><span>Função do motorista</span><Select v-model="filters.driverRole" :options="props.tripRoles" aria-label="Função do motorista" placeholder="Todas" @select2-close="applyOtherFilters" /></div>
+        <div v-if="props.isAdmin && props.tripRoles.length" class="filter-label"><span>Função do responsável</span><Select v-model="filters.responsibleRole" :options="props.tripRoles" aria-label="Função do responsável" placeholder="Todas" @select2-close="applyOtherFilters" /></div>
         <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
       </form>
 

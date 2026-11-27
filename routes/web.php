@@ -128,7 +128,6 @@ Route::middleware([
         })->name('dashboard');
 
         Route::get('/goali/form', [GoaliTripController::class, 'form'])->name('goali.form');
-        Route::post('/goali/check-duplicate', [GoaliTripController::class, 'checkDuplicate'])->name('goali.check-duplicate');
         Route::post('/goali/form', [GoaliTripController::class, 'store'])->name('goali.store');
         Route::get('/goali/records', [GoaliTripController::class, 'index'])->name('goali.index');
         Route::get('/goali/records/export', [GoaliTripController::class, 'export'])->name('goali.export');

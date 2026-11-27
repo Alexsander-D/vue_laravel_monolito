@@ -6,7 +6,6 @@ import TextArea from "@/Components/TextArea.vue";
 import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Radio from "@/Components/Radio.vue";
-import axios from "axios";
 import { Link, useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 
@@ -108,7 +107,7 @@ watch(() => form.passenger_ids, (passengerIds) => {
 const createWithoutDriver = ref(false);
 const previousDriverId = ref(props.initialDriverId);
 const enableTripCode = ref(false);
-const checkingDuplicate = ref(false);
+const submitLocked = ref(false);
 
 const toggleCompanyMode = (event = null) => {
   if (event?.target) {
@@ -147,8 +146,8 @@ const formatAmount = () => {
   }
 };
 
-const submit = async () => {
-  if (form.processing || checkingDuplicate.value) {
+const submit = () => {
+  if (form.processing || submitLocked.value) {
     return;
   }
 
@@ -167,43 +166,7 @@ const submit = async () => {
   }
 
   form.clearErrors();
-  checkingDuplicate.value = true;
-  try {
-    const { data } = await axios.post(route("goali.check-duplicate"), {
-      travel_start_date: form.travel_start_date,
-      travel_end_date: form.travel_end_date,
-      solicitation: form.solicitation,
-      origin: form.origin,
-      destination: form.destination,
-      amount: String(form.amount).replace(",", "."),
-    });
-
-    if (data.duplicate === true) {
-      form.setError("travel_start_date", "Já existe uma corrida com a mesma data, solicitação, origem, destino e valor.");
-      return;
-    }
-
-    if (data.duplicate !== false) {
-      form.setError("travel_start_date", "Não foi possível confirmar se esta corrida já existe. Tente novamente.");
-      return;
-    }
-  } catch (error) {
-    const validationErrors = error.response?.data?.errors;
-    const errorField = validationErrors
-      ? Object.keys(validationErrors).find((field) => field in form)
-      : null;
-    const message = errorField
-      ? validationErrors[errorField][0]
-      : error.response?.data?.message;
-    form.setError(
-      errorField || "travel_start_date",
-      message || "Não foi possível verificar duplicidade. Tente novamente."
-    );
-    return;
-  } finally {
-    checkingDuplicate.value = false;
-  }
-
+  submitLocked.value = true;
   form.post(route("goali.store"), {
     preserveScroll: true,
     onSuccess: () => {
@@ -229,6 +192,9 @@ const submit = async () => {
       form.travel_start_date = dateTime.date;
       form.travel_end_date = dateTime.date;
       form.travel_time = dateTime.time;
+    },
+    onFinish: () => {
+      submitLocked.value = false;
     },
   });
 };
@@ -285,7 +251,6 @@ const submit = async () => {
                   <span>*</span></label>
                 <TextInput id="travel_start_date" v-model="form.travel_start_date" type="date" class="mt-1 block w-full"
                   :min="earliestTravelDate()" required />
-                <InputError :message="form.errors.travel_start_date" class="mt-2" />
                 <InputError :message="form.errors.travel_start_date" class="mt-2" />
               </div>
               <div>
@@ -433,8 +398,8 @@ const submit = async () => {
             <div
               class="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-end sm:gap-3 md:col-span-2">
               <PrimaryButton class="min-h-11 w-full justify-center sm:w-auto" :class="{ 'opacity-25': form.processing }"
-                :disabled="form.processing || checkingDuplicate">
-                {{ checkingDuplicate ? "Verificando duplicidade..." : form.processing ? "Enviando..." : "Enviar registro" }}
+                :disabled="form.processing || submitLocked">
+                {{ form.processing || submitLocked ? "Enviando..." : "Enviar registro" }}
               </PrimaryButton>
               <button type="reset"
                 class="min-h-11 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800 sm:w-auto"

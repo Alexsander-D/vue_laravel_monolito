@@ -83,15 +83,25 @@ class GoaliTripTest extends TestCase
             'observation' => 'Observação de teste',
         ]);
 
+        $this->post(route('goali.store'), [...$payload, 'driver_id' => $driver->id])
+            ->assertRedirect(route('goali.index'));
+        $this->assertSame(2, GoaliTrip::whereDate('travel_date', $payload['travel_start_date'])
+            ->where('origin', $payload['origin'])
+            ->where('destination', $payload['destination'])
+            ->where('amount', $payload['amount'])
+            ->count());
         $this->from(route('goali.form'))
             ->post(route('goali.store'), [...$payload, 'origin' => 'Origem sem vinculo', 'driver_id' => $otherAdmin->id])
             ->assertRedirect(route('goali.form'))
             ->assertSessionHasErrors('driver_id');
 
-        $this->from(route('goali.form'))
-            ->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])
-            ->assertRedirect(route('goali.form'))
-            ->assertSessionHasErrors('travel_start_date');
+        $this->post(route('goali.store'), [...$payload, 'driver_id' => $administrativo->id])
+            ->assertRedirect(route('goali.index'));
+        $this->assertDatabaseHas('goali_trips', [
+            'origin' => $payload['origin'],
+            'driver_id' => $administrativo->id,
+            'responsible' => $administrativo->name,
+        ]);
 
         $this->post(route('goali.store'), [
             ...$payload,
@@ -745,7 +755,7 @@ class GoaliTripTest extends TestCase
                 ])
                 ->where('passengers', ['Ana', 'Bruno', 'Carlos'])
                 ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
-                    === collect([$driverInPeriod->id, $driverOutsidePeriod->id])->sort()->values()->all())
+                    === collect([$admin->id, $driverInPeriod->id, $driverOutsidePeriod->id])->sort()->values()->all())
                 ->where('filters.passenger', 'Ana')
                 ->where('summary.count', 1)
                 ->where('records.0.id', $matchingTrip->id));
@@ -868,7 +878,7 @@ class GoaliTripTest extends TestCase
 
     }
 
-    public function test_goali_managers_only_see_assigned_drivers_or_trips_they_are_responsible_for(): void
+    public function test_admin_sees_all_trips_and_administrativo_sees_assigned_trips(): void
     {
         $admin = User::create([
             'name' => 'Admin com motoristas',
@@ -949,10 +959,11 @@ class GoaliTripTest extends TestCase
         $adminIndexResponse
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('summary.count', 2)
+                ->where('summary.count', 4)
                 ->where('records', fn ($records) => collect($records)->pluck('id')->sort()->values()->all()
-                    === collect([$assignedTrip->id, $adminResponsibleTrip->id])->sort()->values()->all())
-                ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->all() === [$assignedDriver->id]));
+                    === collect([$assignedTrip->id, $adminResponsibleTrip->id, $administrativoResponsibleTrip->id, $hiddenTrip->id])->sort()->values()->all())
+                ->where('filterDrivers', fn ($drivers) => collect($drivers)->pluck('id')->sort()->values()->all()
+                    === collect([$admin->id, $administrativo->id, $assignedDriver->id, $adminResponsibleDriver->id, $administrativoResponsibleDriver->id])->sort()->values()->all()));
 
         $this->flushSession();
         $this->actingAs($administrativo)
@@ -976,7 +987,8 @@ class GoaliTripTest extends TestCase
         $this->flushSession();
         $this->actingAs($admin)
             ->put(route('goali.update', $hiddenTrip), ['mark_cancelled' => true])
-            ->assertNotFound();
+            ->assertRedirect();
+        $this->assertDatabaseHas('goali_trips', ['id' => $hiddenTrip->id, 'trip_status' => 'Cancelada']);
     }
 
     public function test_non_admin_cannot_apply_the_driver_filter(): void

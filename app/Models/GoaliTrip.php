@@ -31,7 +31,6 @@ class GoaliTrip extends Model
         'responsible',
         'amount',
         'company_profit',
-        'duplicate_hash',
     ];
 
     protected $casts = [
