@@ -705,9 +705,7 @@ class GoaliTripController extends Controller
                 $this->isAdmin($user) || $this->canCreateForDrivers($user) ? 'nullable' : 'required',
                 'required_if:trip_status,Pago',
                 'integer',
-                Rule::in($this->isAdmin($user) || $this->canCreateForDrivers($user)
-                    ? array_column($this->tripDriverOptionsForCurrentUser($user), 'id')
-                    : [$user->id]),
+                Rule::exists('users', 'id'),
             ],
             'solicitation' => ['required', 'string', 'max:150'],
             'company_id' => [
