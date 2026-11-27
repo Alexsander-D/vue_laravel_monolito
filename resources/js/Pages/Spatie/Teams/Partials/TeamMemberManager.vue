@@ -28,6 +28,7 @@ const props = defineProps({
 });
 
 const page = usePage();
+const currentUserId = computed(() => Number(page.props.auth?.user?.id ?? 0));
 
 const addTeamMemberForm = useForm({
   user_id: "",
@@ -126,9 +127,9 @@ const removeTeamMember = () => {
   );
 };
 
-const manageGoaliDriverAssignments = (manager) => {
+const manageGoaliDriverAssignments = (manager, driverIds = manager.driverIds) => {
   driverAssignmentManager.value = manager;
-  driverAssignmentForm.defaults({ driver_ids: [...manager.driverIds] });
+  driverAssignmentForm.defaults({ driver_ids: [...driverIds] });
   driverAssignmentForm.reset();
   driverAssignmentForm.clearErrors();
 };
@@ -422,6 +423,13 @@ const displayableRole = (role) => {
               </div>
               <SecondaryButton type="button" @click="manageGoaliDriverAssignments(manager)">
                 Gerenciar motoristas
+              </SecondaryButton>
+              <SecondaryButton
+                v-if="manager.role === 'Admin' && manager.id === currentUserId && goaliDrivers.length"
+                type="button"
+                @click="manageGoaliDriverAssignments(manager, goaliDrivers.map((driver) => driver.id))"
+              >
+                Atribuir todos a mim
               </SecondaryButton>
             </div>
           </div>
