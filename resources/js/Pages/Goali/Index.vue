@@ -188,7 +188,7 @@ const tableData = computed(() => props.records.map((record) => ({
     canEditTrip(record)
       ? `<button type="button" class="goali-action goali-action--edit" data-goali-action="edit" data-record-id="${Number(record.id)}">Editar</button>`
       : (canAdvanceTripStatus(record)
-      ? `<button type="button" class="goali-action goali-action--status" data-goali-action="status" data-record-id="${Number(record.id)}">${nextTripStatus(record.trip_status) || "Atualizar status"}</button>`
+        ? `<button type="button" class="goali-action goali-action--status" data-goali-action="status" data-record-id="${Number(record.id)}">${nextTripStatus(record.trip_status) || "Atualizar status"}</button>`
         : ""),
     props.canCancelTrips
       && record.trip_status !== "Criada"
@@ -279,7 +279,29 @@ const applyDateFilters = () => {
   applyFilters(appliedDateFilters.value);
 };
 const applyOtherFilters = () => applyFilters();
-undefinedng(record.travel_time).slice(0, 5),
+
+const clearFilters = () => {
+  const dateValues = {
+    startDate: "",
+    endDate: "",
+  };
+
+  const filterValues = normalizedFilters({});
+
+  dateFilters.defaults(dateValues).reset();
+  appliedDateFilters.value = dateValues;
+
+  filters.defaults(filterValues).reset();
+
+  applyFilters(dateValues);
+};
+
+const startEdit = (record) => {
+  editingId.value = record.id;
+
+  editForm.defaults({
+    travel_date: record.travel_date,
+    travel_time: time(record.travel_time),
     status: record.status,
     trip_status: "",
     solicitation: record.solicitation,
@@ -289,13 +311,15 @@ undefinedng(record.travel_time).slice(0, 5),
     destination: record.destination,
     passenger: record.passenger,
     observation: record.observation || "",
-    amount: Number(record.amount).toFixed(2),
-    company_profit: record.company_profit === null || record.company_profit === undefined
-      ? ""
-      : Number(record.company_profit).toFixed(2),
+    amount: Number(record.amount || 0).toFixed(2),
+    company_profit:
+      record.company_profit === null || record.company_profit === undefined
+        ? ""
+        : Number(record.company_profit).toFixed(2),
     responsible: record.responsible,
   }).reset();
 };
+
 const advanceTripStatus = async (record) => {
   if (!canAdvanceTripStatus(record)) {
     return;
@@ -459,219 +483,258 @@ onBeforeUnmount(() => {
 <template>
   <BaseLayout title="RELATORIO DE CORRIDAS">
     <main class="col-span-12 w-full px-3 py-5 sm:px-6 lg:px-8">
-      <section class="overflow-hidden rounded-2xl border border-cyan-100 bg-white p-2 shadow-lg dark:border-cyan-900/50 dark:bg-gray-900 sm:p-4 lg:p-6">
+      <section
+        class="overflow-hidden rounded-2xl border border-cyan-100 bg-white p-2 shadow-lg dark:border-cyan-900/50 dark:bg-gray-900 sm:p-4 lg:p-6">
         <div class="grid min-w-0 grid-cols-12 gap-3 sm:gap-4">
-          <header class="col-span-12 grid grid-cols-12 gap-3 border-b border-cyan-100 bg-cyan-50/70 px-3 pb-4 pt-3 dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:gap-4 sm:px-5 sm:pb-5 sm:pt-5">
+          <header
+            class="col-span-12 grid grid-cols-12 gap-3 border-b border-cyan-100 bg-cyan-50/70 px-3 pb-4 pt-3 dark:border-cyan-900/50 dark:bg-cyan-950/30 sm:gap-4 sm:px-5 sm:pb-5 sm:pt-5">
             <div class="col-span-12 text-center">
               <p class="text-xs font-bold uppercase text-cyan-700">{{ $page.props.auth.user.current_team.name }}</p>
               <h1 class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Relatório de corridas</h1>
               <div class="mx-auto mt-3 h-1 w-14 rounded-full bg-cyan-600" aria-hidden="true"></div>
             </div>
             <div class="col-span-12 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <a v-if="props.canCreateTrips" :href="route('goali.form')" class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800">Criar Corrida</a>
-          <a :href="reportUrl" class="inline-flex min-h-11 items-center justify-center rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Exportar Excel</a>
-        </div>
-      </header>
+              <a v-if="props.canCreateTrips" :href="route('goali.form')"
+                class="inline-flex min-h-11 items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800">Criar
+                Corrida</a>
+              <a :href="reportUrl"
+                class="inline-flex min-h-11 items-center justify-center rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">Exportar
+                Excel</a>
+            </div>
+          </header>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 py-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-2" @submit.prevent="applyDateFilters">
-        <label class="filter-label">Data inicial<TextInput v-model="dateFilters.startDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /></label>
-        <label class="filter-label">Data final<TextInput v-model="dateFilters.endDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" /><InputError :message="dateFilters.errors.endDate || dateFilters.errors.startDate" /></label>
-      </form>
+          <form
+            class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 py-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-2"
+            @submit.prevent="applyDateFilters">
+            <label class="filter-label">Data inicial
+              <TextInput v-model="dateFilters.startDate" type="date" class="mt-1 block w-full"
+                @blur="applyDateFilters" />
+            </label>
+            <label class="filter-label">Data final
+              <TextInput v-model="dateFilters.endDate" type="date" class="mt-1 block w-full" @blur="applyDateFilters" />
+              <InputError :message="dateFilters.errors.endDate || dateFilters.errors.startDate" />
+            </label>
+          </form>
 
-      <form class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-7" @submit.prevent="applyOtherFilters">
-        <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
-        <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus" :options="props.tripStatuses" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
-        <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations" placeholder="Todas" multiple @select2-close="applyOtherFilters" /></label>
-        <div v-if="props.passengers.length" class="filter-label"><span>Passageiro</span><Select v-model="filters.passenger" :options="props.passengers" aria-label="Passageiro" placeholder="Todos" @select2-close="applyOtherFilters" /></div>
-        <div v-if="props.canViewAllTrips" class="filter-label"><span>Motorista</span><Select v-model="selectedFilterDriver" :options="props.filterDrivers" aria-label="Motorista" label="name" track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></div>
-        <div v-if="props.canViewAllTrips" class="filter-label"><span>Responsável</span><Select v-model="filters.responsible" :options="props.responsibles" aria-label="Responsável" placeholder="Todos" @select2-close="applyOtherFilters" /></div>
-        <div v-if="props.isAdmin && props.tripRoles.length" class="filter-label"><span>Função do motorista</span><Select v-model="filters.driverRole" :options="props.tripRoles" aria-label="Função do motorista" placeholder="Todas" @select2-close="applyOtherFilters" /></div>
-        <div v-if="props.isAdmin && props.tripRoles.length" class="filter-label"><span>Função do responsável</span><Select v-model="filters.responsibleRole" :options="props.tripRoles" aria-label="Função do responsável" placeholder="Todas" @select2-close="applyOtherFilters" /></div>
-        <button class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end" type="button" @click="clearFilters">Limpar filtros</button>
-      </form>
+          <form
+            class="col-span-12 grid min-w-0 grid-cols-1 gap-3 border-b border-gray-200 px-3 pb-4 pt-4 dark:border-gray-700 sm:grid-cols-2 sm:px-5 xl:grid-cols-7"
+            @submit.prevent="applyOtherFilters">
+            <label class="filter-label">Tipo<Select v-model="filters.status" :options="statusOptions"
+                placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
+            <label class="filter-label">Status da corrida<Select v-model="filters.tripStatus"
+                :options="props.tripStatuses" placeholder="Todos" multiple @select2-close="applyOtherFilters" /></label>
+            <label class="filter-label">Solicitação<Select v-model="filters.solicitation" :options="props.solicitations"
+                placeholder="Todas" multiple @select2-close="applyOtherFilters" /></label>
+            <div v-if="props.passengers.length" class="filter-label"><span>Passageiro</span><Select
+                v-model="filters.passenger" :options="props.passengers" aria-label="Passageiro" placeholder="Todos"
+                @select2-close="applyOtherFilters" /></div>
+            <div v-if="props.canViewAllTrips" class="filter-label"><span>Motorista</span><Select
+                v-model="selectedFilterDriver" :options="props.filterDrivers" aria-label="Motorista" label="name"
+                track-by="id" placeholder="Todos" @update:model-value="applyOtherFilters" /></div>
+            <div v-if="props.canViewAllTrips" class="filter-label"><span>Responsável</span><Select
+                v-model="filters.responsible" :options="props.responsibles" aria-label="Responsável" placeholder="Todos"
+                @select2-close="applyOtherFilters" /></div>
+            <div v-if="props.isAdmin && props.tripRoles.length" class="filter-label"><span>Função do
+                motorista</span><Select v-model="filters.driverRole" :options="props.tripRoles"
+                aria-label="Função do motorista" placeholder="Todas" @select2-close="applyOtherFilters" /></div>
+            <div v-if="props.isAdmin && props.tripRoles.length" class="filter-label"><span>Função do
+                responsável</span><Select v-model="filters.responsibleRole" :options="props.tripRoles"
+                aria-label="Função do responsável" placeholder="Todas" @select2-close="applyOtherFilters" /></div>
+            <button
+              class="min-h-11 self-stretch rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-800 sm:self-end"
+              type="button" @click="clearFilters">Limpar filtros</button>
+          </form>
 
-      <section class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:gap-4 sm:py-4" :class="props.isAdmin ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'">
-        <div class="rounded-md border-l-4 border-teal-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Registros no período</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ props.summary.count }}</p></div>
-        <div class="rounded-md border-l-4 border-amber-500 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor total</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.amount) }}</p></div>
-        <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Valor pago</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.receivable) }}</p></div>
-        <div v-if="props.isAdmin" class="rounded-md border-l-4 border-emerald-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4"><p class="text-xs text-gray-500 sm:text-sm">Lucro total da empresa</p><p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ money(props.summary.companyProfit) }}</p></div>
-      </section>
+          <section
+            class="col-span-12 grid grid-cols-1 gap-2 border-b border-gray-200 py-3 dark:border-gray-700 sm:gap-4 sm:py-4"
+            :class="props.isAdmin ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'">
+            <div class="rounded-md border-l-4 border-teal-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4">
+              <p class="text-xs text-gray-500 sm:text-sm">Registros no período</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{ props.summary.count }}
+              </p>
+            </div>
+            <div class="rounded-md border-l-4 border-amber-500 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4">
+              <p class="text-xs text-gray-500 sm:text-sm">Valor total</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{
+                money(props.summary.amount) }}</p>
+            </div>
+            <div class="rounded-md border-l-4 border-green-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4">
+              <p class="text-xs text-gray-500 sm:text-sm">Valor pago</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{
+                money(props.summary.receivable) }}</p>
+            </div>
+            <div v-if="props.isAdmin"
+              class="rounded-md border-l-4 border-emerald-600 bg-gray-50 px-3 py-2 dark:bg-gray-800 sm:px-4">
+              <p class="text-xs text-gray-500 sm:text-sm">Lucro total da empresa</p>
+              <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">{{
+                money(props.summary.companyProfit) }}</p>
+            </div>
+          </section>
 
-      <section class="col-span-12 lg:hidden" aria-label="Deslocamentos">
-        <div class="mb-3">
-          <label for="goali-mobile-search" class="sr-only">Buscar deslocamentos</label>
-          <input
-            id="goali-mobile-search"
-            v-model="mobileSearch"
-            type="search"
-            placeholder="Buscar nos resultados..."
-            class="min-h-11 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          />
-        </div>
-
-        <div v-if="mobilePageRecords.length" class="space-y-3">
-          <article
-            v-for="record in mobilePageRecords"
-            :key="record.id"
-            class="overflow-hidden rounded-lg border-l-8 shadow-md"
-            :class="{
-              'border-red-700 border-y border-r bg-red-50 dark:border-red-400 dark:bg-red-950/50': record.trip_status === 'Cancelada',
-              'border-orange-600 border-y border-r bg-orange-50 dark:border-orange-400 dark:bg-orange-950/50': !record.driver_id && record.trip_status !== 'Cancelada',
-              'border-gray-500 border-y border-r bg-gray-50 dark:border-gray-400 dark:bg-gray-800': record.driver_id && record.trip_status === 'Criada',
-              'border-blue-700 border-y border-r bg-blue-50 dark:border-blue-400 dark:bg-blue-950/50': record.driver_id && record.trip_status === 'Em Andamento',
-              'border-amber-600 border-y border-r bg-amber-50 dark:border-amber-400 dark:bg-amber-950/50': record.driver_id && record.trip_status === 'Aguardando Aprovação',
-              'border-green-700 border-y border-r bg-green-50 dark:border-green-400 dark:bg-green-950/50': record.driver_id && record.trip_status === 'Pago',
-            }"
-          >
-            <div
-              class="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3"
-              :class="{
-                'border-red-200 bg-red-100 dark:border-red-800 dark:bg-red-900/60': record.trip_status === 'Cancelada',
-                'border-orange-200 bg-orange-100 dark:border-orange-800 dark:bg-orange-900/60': !record.driver_id && record.trip_status !== 'Cancelada',
-                'border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800': record.driver_id && record.trip_status === 'Criada',
-                'border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900/60': record.driver_id && record.trip_status === 'Em Andamento',
-                'border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900/60': record.driver_id && record.trip_status === 'Aguardando Aprovação',
-                'border-green-200 bg-green-100 dark:border-green-800 dark:bg-green-900/60': record.driver_id && record.trip_status === 'Pago',
-              }"
-            >
-              <div>
-                <p class="font-semibold text-gray-900 dark:text-white">{{ date(record.travel_date) }} · {{ time(record.travel_time) }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ record.solicitation }}</p>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <span class="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 dark:bg-teal-900/40 dark:text-teal-200">{{ record.status }}</span>
-                <span
-                  class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  :class="{
-                    'bg-red-700 text-white dark:bg-red-600': record.trip_status === 'Cancelada',
-                    'bg-orange-700 text-white dark:bg-orange-600': !record.driver_id && record.trip_status !== 'Cancelada',
-                    'bg-gray-700 text-white dark:bg-gray-600': record.driver_id && record.trip_status === 'Criada',
-                    'bg-blue-700 text-white dark:bg-blue-600': record.driver_id && record.trip_status === 'Em Andamento',
-                    'bg-amber-700 text-white dark:bg-amber-600': record.driver_id && record.trip_status === 'Aguardando Aprovação',
-                    'bg-green-700 text-white dark:bg-green-600': record.driver_id && record.trip_status === 'Pago',
-                  }"
-                >{{ record.trip_status }}</span>
-              </div>
+          <section class="col-span-12 lg:hidden" aria-label="Deslocamentos">
+            <div class="mb-3">
+              <label for="goali-mobile-search" class="sr-only">Buscar deslocamentos</label>
+              <input id="goali-mobile-search" v-model="mobileSearch" type="search"
+                placeholder="Buscar nos resultados..."
+                class="min-h-11 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
             </div>
 
-            <div class="space-y-3 px-4 py-3">
-              <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">ID</p>
-                <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">ID{{ record.id }}</p>
-              </div>
-              <div v-if="record.trip_code">
-                <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Código da Viagem</p>
-                <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.trip_code }}</p>
-              </div>
-              <div>
-                <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Passageiro</p>
-                <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.passenger }}</p>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="col-span-2">
-                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Origem / destino</p>
-                  <p class="mt-0.5 break-words text-sm text-gray-800 dark:text-gray-200">{{ record.origin }} → {{ record.destination }}</p>
-                </div>
-                <div>
-                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Motorista</p>
-                  <div class="mt-0.5 flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200">
-                    <img
-                      v-if="record.driver?.profile_photo_url"
-                      :src="record.driver.profile_photo_url"
-                      :alt="record.driver.name"
-                      class="h-7 w-7 rounded-full object-cover"
-                      loading="lazy"
-                    />
-                    <span>{{ record.driver?.name || "—" }}</span>
+            <div v-if="mobilePageRecords.length" class="space-y-3">
+              <article v-for="record in mobilePageRecords" :key="record.id"
+                class="overflow-hidden rounded-lg border-l-8 shadow-md" :class="{
+                  'border-red-700 border-y border-r bg-red-50 dark:border-red-400 dark:bg-red-950/50': record.trip_status === 'Cancelada',
+                  'border-orange-600 border-y border-r bg-orange-50 dark:border-orange-400 dark:bg-orange-950/50': !record.driver_id && record.trip_status !== 'Cancelada',
+                  'border-gray-500 border-y border-r bg-gray-50 dark:border-gray-400 dark:bg-gray-800': record.driver_id && record.trip_status === 'Criada',
+                  'border-blue-700 border-y border-r bg-blue-50 dark:border-blue-400 dark:bg-blue-950/50': record.driver_id && record.trip_status === 'Em Andamento',
+                  'border-amber-600 border-y border-r bg-amber-50 dark:border-amber-400 dark:bg-amber-950/50': record.driver_id && record.trip_status === 'Aguardando Aprovação',
+                  'border-green-700 border-y border-r bg-green-50 dark:border-green-400 dark:bg-green-950/50': record.driver_id && record.trip_status === 'Pago',
+                }">
+                <div class="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3" :class="{
+                  'border-red-200 bg-red-100 dark:border-red-800 dark:bg-red-900/60': record.trip_status === 'Cancelada',
+                  'border-orange-200 bg-orange-100 dark:border-orange-800 dark:bg-orange-900/60': !record.driver_id && record.trip_status !== 'Cancelada',
+                  'border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800': record.driver_id && record.trip_status === 'Criada',
+                  'border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900/60': record.driver_id && record.trip_status === 'Em Andamento',
+                  'border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900/60': record.driver_id && record.trip_status === 'Aguardando Aprovação',
+                  'border-green-200 bg-green-100 dark:border-green-800 dark:bg-green-900/60': record.driver_id && record.trip_status === 'Pago',
+                }">
+                  <div>
+                    <p class="font-semibold text-gray-900 dark:text-white">{{ date(record.travel_date) }} · {{
+                      time(record.travel_time) }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ record.solicitation }}</p>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span
+                      class="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 dark:bg-teal-900/40 dark:text-teal-200">{{
+                      record.status }}</span>
+                    <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="{
+                      'bg-red-700 text-white dark:bg-red-600': record.trip_status === 'Cancelada',
+                      'bg-orange-700 text-white dark:bg-orange-600': !record.driver_id && record.trip_status !== 'Cancelada',
+                      'bg-gray-700 text-white dark:bg-gray-600': record.driver_id && record.trip_status === 'Criada',
+                      'bg-blue-700 text-white dark:bg-blue-600': record.driver_id && record.trip_status === 'Em Andamento',
+                      'bg-amber-700 text-white dark:bg-amber-600': record.driver_id && record.trip_status === 'Aguardando Aprovação',
+                      'bg-green-700 text-white dark:bg-green-600': record.driver_id && record.trip_status === 'Pago',
+                    }">{{ record.trip_status }}</span>
                   </div>
                 </div>
-                <div>
-                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valor</p>
-                  <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{ money(record.amount) }}</p>
+
+                <div class="space-y-3 px-4 py-3">
+                  <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">ID</p>
+                    <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">ID{{ record.id }}</p>
+                  </div>
+                  <div v-if="record.trip_code">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Código da
+                      Viagem</p>
+                    <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.trip_code }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Passageiro
+                    </p>
+                    <p class="mt-0.5 font-semibold text-gray-900 dark:text-white">{{ record.passenger }}</p>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2">
+                      <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Origem /
+                        destino</p>
+                      <p class="mt-0.5 break-words text-sm text-gray-800 dark:text-gray-200">{{ record.origin }} → {{
+                        record.destination }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Motorista
+                      </p>
+                      <div class="mt-0.5 flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200">
+                        <img v-if="record.driver?.profile_photo_url" :src="record.driver.profile_photo_url"
+                          :alt="record.driver.name" class="h-7 w-7 rounded-full object-cover" loading="lazy" />
+                        <span>{{ record.driver?.name || "—" }}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Valor</p>
+                      <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{ money(record.amount) }}
+                      </p>
+                    </div>
+                    <div v-if="props.isAdmin" class="col-span-2">
+                      <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Lucro da
+                        empresa</p>
+                      <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{
+                        money(record.company_profit) }}</p>
+                    </div>
+                    <div v-if="props.isAdmin" class="col-span-2">
+                      <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Responsável</p>
+                      <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.responsible }}</p>
+                    </div>
+                    <div v-if="props.isAdmin && record.cancelled_by_role" class="col-span-2">
+                      <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cancelada
+                        por</p>
+                      <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.cancelled_by_role }}: {{
+                        record.cancelled_by_name }}</p>
+                    </div>
+                  </div>
                 </div>
-                <div v-if="props.isAdmin" class="col-span-2">
-                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Lucro da empresa</p>
-                  <p class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">{{ money(record.company_profit) }}</p>
+
+                <div
+                  v-if="props.isAdmin || canEditTrip(record) || canAdvanceTripStatus(record) || (props.canCancelTrips && record.trip_status !== 'Criada' && record.trip_status !== 'Cancelada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
+                  class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+                  <button v-if="canEditTrip(record)" type="button"
+                    class="min-h-11 flex-1 rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700"
+                    @click="startEdit(record)">Editar</button>
+                  <button v-if="canAdvanceTripStatus(record)" type="button"
+                    class="min-h-11 flex-1 rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700"
+                    @click="advanceTripStatus(record)">{{ nextTripStatus(record.trip_status) }}</button>
+                  <button
+                    v-if="props.canCancelTrips && record.trip_status !== 'Criada' && record.trip_status !== 'Cancelada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
+                    type="button"
+                    class="min-h-11 flex-1 rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+                    @click="returnTripToQueue(record)">Devolver à fila</button>
+                  <button v-if="props.isAdmin && record.trip_status !== 'Cancelada'" type="button"
+                    class="min-h-11 flex-1 rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                    @click="markTripCancelled(record)">Marcar Cancelada</button>
                 </div>
-                <div v-if="props.isAdmin" class="col-span-2">
-                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Responsável</p>
-                  <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.responsible }}</p>
-                </div>
-                <div v-if="props.isAdmin && record.cancelled_by_role" class="col-span-2">
-                  <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Cancelada por</p>
-                  <p class="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{{ record.cancelled_by_role }}: {{ record.cancelled_by_name }}</p>
-                </div>
+              </article>
+            </div>
+
+            <p v-else
+              class="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              {{ mobileSearch ? "Nenhum deslocamento encontrado para essa busca." : "Nenhum deslocamento encontrado para
+              os filtros selecionados." }}
+            </p>
+
+            <div v-if="mobileFilteredRecords.length"
+              class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-300">
+              <span>Mostrando {{ mobilePageStart }}–{{ mobilePageEnd }} de {{ mobileFilteredRecords.length }}</span>
+              <div v-if="mobilePageCount > 1" class="flex gap-2">
+                <button type="button"
+                  class="min-h-11 rounded-md border border-gray-300 px-3 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+                  :disabled="mobilePage === 1" @click="mobilePage--">Anterior</button>
+                <button type="button"
+                  class="min-h-11 rounded-md border border-gray-300 px-3 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+                  :disabled="mobilePage === mobilePageCount" @click="mobilePage++">Próxima</button>
               </div>
             </div>
+          </section>
 
-            <div
-              v-if="props.isAdmin || canEditTrip(record) || canAdvanceTripStatus(record) || (props.canCancelTrips && record.trip_status !== 'Criada' && record.trip_status !== 'Cancelada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status))"
-              class="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700"
-            >
-              <button
-                v-if="canEditTrip(record)"
-                type="button"
-                class="min-h-11 flex-1 rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700"
-                @click="startEdit(record)"
-              >Editar</button>
-              <button
-                v-if="canAdvanceTripStatus(record)"
-                type="button"
-                class="min-h-11 flex-1 rounded-md bg-cyan-700 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700"
-                @click="advanceTripStatus(record)"
-              >{{ nextTripStatus(record.trip_status) }}</button>
-              <button
-                v-if="props.canCancelTrips && record.trip_status !== 'Criada' && record.trip_status !== 'Cancelada' && record.driver_id !== null && !['Pago', 'Aguardando Aprovação'].includes(record.trip_status)"
-                type="button"
-                class="min-h-11 flex-1 rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
-                @click="returnTripToQueue(record)"
-              >Devolver à fila</button>
-              <button
-                v-if="props.isAdmin && record.trip_status !== 'Cancelada'"
-                type="button"
-                class="min-h-11 flex-1 rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
-                @click="markTripCancelled(record)"
-              >Marcar Cancelada</button>
-            </div>
-          </article>
+          <Datatable class="col-span-12 hidden w-full min-w-0 lg:block" :thead="tableHeaders" :tbody="tableData"
+            :row-columns="tableColumns" :column-renderers="tableColumnRenderers" :id="tableId" :order-by="[]"
+            :row-class="tripRowClass" managed-rows />
         </div>
+      </section>
 
-        <p v-else class="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-          {{ mobileSearch ? "Nenhum deslocamento encontrado para essa busca." : "Nenhum deslocamento encontrado para os filtros selecionados." }}
-        </p>
-
-        <div v-if="mobileFilteredRecords.length" class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-300">
-          <span>Mostrando {{ mobilePageStart }}–{{ mobilePageEnd }} de {{ mobileFilteredRecords.length }}</span>
-          <div v-if="mobilePageCount > 1" class="flex gap-2">
-            <button
-              type="button"
-              class="min-h-11 rounded-md border border-gray-300 px-3 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
-              :disabled="mobilePage === 1"
-              @click="mobilePage--"
-            >Anterior</button>
-            <button
-              type="button"
-              class="min-h-11 rounded-md border border-gray-300 px-3 font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
-              :disabled="mobilePage === mobilePageCount"
-              @click="mobilePage++"
-            >Próxima</button>
+      <div v-if="editingId"
+        class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4"
+        @click.self="editingId = null">
+        <form
+          class="my-2 max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900 sm:my-6 sm:max-h-[90vh] sm:p-6"
+          data-select2-dropdown-parent @click.stop @submit.prevent="saveEdit">
+          <div class="mb-5 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Editar deslocamento</h2><button
+              type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500"
+              @click="editingId = null">&times;</button>
           </div>
-        </div>
-      </section>
-
-      <Datatable class="col-span-12 hidden w-full min-w-0 lg:block" :thead="tableHeaders" :tbody="tableData" :row-columns="tableColumns" :column-renderers="tableColumnRenderers" :id="tableId" :order-by="[]" :row-class="tripRowClass" managed-rows />
-        </div>
-      </section>
-
-      <div v-if="editingId" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4" @click.self="editingId = null">
-        <form class="my-2 max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-gray-900 sm:my-6 sm:max-h-[90vh] sm:p-6" data-select2-dropdown-parent @click.stop @submit.prevent="saveEdit">
-          <div class="mb-5 flex items-center justify-between"><h2 class="text-lg font-semibold text-gray-900 dark:text-white">Editar deslocamento</h2><button type="button" aria-label="Fechar" class="text-2xl leading-none text-gray-500" @click="editingId = null">&times;</button></div>
           <div v-if="props.isAdmin || props.isAdministrative" class="grid grid-cols-1 gap-4">
             <label class="filter-label">Próximo status
-              <select
-                v-model="editForm.trip_status"
-                class="mt-1 min-h-11 w-full rounded-md border-gray-300 shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              >
+              <select v-model="editForm.trip_status"
+                class="mt-1 min-h-11 w-full rounded-md border-gray-300 shadow-sm focus:border-teal-700 focus:ring-teal-700 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                 <option value="">Manter status atual</option>
                 <option v-for="status in editTripStatusOptions" :key="status" :value="status">
                   {{ status }}
@@ -681,22 +744,69 @@ onBeforeUnmount(() => {
             </label>
           </div>
           <div v-if="props.isAdmin" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label class="filter-label">Data<TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_date" /></label>
-            <label class="filter-label">Horário<TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required /><InputError :message="editForm.errors.travel_time" /></label>
-            <div class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions" placeholder="Selecione o tipo" :allow-empty="false" required /><InputError :message="editForm.errors.status" /></div>
-            <div class="filter-label">Motorista<Select v-model="selectedEditDriver" :options="props.drivers" label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="true" /><InputError :message="editForm.errors.driver_id" /></div>
-            <div class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations" placeholder="Selecione uma empresa" :allow-empty="false" required /><span v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation }}</span></div>
-            <label class="filter-label">Código da Viagem<TextInput v-model="editForm.trip_code" type="text" class="mt-1 block w-full" maxlength="255" /><InputError :message="editForm.errors.trip_code" /></label>
-            <label class="filter-label">Origem<TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required /><InputError :message="editForm.errors.origin" /></label>
-            <label class="filter-label">Destino<TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required /><InputError :message="editForm.errors.destination" /></label>
-            <label class="filter-label">Passageiro<TextArea v-model="editForm.passenger" class="mt-1 block w-full" required /><InputError :message="editForm.errors.passenger" /></label>
-            <label class="filter-label">Observação<TextArea v-model="editForm.observation" class="mt-1 block w-full" maxlength="5000" autocomplete="off" /><InputError :message="editForm.errors.observation" /></label>
-            <label class="filter-label">Responsável<TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" :readonly="props.isDriver" required /><InputError :message="editForm.errors.responsible" /></label>
-            <label class="filter-label">Valor (R$)<TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" required /><InputError :message="editForm.errors.amount" /></label>
-            <label class="filter-label">Lucro da empresa (R$)<TextInput v-model="editForm.company_profit" type="number" class="mt-1 block w-full" min="0" step="0.01" inputmode="decimal" /><InputError :message="editForm.errors.company_profit" /></label>
+            <label class="filter-label">Data
+              <TextInput v-model="editForm.travel_date" type="date" class="mt-1 block w-full" required />
+              <InputError :message="editForm.errors.travel_date" />
+            </label>
+            <label class="filter-label">Horário
+              <TextInput v-model="editForm.travel_time" type="time" class="mt-1 block w-full" required />
+              <InputError :message="editForm.errors.travel_time" />
+            </label>
+            <div class="filter-label">Tipo<Select v-model="editForm.status" :options="statusOptions"
+                placeholder="Selecione o tipo" :allow-empty="false" required />
+              <InputError :message="editForm.errors.status" />
+            </div>
+            <div class="filter-label">Motorista<Select v-model="selectedEditDriver" :options="props.drivers"
+                label="name" track-by="id" placeholder="Selecione um motorista" :allow-empty="true" />
+              <InputError :message="editForm.errors.driver_id" />
+            </div>
+            <div class="filter-label">Solicitação<Select v-model="editForm.solicitation" :options="props.solicitations"
+                placeholder="Selecione uma empresa" :allow-empty="false" required /><span
+                v-if="editForm.errors.solicitation" class="text-xs text-red-700">{{ editForm.errors.solicitation
+                }}</span></div>
+            <label class="filter-label">Código da Viagem
+              <TextInput v-model="editForm.trip_code" type="text" class="mt-1 block w-full" maxlength="255" />
+              <InputError :message="editForm.errors.trip_code" />
+            </label>
+            <label class="filter-label">Origem
+              <TextInput v-model="editForm.origin" type="text" class="mt-1 block w-full" maxlength="255" required />
+              <InputError :message="editForm.errors.origin" />
+            </label>
+            <label class="filter-label">Destino
+              <TextInput v-model="editForm.destination" type="text" class="mt-1 block w-full" required />
+              <InputError :message="editForm.errors.destination" />
+            </label>
+            <label class="filter-label">Passageiro<TextArea v-model="editForm.passenger" class="mt-1 block w-full"
+                required />
+              <InputError :message="editForm.errors.passenger" />
+            </label>
+            <label class="filter-label">Observação<TextArea v-model="editForm.observation" class="mt-1 block w-full"
+                maxlength="5000" autocomplete="off" />
+              <InputError :message="editForm.errors.observation" />
+            </label>
+            <label class="filter-label">Responsável
+              <TextInput v-model="editForm.responsible" type="text" class="mt-1 block w-full" :readonly="props.isDriver"
+                required />
+              <InputError :message="editForm.errors.responsible" />
+            </label>
+            <label class="filter-label">Valor (R$)
+              <TextInput v-model="editForm.amount" type="number" class="mt-1 block w-full" min="0" step="0.01"
+                inputmode="decimal" required />
+              <InputError :message="editForm.errors.amount" />
+            </label>
+            <label class="filter-label">Lucro da empresa (R$)
+              <TextInput v-model="editForm.company_profit" type="number" class="mt-1 block w-full" min="0" step="0.01"
+                inputmode="decimal" />
+              <InputError :message="editForm.errors.company_profit" />
+            </label>
           </div>
           <p v-if="editForm.hasErrors" class="mt-3 text-sm text-red-700">Verifique os campos informados.</p>
-          <div class="mt-6 flex justify-end gap-2"><button type="button" class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-800" @click="editingId = null">Cancelar</button><button type="submit" class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white" :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : props.isAdmin ? "Salvar alterações" : "Atualizar status" }}</button></div>
+          <div class="mt-6 flex justify-end gap-2"><button type="button"
+              class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-800"
+              @click="editingId = null">Cancelar</button><button type="submit"
+              class="rounded-md bg-cyan-700 px-4 py-2 text-sm font-semibold text-white"
+              :disabled="editForm.processing">{{ editForm.processing ? "Salvando..." : props.isAdmin ? "Salvar
+              alterações" : "Atualizar status" }}</button></div>
         </form>
       </div>
     </main>
@@ -704,7 +814,15 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.filter-label { display: flex; flex-direction: column; gap: .4rem; color: #4b5563; font-size: .8rem; font-weight: 600; }
+.filter-label {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  color: #4b5563;
+  font-size: .8rem;
+  font-weight: 600;
+}
+
 :deep(#goali-trips-datatable .datatable-actions) {
   display: flex;
   flex-wrap: nowrap;
@@ -712,6 +830,7 @@ onBeforeUnmount(() => {
   width: max-content;
   min-width: max-content;
 }
+
 :deep(#goali-trips-datatable .goali-action) {
   display: inline-flex;
   min-height: 2.75rem;
@@ -731,24 +850,74 @@ onBeforeUnmount(() => {
   touch-action: manipulation;
   transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
-:deep(#goali-trips-datatable .goali-action--edit) { background-color: #0f766e; }
-:deep(#goali-trips-datatable .goali-action--edit:hover) { background-color: #115e59; }
-:deep(#goali-trips-datatable .goali-action--status) { background-color: #0891b2; color: #fff; }
-:deep(#goali-trips-datatable .goali-action--status:hover) { background-color: #0e7490; }
-:deep(#goali-trips-datatable .goali-action--cancel) { background-color: #d97706; }
-:deep(#goali-trips-datatable .goali-action--cancel:hover) { background-color: #b45309; }
-:deep(#goali-trips-datatable .goali-action--cancelled) { background-color: #b91c1c; }
-:deep(#goali-trips-datatable .goali-action--cancelled:hover) { background-color: #991b1b; }
+
+:deep(#goali-trips-datatable .goali-action--edit) {
+  background-color: #0f766e;
+}
+
+:deep(#goali-trips-datatable .goali-action--edit:hover) {
+  background-color: #115e59;
+}
+
+:deep(#goali-trips-datatable .goali-action--status) {
+  background-color: #0891b2;
+  color: #fff;
+}
+
+:deep(#goali-trips-datatable .goali-action--status:hover) {
+  background-color: #0e7490;
+}
+
+:deep(#goali-trips-datatable .goali-action--cancel) {
+  background-color: #d97706;
+}
+
+:deep(#goali-trips-datatable .goali-action--cancel:hover) {
+  background-color: #b45309;
+}
+
+:deep(#goali-trips-datatable .goali-action--cancelled) {
+  background-color: #b91c1c;
+}
+
+:deep(#goali-trips-datatable .goali-action--cancelled:hover) {
+  background-color: #991b1b;
+}
+
 :deep(#goali-trips-datatable .goali-action:focus-visible) {
   outline: 3px solid #93c5fd;
   outline-offset: 2px;
 }
-:deep(#goali-trips-datatable .goali-action:active) { transform: translateY(1px); }
-:deep(.goali-trip--created > td) { background-color: #f3f4f6 !important; }
-:deep(.goali-trip--unassigned > td) { background-color: #ffedd5 !important; }
-:deep(.goali-trip--in-progress > td) { background-color: #eff6ff !important; }
-:deep(.goali-trip--awaiting > td) { background-color: #fef3c7 !important; }
-:deep(.goali-trip--finished > td) { background-color: #dcfce7 !important; }
-:deep(.goali-trip--cancelled > td) { background-color: #fee2e2 !important; }
-:deep(.goali-trip--cancelled > td) { background-color: #fee2e2 !important; }
+
+:deep(#goali-trips-datatable .goali-action:active) {
+  transform: translateY(1px);
+}
+
+:deep(.goali-trip--created > td) {
+  background-color: #f3f4f6 !important;
+}
+
+:deep(.goali-trip--unassigned > td) {
+  background-color: #ffedd5 !important;
+}
+
+:deep(.goali-trip--in-progress > td) {
+  background-color: #eff6ff !important;
+}
+
+:deep(.goali-trip--awaiting > td) {
+  background-color: #fef3c7 !important;
+}
+
+:deep(.goali-trip--finished > td) {
+  background-color: #dcfce7 !important;
+}
+
+:deep(.goali-trip--cancelled > td) {
+  background-color: #fee2e2 !important;
+}
+
+:deep(.goali-trip--cancelled > td) {
+  background-color: #fee2e2 !important;
+}
 </style>
